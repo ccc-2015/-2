@@ -22,7 +22,9 @@ async def chat(messages: list[dict], temperature: float = 0.2, max_tokens: int =
         raise ApiError("service_not_configured", "模型服务尚未配置，无法完成分析。")
 
     try:
-        async with httpx.AsyncClient(timeout=settings.timeout_seconds) as client:
+        # trust_env=False：出站不继承本机代理环境变量。httpx 0.28 解析 IPv6 形式的
+        # NO_PROXY（如 [::1]）会在构造客户端时抛 InvalidURL，导致接口 500。
+        async with httpx.AsyncClient(timeout=settings.timeout_seconds, trust_env=False) as client:
             response = await client.post(
                 f"{settings.base_url}/chat/completions",
                 headers={
