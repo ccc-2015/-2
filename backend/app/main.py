@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .responses import register_exception_handlers, success
-from .routers import config, contract, dispute
+from .routers import config, contract, dispute, extract
 
 app = FastAPI(
     title="租住有据 API",
@@ -28,6 +28,7 @@ register_exception_handlers(app)
 app.include_router(config.router, prefix="/api")
 app.include_router(contract.router, prefix="/api")
 app.include_router(dispute.router, prefix="/api")
+app.include_router(extract.router, prefix="/api")
 
 
 @app.get("/api/health", tags=["health"])

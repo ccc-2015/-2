@@ -6,6 +6,7 @@ import type {
   ContractResult,
   DiagnoseDisputeInput,
   DisputeResult,
+  ExtractResult,
 } from "@/shared/api";
 
 export class ApiError extends Error {
@@ -26,12 +27,13 @@ export interface ApiResult<T> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
+  const isForm = typeof FormData !== "undefined" && init?.body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(path, {
       credentials: "same-origin",
       ...init,
-      headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...(init?.headers ?? {}) },
+      headers: { ...(init?.body && !isForm ? { "Content-Type": "application/json" } : {}), ...(init?.headers ?? {}) },
     });
   } catch {
     throw new ApiError("network", "网络连接失败，请保留输入稍后手动重试。", true);
@@ -60,6 +62,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
 
 export const api = {
   config: () => request<AppConfig>("/api/config", { method: "GET" }),
+  extract: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<ExtractResult>("/api/extract", { method: "POST", body: form });
+  },
   analyzeContract: (input: AnalyzeContractInput) =>
     request<ContractResult>("/api/contract/analyze", { method: "POST", body: JSON.stringify(input) }),
   diagnoseDispute: (input: DiagnoseDisputeInput) =>

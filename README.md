@@ -62,7 +62,7 @@ npm run build            # 类型检查 + 静态构建到 dist/
 | GET | `/api/config` | 版本、城市、功能开关、输入限制、模型可用状态 |
 | POST | `/api/contract/analyze` | 合同问答 / 审查 / 修改建议 / 起草修订 |
 | POST | `/api/dispute/diagnose` | 争议事实整理、一般方向候选、所选方向话术 |
-| POST | `/api/extract` | 文件文本提取 / OCR（后续里程碑） |
+| POST | `/api/extract` | 文件文本提取 / OCR（TXT·MD·DOCX·PDF·图片，本机处理， multipart 上传） |
 
 成功返回 `{ ok: true, data, meta }`；失败返回 `{ ok: false, requestId, error: { code, message, retryable } }`。
 引文必须满足 `text.slice(start, end) === excerpt.text`（UTF-16 下标），服务端闭合校验，虚构引文丢弃。
@@ -77,7 +77,7 @@ npm run build            # 类型检查 + 静态构建到 dist/
 ## 里程碑
 
 1. ✅ 项目骨架：React 前端 + FastAPI 后端、配置/合同/争议路由、模型适配器、引文校验、合同审查工作区。
-2. ⏳ 文件输入与提取 / OCR + 用户校对。
+2. ✅ 文件输入与提取 / OCR + 用户校对：TXT/MD/DOCX/PDF/图片本机提取，扫描 PDF 与图片本地 OCR，服务端强制大小/页数/文本限制，损坏/加密/空白/超限明确状态，校对确认前不分析。
 3. ⏳ 合同审查对话、引用定位与错误状态完善。
 4. ⏳ 风险提示展示 + 修订副本（逐条/批量应用 + 复查）。
 5. ⏳ 证据画布：时间线 + 本地保存/删除 + 水电对照。

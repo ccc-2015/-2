@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { FileText, Loader2, ArrowLeft, ShieldAlert, Sparkles } from "lucide-react";
-import type { ContractResult, ContractIntent, Finding } from "@/shared/api";
+import { useRef, useState } from "react";
+import { FileText, Loader2, ArrowLeft, ShieldAlert, Sparkles, Upload, AlertTriangle, Files } from "lucide-react";
+import type { ContractResult, ContractIntent, Finding, ExtractResult, ExtractPage } from "@/shared/api";
 import { PRIORITY_LABELS } from "@/shared/api";
 import { api, ApiError, errorMessage } from "../../lib/api";
 import { useConfig } from "../../lib/config-context";
@@ -13,6 +13,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
 type Stage = "input" | "proofread" | "review";
+
+interface ProofreadMeta {
+  warnings: string[];
+  pageCount: number | null;
+  method: "text" | "ocr";
+  ocrUsed: boolean;
+  pages: ExtractPage[];
+}
+
+const PASTE_META: ProofreadMeta = { warnings: [], pageCount: null, method: "text", ocrUsed: false, pages: [] };
+
+const ACCEPT = ".txt,.md,.markdown,.docx,.pdf,.png,.jpg,.jpeg,.webp";
 
 const INTENTS: { id: ContractIntent; label: string }[] = [
   { id: "review", label: "整体审查" },
@@ -27,13 +39,15 @@ export function ContractWorkspace() {
   const [pasted, setPasted] = useState("");
   const [draft, setDraft] = useState("");
   const [sourceName, setSourceName] = useState("粘贴文本");
+  const [meta, setMeta] = useState<ProofreadMeta>(PASTE_META);
   const [confirmed, setConfirmed] = useState("");
 
   const maxText = config?.limits.maxTextLength ?? 50000;
 
-  function goToProofread(text: string, source: string) {
+  function goToProofread(text: string, source: string, m: ProofreadMeta) {
     setDraft(text);
     setSourceName(source);
+    setMeta(m);
     setStage("proofread");
   }
 
@@ -57,7 +71,16 @@ export function ContractWorkspace() {
           pasted={pasted}
           setPasted={setPasted}
           maxText={maxText}
-          onContinue={() => goToProofread(pasted, "粘贴文本")}
+          onContinue={() => goToProofread(pasted, "粘贴文本", PASTE_META)}
+          onExtracted={(r: ExtractResult) =>
+            goToProofread(r.text, r.sourceName, {
+              warnings: r.warnings,
+              pageCount: r.pageCount,
+              method: r.method,
+              ocrUsed: r.ocrUsed,
+              pages: r.pages,
+            })
+          }
         />
       )}
 
@@ -66,6 +89,7 @@ export function ContractWorkspace() {
           draft={draft}
           setDraft={setDraft}
           sourceName={sourceName}
+          meta={meta}
           maxText={maxText}
           onBack={() => setStage("input")}
           onConfirm={confirmText}
@@ -113,25 +137,130 @@ function InputStage({
   setPasted,
   maxText,
   onContinue,
+  onExtracted,
 }: {
   pasted: string;
   setPasted: (v: string) => void;
   maxText: number;
   onContinue: () => void;
+  onExtracted: (r: ExtractResult) => void;
 }) {
+  const { config } = useConfig();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState<ApiError | null>(null);
+
+  const limits = config?.limits;
+  const maxFileMB = limits ? Math.round(limits.maxFileBytes / (1024 * 1024)) : 10;
+  const maxPdfPages = limits?.maxPdfPages ?? 50;
   const over = pasted.length > maxText;
+
+  async function handleFile(file: File) {
+    setUploadError(null);
+    if (limits && file.size > limits.maxFileBytes) {
+      setUploadError(new ApiError("payload_too_large", `文件超过 ${maxFileMB}MB 限制，请缩小材料或选择片段，也可直接粘贴文本。`, false));
+      return;
+    }
+    setUploading(true);
+    try {
+      const { data } = await api.extract(file);
+      onExtracted(data);
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && !uploading) void handleFile(file);
+  }
+
   return (
     <section className="space-y-4">
       <div className="rounded-lg border bg-card p-4">
         <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+          <Files className="size-4 text-primary" />
+          导入合同文件
+        </div>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="选择或拖拽合同文件"
+          onClick={() => !uploading && fileRef.current?.click()}
+          onKeyDown={(e) => {
+            if ((e.key === "Enter" || e.key === " ") && !uploading) {
+              e.preventDefault();
+              fileRef.current?.click();
+            }
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!uploading) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          className={cn(
+            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-4 py-8 text-center transition-colors",
+            dragOver ? "border-primary bg-secondary" : "border-input hover:border-primary/50 hover:bg-secondary/50",
+            uploading && "pointer-events-none opacity-60",
+          )}
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="size-6 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">正在本机提取文本 / OCR 识别…</span>
+            </>
+          ) : (
+            <>
+              <Upload className="size-6 text-muted-foreground" />
+              <span className="text-sm font-medium">点击选择或拖拽文件到此处</span>
+              <span className="text-xs text-muted-foreground">
+                支持 TXT / MD / DOCX / PDF / 图片（PNG·JPG·WEBP）；单文件 ≤ {maxFileMB}MB，PDF ≤ {maxPdfPages} 页
+              </span>
+            </>
+          )}
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept={ACCEPT}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleFile(file);
+          }}
+        />
+        <p className="mt-2 text-xs text-muted-foreground">
+          文件仅提交到本机后端临时解析，不自动持久化；扫描 PDF 与图片用本地 OCR 识别。提取后须由你校对确认才会分析。
+        </p>
+        {uploadError && (
+          <Alert variant="destructive" className="mt-3">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>导入未完成</AlertTitle>
+            <AlertDescription>
+              {uploadError.message}
+              {uploadError.retryable && " 你可以稍后手动重试。"}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+
+      <div className="rounded-lg border bg-card p-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
           <FileText className="size-4 text-primary" />
-          粘贴合同文本
+          或粘贴合同文本
         </div>
         <Textarea
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
-          placeholder="将合同全文粘贴到此处…导入文件（TXT / MD / DOCX / PDF / 图片）将在下一里程碑接入。"
-          className="min-h-56 font-mono text-sm"
+          placeholder="将合同全文粘贴到此处…"
+          className="min-h-48 font-mono text-sm"
           aria-label="合同文本"
         />
         <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -143,6 +272,7 @@ function InputStage({
           </Button>
         </div>
       </div>
+
       <Alert>
         <ShieldAlert className="size-4" />
         <AlertTitle>隐私提示</AlertTitle>
@@ -158,6 +288,7 @@ function ProofreadStage({
   draft,
   setDraft,
   sourceName,
+  meta,
   maxText,
   onBack,
   onConfirm,
@@ -165,27 +296,47 @@ function ProofreadStage({
   draft: string;
   setDraft: (v: string) => void;
   sourceName: string;
+  meta: ProofreadMeta;
   maxText: number;
   onBack: () => void;
   onConfirm: () => void;
 }) {
   const over = draft.length > maxText;
   const empty = !draft.trim();
+  const ocrPages = meta.pages.filter((p) => p.method === "ocr").length;
   return (
     <section className="space-y-4">
+      {meta.warnings.length > 0 && (
+        <Alert className="border-amber-500/50 bg-amber-500/10">
+          <AlertTriangle className="size-4 text-amber-600" />
+          <AlertTitle>识别提示（请校对）</AlertTitle>
+          <AlertDescription>
+            <ul className="list-inside list-disc space-y-0.5">
+              {meta.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="rounded-lg border bg-card p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
             <FileText className="size-4 text-primary" />
             校对文本
             <Badge variant="secondary">{sourceName}</Badge>
+            <Badge variant="outline">{meta.method === "ocr" ? "OCR 识别" : "文本提取"}</Badge>
+            {meta.pageCount != null && (
+              <Badge variant="outline">
+                共 {meta.pageCount} 页{ocrPages > 0 && ` · ${ocrPages} 页 OCR`}
+              </Badge>
+            )}
           </div>
           <span className={cn("text-xs text-muted-foreground", over && "text-destructive")}>
             {draft.length} / {maxText} 字符
           </span>
         </div>
         <p className="mb-2 text-xs text-muted-foreground">
-          请检查并修正识别错误（尤其是 OCR 错字）。确认前不会发起任何分析请求。
+          请检查并修正识别错误（尤其是 OCR 错字、漏字与数字）。确认前不会发起任何分析请求。
         </p>
         <Textarea
           value={draft}
@@ -196,6 +347,24 @@ function ProofreadStage({
         {over && (
           <p className="mt-2 text-xs text-destructive">文本超过限制，请缩小材料或选择片段，系统不会静默截断。</p>
         )}
+
+        {meta.pages.length > 0 && (
+          <details className="mt-3 rounded-md border bg-secondary/40 p-2 text-xs">
+            <summary className="cursor-pointer font-medium text-muted-foreground">按页查看提取结果（{meta.pages.length} 页）</summary>
+            <div className="mt-2 space-y-2">
+              {meta.pages.map((p) => (
+                <div key={p.page} className="rounded border bg-card p-2">
+                  <div className="mb-1 flex items-center gap-2">
+                    <Badge variant="secondary">第 {p.page} 页</Badge>
+                    <span className="text-muted-foreground">{p.method === "ocr" ? "OCR" : "文本层"} · {p.text.length} 字符</span>
+                  </div>
+                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed">{p.text || "（本页未提取到文本）"}</pre>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
         <div className="mt-3 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={onBack}>
             <ArrowLeft className="size-4" />

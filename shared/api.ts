@@ -61,6 +61,27 @@ export interface AppConfig {
   privacyNotice: string;
 }
 
+// ---- extract（文件提取/OCR）----
+export type ExtractMethod = "text" | "ocr";
+
+export interface ExtractPage {
+  page: number;
+  text: string;
+  method: ExtractMethod;
+}
+
+export interface ExtractResult {
+  text: string;
+  sourceName: string;
+  fileType: string;
+  pageCount: number | null;
+  pages: ExtractPage[];
+  method: ExtractMethod;
+  ocrUsed: boolean;
+  warnings: string[];
+  needsReview: boolean;
+}
+
 // ---- contract ----
 export type ContractIntent = "ask" | "review" | "suggest_revision" | "draft_revision";
 export type FindingPriority = "confirm_first" | "needs_attention" | "insufficient_info";
