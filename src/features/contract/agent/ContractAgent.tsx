@@ -29,6 +29,7 @@ import {
   defaultQuestion,
   type ContractDoc,
   type Exchange,
+  type RevisionDraft,
   type RevisionSuggestion,
 } from "./types";
 
@@ -52,7 +53,8 @@ export function ContractAgent() {
   const [dragOver, setDragOver] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [activeExcerpt, setActiveExcerpt] = useState<Excerpt | null>(null);
-  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionDrafts, setRevisionDrafts] = useState<Record<string, RevisionDraft>>({});
+  const [revisionTargetId, setRevisionTargetId] = useState<string | null>(null);
   const [signingDate, setSigningDate] = useState("");
   const [textRecordId, setTextRecordId] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState("");
@@ -63,13 +65,23 @@ export function ContractAgent() {
 
   const busy = exchanges.some((exchange) => exchange.loading);
   const empty = !doc && exchanges.length === 0;
-  const completed = exchanges.filter((exchange) => exchange.result);
-  const originalFindingCount = completed.length ? completed[completed.length - 1].result!.findings.length : null;
-  const suggestions = exchanges.reduce<RevisionSuggestion[]>((list, exchange) => {
-    const revision = exchange.result?.revision;
-    if (revision) list.push({ id: exchange.id, text: revision.text, targetExcerpt: revision.targetExcerpt });
-    return list;
-  }, []);
+  const revisionExchangeIds = exchanges.filter((exchange) => exchange.result?.revision).map((exchange) => exchange.id);
+  const latestRevisionExchangeId = revisionExchangeIds.length
+    ? revisionExchangeIds[revisionExchangeIds.length - 1]
+    : null;
+  const revisionTarget = revisionTargetId
+    ? exchanges.find((exchange) => exchange.id === revisionTargetId) ?? null
+    : null;
+  const revisionDraft = revisionTargetId ? revisionDrafts[revisionTargetId] ?? null : null;
+  const revisionSuggestions: RevisionSuggestion[] = revisionTarget?.result?.revision
+    ? [
+        {
+          id: revisionTarget.id,
+          text: revisionTarget.result.revision.text,
+          targetExcerpt: revisionTarget.result.revision.targetExcerpt,
+        },
+      ]
+    : [];
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
@@ -79,7 +91,8 @@ export function ContractAgent() {
     setExchanges([]);
     setQuestion("");
     setActiveExcerpt(null);
-    setRevisionOpen(false);
+    setRevisionDrafts({});
+    setRevisionTargetId(null);
     setTextRecordId(null);
     setSaveNotice("");
     setSigningDate("");
@@ -118,7 +131,9 @@ export function ContractAgent() {
         eventDate: eventDate || null,
       });
       setExchanges((prev) =>
-        prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: false, result: data, meta } : exchange)),
+        prev.map((exchange) =>
+          exchange.id === id ? { ...exchange, loading: false, result: data, meta, docText: text } : exchange,
+        ),
       );
     } catch (err) {
       const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
@@ -133,7 +148,17 @@ export function ContractAgent() {
     const reviewQuestion = "请审查这份合同。";
     setQuestion("");
     setExchanges([
-      { id, question: reviewQuestion, intent: "review", auto: true, result: null, meta: null, error: null, loading: true },
+      {
+        id,
+        question: reviewQuestion,
+        intent: "review",
+        auto: true,
+        docText: nextDoc.text,
+        result: null,
+        meta: null,
+        error: null,
+        loading: true,
+      },
     ]);
     void run(id, reviewQuestion, "review", [], nextDoc.text, "");
   }
@@ -220,7 +245,7 @@ export function ContractAgent() {
     setQuestion("");
     setExchanges((prev) => [
       ...prev,
-      { id, question: displayQuestion, intent, result: null, meta: null, error: null, loading: true },
+      { id, question: displayQuestion, intent, docText: doc.text, result: null, meta: null, error: null, loading: true },
     ]);
     void run(id, displayQuestion, intent, conversation, doc.text);
   }
@@ -229,6 +254,13 @@ export function ContractAgent() {
     const index = exchanges.findIndex((exchange) => exchange.id === id);
     if (index === -1 || busy || !doc) return;
     const exchange = exchanges[index];
+    setRevisionDrafts((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    if (revisionTargetId === id) setRevisionTargetId(null);
     void run(id, exchange.question, exchange.intent, buildConversation(exchanges.slice(0, index)), doc.text);
   }
 
@@ -241,9 +273,75 @@ export function ContractAgent() {
     const conversation = buildConversation(exchanges);
     setExchanges((prev) => [
       ...prev,
-      { id, question: reviewQuestion, intent: "review", result: null, meta: null, error: null, loading: true },
+      {
+        id,
+        question: reviewQuestion,
+        intent: "review",
+        docText: doc.text,
+        result: null,
+        meta: null,
+        error: null,
+        loading: true,
+      },
     ]);
     void run(id, reviewQuestion, "review", conversation, doc.text);
+  }
+
+  function openRevision(exchangeId: string) {
+    const exchange = exchanges.find((item) => item.id === exchangeId);
+    if (!exchange?.result?.revision) return;
+    const originalText = exchange.docText ?? doc?.text ?? "";
+    setRevisionDrafts((prev) => {
+      if (prev[exchangeId]) return prev;
+      return {
+        ...prev,
+        [exchangeId]: {
+          exchangeId,
+          originalText,
+          copy: originalText,
+          applied: [],
+          selected: [],
+          notice: "",
+          archiveNotice: "",
+          archivedId: null,
+          result: null,
+          error: null,
+          loading: false,
+        },
+      };
+    });
+    setRevisionTargetId(exchangeId);
+  }
+
+  function updateRevisionDraft(exchangeId: string, patch: Partial<RevisionDraft>) {
+    setRevisionDrafts((prev) => {
+      const current = prev[exchangeId];
+      if (!current) return prev;
+      return { ...prev, [exchangeId]: { ...current, ...patch } };
+    });
+  }
+
+  function reReviewRevision(exchangeId: string) {
+    const draft = revisionDrafts[exchangeId];
+    if (!draft || draft.loading || !aiAvailable || !draft.copy.trim()) return;
+    updateRevisionDraft(exchangeId, { loading: true, error: null });
+    void api
+      .analyzeContract({
+        text: draft.copy,
+        textScope: "full",
+        question: "请复查这份修订副本，指出仍存在的风险。",
+        conversation: [],
+        intent: "review",
+        cityCode,
+        eventDate: signingDate || null,
+      })
+      .then(({ data }) => {
+        updateRevisionDraft(exchangeId, { loading: false, result: data });
+      })
+      .catch((err) => {
+        const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
+        updateRevisionDraft(exchangeId, { loading: false, error });
+      });
   }
 
   function openDoc(excerpt: Excerpt | null = null) {
@@ -320,10 +418,10 @@ export function ContractAgent() {
               合同文本
             </Button>
           )}
-          {suggestions.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => setRevisionOpen(true)}>
+          {latestRevisionExchangeId && (
+            <Button variant="ghost" size="sm" onClick={() => openRevision(latestRevisionExchangeId)}>
               修订副本
-              <span className="text-[11px] text-muted-foreground">{suggestions.length}</span>
+              <span className="text-[11px] text-muted-foreground">{revisionExchangeIds.length}</span>
             </Button>
           )}
           {(doc || exchanges.length > 0) && (
@@ -361,10 +459,10 @@ export function ContractAgent() {
                 textareaRef.current?.focus();
               }}
               onOpenDoc={() => openDoc()}
-              onOpenRevision={() => setRevisionOpen(true)}
+              onOpenRevision={openRevision}
               onQuickAction={(intent) => submit(intent)}
             />
-            <div ref={endRef} />
+            <div ref={endRef} className="scroll-mb-40" />
           </div>
         )}
 
@@ -422,17 +520,28 @@ export function ContractAgent() {
         maxText={maxText}
       />
 
-      <Sheet open={revisionOpen} onOpenChange={setRevisionOpen}>
+      <Sheet
+        open={revisionTargetId != null}
+        onOpenChange={(open) => {
+          if (!open) setRevisionTargetId(null);
+        }}
+      >
         <SheetContent className="w-full sm:max-w-2xl">
           <div className="h-full overflow-y-auto p-4 pt-10">
-            {doc && (
+            {revisionTarget && revisionDraft && (
               <RevisionCopyPanel
-                originalText={doc.text}
-                sourceName={doc.sourceName}
+                draft={revisionDraft}
+                sourceName={doc?.sourceName ?? ""}
                 signingDate={signingDate}
-                suggestions={suggestions}
+                suggestions={revisionSuggestions}
                 aiAvailable={aiAvailable}
-                originalFindingCount={originalFindingCount}
+                originalFindingCount={revisionTarget.result?.findings.length ?? null}
+                onDraftChange={(patch) => {
+                  if (revisionTargetId) updateRevisionDraft(revisionTargetId, patch);
+                }}
+                onReReview={() => {
+                  if (revisionTargetId) reReviewRevision(revisionTargetId);
+                }}
               />
             )}
           </div>

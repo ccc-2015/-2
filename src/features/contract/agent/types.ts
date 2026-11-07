@@ -35,8 +35,24 @@ export interface Exchange {
   question: string;
   intent: ContractIntent;
   auto?: boolean; // 上传/粘贴后自动发起的首轮审查，界面只显示合同卡片
+  docText?: string; // 本次请求使用的合同文本快照，供修订副本使用
   result: ContractResult | null;
   meta: ResponseMeta | null; // 二期知识库版本与警告从这里取
+  error: ApiError | null;
+  loading: boolean;
+}
+
+/** 修订副本状态按消息 id 保存在页面级，关闭抽屉不丢。 */
+export interface RevisionDraft {
+  exchangeId: string;
+  originalText: string;
+  copy: string;
+  applied: string[];
+  selected: string[];
+  notice: string;
+  archiveNotice: string;
+  archivedId: string | null;
+  result: ContractResult | null;
   error: ApiError | null;
   loading: boolean;
 }

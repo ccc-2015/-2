@@ -27,7 +27,7 @@ export function Thread({
   onLocate: (excerpt: Excerpt) => void;
   onFollowUp: (question: string) => void;
   onOpenDoc: () => void;
-  onOpenRevision: () => void;
+  onOpenRevision: (exchangeId: string) => void;
   onQuickAction: (intent: ContractIntent) => void;
 }) {
   return (
@@ -105,6 +105,7 @@ export function Thread({
 
             {exchange.result && (
               <ResultBlock
+                exchangeId={exchange.id}
                 result={exchange.result}
                 signingDate={signingDate}
                 isLast={index === exchanges.length - 1}
@@ -122,6 +123,7 @@ export function Thread({
 }
 
 function ResultBlock({
+  exchangeId,
   result,
   signingDate,
   isLast,
@@ -130,12 +132,13 @@ function ResultBlock({
   onOpenRevision,
   onQuickAction,
 }: {
+  exchangeId: string;
   result: ContractResult;
   signingDate: string;
   isLast: boolean;
   onLocate: (excerpt: Excerpt) => void;
   onFollowUp: (question: string) => void;
-  onOpenRevision: () => void;
+  onOpenRevision: (exchangeId: string) => void;
   onQuickAction: (intent: ContractIntent) => void;
 }) {
   return (
@@ -158,7 +161,12 @@ function ResultBlock({
               <span className="text-[11px] font-medium">修订草稿</span>
               <span className="text-[11px] text-muted-foreground">协商用，须自行检查。</span>
             </div>
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={onOpenRevision}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-[11px]"
+              onClick={() => onOpenRevision(exchangeId)}
+            >
               打开修订副本
             </Button>
           </div>
