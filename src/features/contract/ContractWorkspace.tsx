@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Loader2, ArrowLeft, ShieldAlert, Sparkles, Upload, AlertTriangle, Files, Send, RotateCw, MapPin, MessageSquare } from "lucide-react";
+import { FileText, Loader2, ArrowLeft, ShieldAlert, Sparkles, Upload, AlertTriangle, Files, Send, RotateCw, MapPin, MessageSquare, Copy, ClipboardCopy, Undo2, Check } from "lucide-react";
 import type { ContractResult, ContractIntent, Finding, ExtractResult, ExtractPage, Excerpt, ConversationTurn } from "@/shared/api";
 import { PRIORITY_LABELS } from "@/shared/api";
 import { api, ApiError, errorMessage } from "../../lib/api";
@@ -388,6 +388,12 @@ interface Exchange {
   loading: boolean;
 }
 
+interface RevisionSuggestion {
+  id: string;
+  text: string;
+  targetExcerpt: Excerpt | null;
+}
+
 function buildConversation(list: Exchange[]): ConversationTurn[] {
   const turns: ConversationTurn[] = [];
   for (const e of list) {
@@ -415,11 +421,18 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [showText, setShowText] = useState(false);
   const [active, setActive] = useState<Excerpt | null>(null);
+  const [copyOpen, setCopyOpen] = useState(false);
   const markRef = useRef<HTMLElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const aiAvailable = config?.aiAvailable ?? false;
   const busy = exchanges.some((e) => e.loading);
+
+  const suggestions: RevisionSuggestion[] = exchanges
+    .filter((e) => e.result?.revision)
+    .map((e) => ({ id: e.id, text: e.result!.revision!.text, targetExcerpt: e.result!.revision!.targetExcerpt }));
+  const completed = exchanges.filter((e) => e.result);
+  const originalFindingCount = completed.length ? completed[completed.length - 1].result!.findings.length : null;
 
   useEffect(() => {
     if (showText && active && markRef.current) {
@@ -486,9 +499,14 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
             <span className="text-muted-foreground">{text.length} 字符</span>
             {active && <Badge variant="secondary">已定位引文</Badge>}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowText((v) => !v)}>
               {showText ? "收起原文" : "查看原文"}
+            </Button>
+            <Button variant={copyOpen ? "secondary" : "ghost"} size="sm" onClick={() => setCopyOpen((v) => !v)}>
+              <Copy className="size-4" />
+              {copyOpen ? "收起修订副本" : "修订副本"}
+              {suggestions.length > 0 && <Badge variant="outline" className="ml-1">{suggestions.length}</Badge>}
             </Button>
             <Button variant="ghost" size="sm" onClick={onReinput}>重新校对</Button>
           </div>
@@ -514,6 +532,15 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
           </button>
         )}
       </div>
+
+      {copyOpen && (
+        <RevisionCopyPanel
+          originalText={text}
+          suggestions={suggestions}
+          aiAvailable={aiAvailable}
+          originalFindingCount={originalFindingCount}
+        />
+      )}
 
       <details className="rounded-lg border bg-card p-4" open={exchanges.length === 0}>
         <summary className="cursor-pointer text-sm font-medium">审查上下文（城市 / 日期）</summary>
@@ -691,7 +718,7 @@ function ResultView({
         <div className="rounded-md border border-primary/30 bg-secondary/40 p-3">
           <div className="mb-1 flex items-center gap-2">
             <Badge variant="outline" className="border-primary/40 text-primary">修订草稿</Badge>
-            <span className="text-xs text-muted-foreground">协商用，须自行检查；副本应用将在后续里程碑接入。</span>
+            <span className="text-xs text-muted-foreground">协商用，须自行检查；在「修订副本」面板中逐条或批量应用。</span>
           </div>
           {result.revision.targetExcerpt && (
             <button
@@ -757,6 +784,263 @@ function FindingCard({ finding, onLocate }: { finding: Finding; onLocate: (ex: E
         <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
           {finding.uncertainties.map((u, i) => <li key={i}>{u}</li>)}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function RevisionCopyPanel({
+  originalText,
+  suggestions,
+  aiAvailable,
+  originalFindingCount,
+}: {
+  originalText: string;
+  suggestions: RevisionSuggestion[];
+  aiAvailable: boolean;
+  originalFindingCount: number | null;
+}) {
+  const [copy, setCopy] = useState(originalText);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [applied, setApplied] = useState<Set<string>>(new Set());
+  const [notice, setNotice] = useState("");
+  const [result, setResult] = useState<ContractResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const dirty = copy !== originalText;
+  const pendingCount = suggestions.filter((s) => !applied.has(s.id)).length;
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+
+  function applyOne(s: RevisionSuggestion) {
+    if (applied.has(s.id)) return;
+    let next: string;
+    if (s.targetExcerpt) {
+      const target = s.targetExcerpt.text;
+      const idx = copy.indexOf(target);
+      if (idx === -1) {
+        setNotice(`未找到目标原文「${target.slice(0, 18)}${target.length > 18 ? "…" : ""}」，可能已被修改，请手动编辑副本。`);
+        return;
+      }
+      next = copy.slice(0, idx) + s.text + copy.slice(idx + target.length);
+    } else {
+      next = `${copy}\n\n【新增条款草稿】\n${s.text}`;
+    }
+    setCopy(next);
+    setApplied((prev) => new Set(prev).add(s.id));
+    setSelected((prev) => {
+      const n = new Set(prev);
+      n.delete(s.id);
+      return n;
+    });
+    setNotice("已应用 1 条建议到副本（原文不变）。");
+    setResult(null);
+  }
+
+  function applySelected() {
+    const items = suggestions.filter((s) => selected.has(s.id) && !applied.has(s.id));
+    if (items.length === 0) return;
+    let next = copy;
+    const done: string[] = [];
+    let skipped = 0;
+    for (const s of items) {
+      if (s.targetExcerpt) {
+        const target = s.targetExcerpt.text;
+        const idx = next.indexOf(target);
+        if (idx === -1) {
+          skipped++;
+          continue;
+        }
+        next = next.slice(0, idx) + s.text + next.slice(idx + target.length);
+      } else {
+        next = `${next}\n\n【新增条款草稿】\n${s.text}`;
+      }
+      done.push(s.id);
+    }
+    setCopy(next);
+    setApplied((prev) => {
+      const n = new Set(prev);
+      done.forEach((id) => n.add(id));
+      return n;
+    });
+    setSelected(new Set());
+    setNotice(`已应用 ${done.length} 条建议到副本${skipped ? `；${skipped} 条未找到目标原文，请手动编辑` : ""}（原文不变）。`);
+    setResult(null);
+  }
+
+  function discard() {
+    setCopy(originalText);
+    setApplied(new Set());
+    setSelected(new Set());
+    setResult(null);
+    setError(null);
+    setNotice("已放弃修改，副本恢复为原文。");
+  }
+
+  async function copyClipboard() {
+    try {
+      await navigator.clipboard.writeText(copy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setNotice("复制失败，请手动选择副本文本复制。");
+    }
+  }
+
+  async function reReview() {
+    if (loading || !aiAvailable || !copy.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await api.analyzeContract({
+        text: copy,
+        textScope: "full",
+        question: "请复查这份修订副本，指出仍存在的风险。",
+        conversation: [],
+        intent: "review",
+      });
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-card p-4">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Copy className="size-4 text-primary" />
+          修订副本
+          <Badge variant="outline">{dirty ? "已修改" : "与原文一致"}</Badge>
+        </div>
+        <span className="text-xs text-muted-foreground">原文只读保留，所有修改仅发生在副本。</span>
+      </div>
+
+      <Alert className="mb-3">
+        <ShieldAlert className="size-4" />
+        <AlertDescription>修订内容为协商草稿，须自行检查，不代替法律审定或自动签约。</AlertDescription>
+      </Alert>
+
+      <div className="mb-3 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-sm font-semibold">修订建议（{suggestions.length}）</h4>
+          {pendingCount > 0 && (
+            <Button size="sm" variant="outline" onClick={applySelected} disabled={selected.size === 0}>
+              <Check className="size-4" />
+              批量应用已选（{selected.size}）
+            </Button>
+          )}
+        </div>
+        {suggestions.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            暂无修订建议。请用「修改建议」或「起草修订」意图生成后，在此逐条或批量应用。
+          </p>
+        ) : (
+          suggestions.map((s) => (
+            <div key={s.id} className="rounded-md border bg-secondary/30 p-2">
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 accent-primary"
+                  checked={selected.has(s.id)}
+                  disabled={applied.has(s.id)}
+                  onChange={() => toggleSelect(s.id)}
+                  aria-label="选择此建议"
+                />
+                <div className="min-w-0 flex-1">
+                  {s.targetExcerpt && (
+                    <p className="mb-1 font-mono text-[11px] text-muted-foreground">目标原文：「{s.targetExcerpt.text}」</p>
+                  )}
+                  <p className="whitespace-pre-wrap font-mono text-xs">{s.text}</p>
+                </div>
+                <div className="shrink-0">
+                  {applied.has(s.id) ? (
+                    <Badge variant="secondary"><Check className="size-3" /> 已应用</Badge>
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={() => applyOne(s)}>应用</Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {notice && <p className="mb-2 text-xs text-primary">{notice}</p>}
+
+      <Label htmlFor="copy-editor" className="text-xs">副本全文（可编辑）</Label>
+      <Textarea
+        id="copy-editor"
+        value={copy}
+        onChange={(e) => {
+          setCopy(e.target.value);
+          setResult(null);
+        }}
+        className="mt-1 min-h-56 font-mono text-sm"
+        aria-label="修订副本全文"
+      />
+      <div className="mt-1 text-xs text-muted-foreground">{copy.length} 字符</div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={copyClipboard}>
+          <ClipboardCopy className="size-4" />
+          {copied ? "已复制" : "复制副本"}
+        </Button>
+        <Button size="sm" variant="outline" onClick={discard} disabled={!dirty && applied.size === 0}>
+          <Undo2 className="size-4" />
+          放弃修改
+        </Button>
+        <Button size="sm" onClick={reReview} disabled={loading || !aiAvailable || !copy.trim()}>
+          {loading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          {loading ? "复查中…" : "复查副本"}
+        </Button>
+      </div>
+
+      {!aiAvailable && <p className="mt-2 text-xs text-muted-foreground">服务端未配置模型密钥，复查暂不可用。</p>}
+
+      {error && (
+        <Alert variant="destructive" className="mt-3">
+          <ShieldAlert className="size-4" />
+          <AlertTitle>复查未完成</AlertTitle>
+          <AlertDescription>{error.message}{error.retryable && " 可稍后手动重试。"}</AlertDescription>
+        </Alert>
+      )}
+
+      {result && (
+        <div className="mt-3 space-y-2 rounded-md border bg-secondary/30 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-sm font-semibold">副本复查结果</h4>
+            {originalFindingCount != null && (
+              <Badge variant="outline">原文 {originalFindingCount} 条 → 副本 {result.findings.length} 条</Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">AI 辅助意见，仅供协商参考；请对比修改前后发现。</p>
+          {result.answer && <p className="whitespace-pre-wrap text-sm">{result.answer}</p>}
+          {result.findings.length > 0 ? (
+            <ul className="space-y-1">
+              {result.findings.map((f, i) => (
+                <li key={i} className="text-xs">
+                  <Badge variant="secondary">{PRIORITY_LABELS[f.priority]}</Badge>{" "}
+                  <span className="font-medium">{f.issue}</span>
+                  {f.excerpt && <span className="font-mono text-muted-foreground"> —「{f.excerpt.text}」</span>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">副本未发现明显风险项（仍建议自行核对）。</p>
+          )}
+        </div>
       )}
     </div>
   );
