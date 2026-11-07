@@ -20,8 +20,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RegionSelect } from "../../components/RegionSelect";
 import { EVIDENCE_STATUS_LABELS, type DisputeResult } from "@/shared/api";
 import { useConfig } from "../../lib/config-context";
+import { useRegionCode } from "../../lib/region";
 import { api, ApiError, errorMessage } from "../../lib/api";
 import type { ViewId } from "../../components/AppShell";
 import {
@@ -66,8 +68,8 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const selectedEvidence = toSelectedEvidence(allRecords, selectedIds);
   const overEvidenceLimit = selectedEvidence.length > maxEvidence;
 
+  const cityCode = useRegionCode();
   const [issue, setIssue] = useState("");
-  const [cityCode, setCityCode] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [counterparty, setCounterparty] = useState("");
   const [goal, setGoal] = useState("");
@@ -100,7 +102,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     try {
       const { data } = await api.diagnoseDispute({
         issue: issue.trim(),
-        cityCode: cityCode || undefined,
+        cityCode,
         eventDate: eventDate || null,
         counterparty: counterparty.trim(),
         goal: goal.trim(),
@@ -222,18 +224,8 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <Label htmlFor="dp-city" className="text-xs">城市（可选）</Label>
-                  <Select value={cityCode || "none"} onValueChange={(v) => setCityCode(v === "none" ? "" : v)}>
-                    <SelectTrigger id="dp-city" size="sm" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">未选择</SelectItem>
-                      {(config?.cities ?? []).map((c) => (
-                        <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="dp-city" className="text-xs">城市 / 地区</Label>
+                  <RegionSelect id="dp-city" />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="dp-date" className="text-xs">事件日期（可选）</Label>

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ConfigProvider, useConfig } from "./lib/config-context";
 import { AppShell, type ViewId } from "./components/AppShell";
-import { ContractWorkspace } from "./features/contract/ContractWorkspace";
+import { ContractAgent } from "./features/contract/agent/ContractAgent";
 import { EvidenceCanvas } from "./features/evidence/EvidenceCanvas";
 import { DisputePanel } from "./features/dispute/DisputePanel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -38,7 +38,7 @@ function Views() {
   return (
     <AppShell active={view} onNavigate={setView}>
       <div className={view === "contract" ? undefined : "hidden"}>
-        <ContractWorkspace />
+        <ContractAgent />
       </div>
       <div className={view === "evidence" ? undefined : "hidden"}>
         <EvidenceCanvas onNavigate={setView} />
