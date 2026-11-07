@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ClipboardPaste, FileText } from "lucide-react";
+import { AlertTriangle, FileText, ShieldCheck } from "lucide-react";
 import type { ContractIntent, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -13,9 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
 import { RegionSelect } from "../../../components/RegionSelect";
 import { api, ApiError, errorMessage } from "../../../lib/api";
 import { useConfig } from "../../../lib/config-context";
@@ -58,15 +56,13 @@ export function ContractAgent() {
   const [signingDate, setSigningDate] = useState("");
   const [textRecordId, setTextRecordId] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState("");
-  const [pasteOpen, setPasteOpen] = useState(false);
-  const [pasteText, setPasteText] = useState("");
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const busy = exchanges.some((exchange) => exchange.loading);
-  const firstTurn = !exchanges.some((exchange) => exchange.result);
+  const empty = !doc && exchanges.length === 0;
   const completed = exchanges.filter((exchange) => exchange.result);
   const originalFindingCount = completed.length ? completed[completed.length - 1].result!.findings.length : null;
   const suggestions = exchanges.reduce<RevisionSuggestion[]>((list, exchange) => {
@@ -100,7 +96,50 @@ export function ContractAgent() {
     setPendingConfirm({ title, description, action });
   }
 
+  async function run(
+    id: string,
+    displayQuestion: string,
+    intent: ContractIntent,
+    conversation: ReturnType<typeof buildConversation>,
+    text: string,
+    eventDate: string = signingDate,
+  ) {
+    setExchanges((prev) =>
+      prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: true, error: null } : exchange)),
+    );
+    try {
+      const { data, meta } = await api.analyzeContract({
+        text,
+        textScope: "full",
+        question: displayQuestion,
+        conversation,
+        intent,
+        cityCode,
+        eventDate: eventDate || null,
+      });
+      setExchanges((prev) =>
+        prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: false, result: data, meta } : exchange)),
+      );
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
+      setExchanges((prev) =>
+        prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: false, error } : exchange)),
+      );
+    }
+  }
+
+  function startReview(nextDoc: ContractDoc) {
+    const id = newId();
+    const reviewQuestion = "请审查这份合同。";
+    setQuestion("");
+    setExchanges([
+      { id, question: reviewQuestion, intent: "review", auto: true, result: null, meta: null, error: null, loading: true },
+    ]);
+    void run(id, reviewQuestion, "review", [], nextDoc.text, "");
+  }
+
   async function extractFile(file: File) {
+    if (uploading || busy) return;
     setUploadError(null);
     const maxBytes = config?.limits.maxFileBytes ?? 10 * 1024 * 1024;
     if (file.size > maxBytes) {
@@ -126,11 +165,16 @@ export function ContractAgent() {
           ocrUsed: data.ocrUsed,
           pages: data.pages,
         },
-        reviewed: !data.ocrUsed,
       };
       resetConversation();
       setDoc(nextDoc);
-      if (data.ocrUsed) setDocOpen(true);
+      if (!nextDoc.text.trim()) {
+        setUploadError(
+          new ApiError("invalid_input", "未识别到合同文本，请换一张更清晰的文件，或在合同文本中手动补充。", false),
+        );
+        return;
+      }
+      startReview(nextDoc);
     } catch (err) {
       setUploadError(err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false));
     } finally {
@@ -139,70 +183,38 @@ export function ContractAgent() {
   }
 
   function handleFile(file: File) {
-    if (uploading) return;
+    if (uploading || busy) return;
     if (doc || exchanges.length > 0) {
-      askConfirm("更换合同？", "更换后会开始新对话，当前对话与审查结果不会保留。", () => void extractFile(file));
+      askConfirm("开始审查新合同？", "当前合同与对话将被清空，已存为证据的内容不受影响。", () => void extractFile(file));
     } else {
       void extractFile(file);
     }
   }
 
-  function importPaste() {
-    const text = pasteText.trim();
-    if (!text) return;
-    resetConversation();
-    setDoc({ text, sourceName: "粘贴文本", meta: PASTE_META, reviewed: true });
-    setPasteOpen(false);
-    setPasteText("");
-  }
+  function submit(override?: ContractIntent) {
+    if (busy || !aiAvailable) return;
+    const trimmed = question.trim();
 
-  function removeDoc() {
-    if (exchanges.length > 0) {
-      askConfirm("移除合同？", "当前对话与审查结果将一并清空，已存为证据的内容不受影响。", resetAll);
-    } else {
-      resetAll();
-    }
-  }
-
-  function newChat() {
-    if (!doc && exchanges.length === 0) return;
-    askConfirm("开始新对话？", "当前合同与对话将被清空，已存为证据的内容不受影响。", resetAll);
-  }
-
-  async function run(id: string, displayQuestion: string, intent: ContractIntent, conversation: ReturnType<typeof buildConversation>) {
-    if (!doc) return;
-    setExchanges((prev) => prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: true, error: null } : exchange)));
-    try {
-      const { data, meta } = await api.analyzeContract({
-        text: doc.text,
-        textScope: "full",
-        question: displayQuestion,
-        conversation,
-        intent,
-        cityCode,
-        eventDate: signingDate || null,
-      });
-      setExchanges((prev) =>
-        prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: false, result: data, meta } : exchange)),
-      );
-    } catch (err) {
-      const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
-      setExchanges((prev) =>
-        prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: false, error } : exchange)),
-      );
-    }
-  }
-
-  async function submit(override?: ContractIntent) {
-    if (!doc || !doc.text.trim() || busy || !aiAvailable) return;
-    if (!doc.reviewed) {
-      setDocOpen(true);
+    if (!doc) {
+      if (!trimmed) return;
+      if (trimmed.length > maxText) {
+        setUploadError(
+          new ApiError("payload_too_large", `合同文本超过 ${maxText} 字符限制，请缩小材料或分段处理。`, false),
+        );
+        return;
+      }
+      const nextDoc: ContractDoc = { text: trimmed, sourceName: "粘贴文本", meta: PASTE_META };
+      resetConversation();
+      setDoc(nextDoc);
+      startReview(nextDoc);
       return;
     }
-    const intent = override ?? (firstTurn ? "review" : "ask");
-    const trimmed = question.trim();
-    if (intent === "ask" && !trimmed) return;
+
+    if (!trimmed && !override) return;
+    const intent = override ?? "ask";
     const displayQuestion = trimmed || defaultQuestion(intent);
+    if (!displayQuestion) return;
+
     const id = newId();
     const conversation = buildConversation(exchanges);
     setQuestion("");
@@ -210,14 +222,28 @@ export function ContractAgent() {
       ...prev,
       { id, question: displayQuestion, intent, result: null, meta: null, error: null, loading: true },
     ]);
-    await run(id, displayQuestion, intent, conversation);
+    void run(id, displayQuestion, intent, conversation, doc.text);
   }
 
   function retry(id: string) {
     const index = exchanges.findIndex((exchange) => exchange.id === id);
     if (index === -1 || busy || !doc) return;
     const exchange = exchanges[index];
-    void run(id, exchange.question, exchange.intent, buildConversation(exchanges.slice(0, index)));
+    void run(id, exchange.question, exchange.intent, buildConversation(exchanges.slice(0, index)), doc.text);
+  }
+
+  function reReview() {
+    if (!doc || busy || !aiAvailable) return;
+    setDocOpen(false);
+    setActiveExcerpt(null);
+    const id = newId();
+    const reviewQuestion = "请重新审查这份合同。";
+    const conversation = buildConversation(exchanges);
+    setExchanges((prev) => [
+      ...prev,
+      { id, question: reviewQuestion, intent: "review", result: null, meta: null, error: null, loading: true },
+    ]);
+    void run(id, reviewQuestion, "review", conversation, doc.text);
   }
 
   function openDoc(excerpt: Excerpt | null = null) {
@@ -233,11 +259,6 @@ export function ContractAgent() {
   function updateDocText(text: string) {
     setDoc((prev) => (prev ? { ...prev, text } : prev));
     setSaveNotice("");
-  }
-
-  function confirmReviewed() {
-    setDoc((prev) => (prev ? { ...prev, reviewed: true } : prev));
-    setDocOpen(false);
   }
 
   function saveDocEvidence() {
@@ -265,16 +286,21 @@ export function ContractAgent() {
     setSaveNotice(existing ? "已更新证据画布中的合同原文。" : "已存为签约证据，可在证据画布查看。");
   }
 
+  function newChat() {
+    if (!doc && exchanges.length === 0) return;
+    askConfirm("开始新对话？", "当前合同与对话将被清空，已存为证据的内容不受影响。", resetAll);
+  }
+
   function onDrop(event: React.DragEvent) {
     event.preventDefault();
     setDragOver(false);
     const file = event.dataTransfer.files?.[0];
-    if (file && !uploading) handleFile(file);
+    if (file && !uploading && !busy) handleFile(file);
   }
 
   return (
     <div
-      className="mx-auto flex min-h-[calc(100dvh-7rem)] w-full max-w-3xl flex-col px-4 pb-4 pt-5 md:min-h-dvh md:px-8 md:pt-8"
+      className="mx-auto flex min-h-[calc(100dvh-7rem)] w-full max-w-[680px] flex-col px-4 pb-4 pt-5 md:min-h-dvh md:px-6 md:pt-6"
       onDragOver={(event) => {
         event.preventDefault();
         if (!uploading) setDragOver(true);
@@ -308,79 +334,75 @@ export function ContractAgent() {
         </div>
       </header>
 
-      <div className="flex-1 py-5">
-        {exchanges.length === 0 && !doc && (
-          <div className="flex min-h-[45vh] flex-col items-center justify-center px-4 text-center">
-            <FileText className="size-7 text-muted-foreground/70" />
-            <p className="mt-3 text-[15px] font-medium">把合同发给我</p>
-            <p className="mt-1 max-w-sm text-[12px] leading-relaxed text-muted-foreground">
-              点击输入框左侧的 + 上传文件，或粘贴文本。之后可以直接问押金、退租、维修责任。
+      <div className={empty ? "flex flex-1 flex-col justify-center" : "flex flex-1 flex-col"}>
+        {empty ? (
+          <div className="flex flex-col items-center px-4 text-center">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-foreground text-background shadow-sm">
+              <ShieldCheck className="size-5" />
+            </span>
+            <h2 className="mt-4 text-[22px] font-semibold tracking-tight">把合同发给我</h2>
+            <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-muted-foreground">
+              上传合同图片、PDF，或直接粘贴合同文本；我会先看押金、退租和维修责任。
             </p>
-            <Button size="sm" variant="outline" className="mt-4" onClick={() => setPasteOpen(true)}>
-              <ClipboardPaste className="size-3.5" />
-              粘贴文本
-            </Button>
+            <p className="mt-1 text-[11px] text-muted-foreground">首条消息会直接开始审查，之后可以继续追问。</p>
+          </div>
+        ) : (
+          <div className="pb-28 pt-5">
+            <Thread
+              exchanges={exchanges}
+              doc={doc}
+              busy={busy}
+              aiAvailable={aiAvailable}
+              signingDate={signingDate}
+              onRetry={retry}
+              onLocate={openDoc}
+              onFollowUp={(next) => {
+                setQuestion(next);
+                textareaRef.current?.focus();
+              }}
+              onOpenDoc={() => openDoc()}
+              onOpenRevision={() => setRevisionOpen(true)}
+              onQuickAction={(intent) => submit(intent)}
+            />
+            <div ref={endRef} />
           </div>
         )}
 
-        {exchanges.length === 0 && doc && (
-          <div className="flex min-h-[30vh] items-center justify-center px-6 text-center">
-            <p className="max-w-sm text-[12px] leading-relaxed text-muted-foreground">
-              已读取 {doc.text.length} 字符。直接发送开始整体审查，或先输入你想确认的条款。
+        <div
+          className={
+            empty
+              ? "mt-8"
+              : "sticky bottom-0 z-10 mt-4 -mx-4 border-t border-border/60 bg-background/85 px-4 py-3 backdrop-blur-xl md:-mx-6 md:px-6"
+          }
+        >
+          <div className="mx-auto w-full max-w-[680px]">
+            {uploadError && (
+              <Alert variant="destructive" className="mb-2 py-2">
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  {uploadError.message}
+                  {uploadError.retryable && " 可稍后重试。"}
+                </AlertDescription>
+              </Alert>
+            )}
+            <Composer
+              hasDoc={!!doc}
+              uploading={uploading}
+              busy={busy}
+              aiAvailable={aiAvailable}
+              dragOver={dragOver}
+              text={question}
+              onTextChange={setQuestion}
+              onSend={() => submit()}
+              onFile={handleFile}
+              textareaRef={textareaRef}
+            />
+            <p className="mt-1.5 text-center text-[10px] leading-relaxed text-muted-foreground">
+              {!aiAvailable
+                ? "服务端未配置模型密钥，审查暂不可用。"
+                : "AI 辅助意见，不构成法律结论；请核对原文。合同全文不自动保存。"}
             </p>
           </div>
-        )}
-
-        {exchanges.length > 0 && (
-          <Thread
-            exchanges={exchanges}
-            doc={doc}
-            busy={busy}
-            aiAvailable={aiAvailable}
-            signingDate={signingDate}
-            onRetry={retry}
-            onLocate={openDoc}
-            onFollowUp={(next) => {
-              setQuestion(next);
-              textareaRef.current?.focus();
-            }}
-            onOpenDoc={() => openDoc()}
-            onOpenRevision={() => setRevisionOpen(true)}
-          />
-        )}
-        <div ref={endRef} />
-      </div>
-
-      <div className="sticky bottom-0 z-10 mt-auto -mx-4 border-t border-border/70 bg-background/85 px-4 py-3 backdrop-blur-xl md:-mx-8 md:px-8">
-        <div className="mx-auto w-full max-w-3xl">
-          {uploadError && (
-            <Alert variant="destructive" className="mb-2 py-2">
-              <AlertTriangle className="size-4" />
-              <AlertDescription>
-                {uploadError.message}
-                {uploadError.retryable && " 可稍后重试。"}
-              </AlertDescription>
-            </Alert>
-          )}
-          <Composer
-            doc={doc}
-            uploading={uploading}
-            busy={busy}
-            aiAvailable={aiAvailable}
-            dragOver={dragOver}
-            firstTurn={firstTurn}
-            text={question}
-            onTextChange={setQuestion}
-            onSend={() => void submit()}
-            onQuickAction={(intent) => void submit(intent)}
-            onFile={handleFile}
-            onOpenDoc={() => openDoc()}
-            onRemoveDoc={removeDoc}
-            textareaRef={textareaRef}
-          />
-          <p className="mt-1 px-1 text-[10px] leading-relaxed text-muted-foreground">
-            合同全文不自动持久化；点击分析即表示将所确认的文本提交给模型服务。
-          </p>
         </div>
       </div>
 
@@ -391,10 +413,11 @@ export function ContractAgent() {
         signingDate={signingDate}
         onSigningDateChange={setSigningDate}
         onTextChange={updateDocText}
-        onConfirmReviewed={confirmReviewed}
+        onReReview={reReview}
         onSaveEvidence={saveDocEvidence}
         saveNotice={saveNotice}
         saved={textRecordId != null}
+        busy={busy}
         activeExcerpt={activeExcerpt}
         maxText={maxText}
       />
@@ -415,32 +438,6 @@ export function ContractAgent() {
           </div>
         </SheetContent>
       </Sheet>
-
-      <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>粘贴合同文本</DialogTitle>
-            <DialogDescription className="text-xs">
-              粘贴后会作为一份新合同开始对话；文本不自动保存。
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={pasteText}
-            onChange={(event) => setPasteText(event.target.value)}
-            placeholder="将合同全文粘贴到此处…"
-            className="min-h-64 font-mono text-sm"
-            aria-label="合同文本"
-          />
-          <div className="flex items-center justify-between gap-2">
-            <span className={pasteText.length > maxText ? "text-[11px] text-destructive" : "text-[11px] text-muted-foreground"}>
-              {pasteText.length} / {maxText} 字符
-            </span>
-            <Button onClick={importPaste} disabled={!pasteText.trim() || pasteText.length > maxText}>
-              导入为合同
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog
         open={pendingConfirm != null}

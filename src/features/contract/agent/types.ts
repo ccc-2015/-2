@@ -28,13 +28,13 @@ export interface ContractDoc {
   text: string;
   sourceName: string;
   meta: DocumentMeta;
-  reviewed: boolean; // OCR 识别须由用户显式核对后才能发送
 }
 
 export interface Exchange {
   id: string;
   question: string;
   intent: ContractIntent;
+  auto?: boolean; // 上传/粘贴后自动发起的首轮审查，界面只显示合同卡片
   result: ContractResult | null;
   meta: ResponseMeta | null; // 二期知识库版本与警告从这里取
   error: ApiError | null;
@@ -46,19 +46,6 @@ export interface RevisionSuggestion {
   text: string;
   targetExcerpt: Excerpt | null;
 }
-
-export const QUICK_ACTIONS: { id: ContractIntent; label: string }[] = [
-  { id: "review", label: "整体审查" },
-  { id: "suggest_revision", label: "修改建议" },
-  { id: "draft_revision", label: "起草修订" },
-];
-
-export const INTENT_LABELS: Record<ContractIntent, string> = {
-  ask: "追问",
-  review: "整体审查",
-  suggest_revision: "修改建议",
-  draft_revision: "起草修订",
-};
 
 export function defaultQuestion(intent: ContractIntent): string {
   if (intent === "review") return "请审查这份合同。";

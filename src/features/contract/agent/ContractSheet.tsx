@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Check, FileText, Pencil, Save } from "lucide-react";
+import { AlertTriangle, FileText, Pencil, RefreshCw, Save } from "lucide-react";
 import type { Excerpt } from "@/shared/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +18,11 @@ export function ContractSheet({
   signingDate,
   onSigningDateChange,
   onTextChange,
-  onConfirmReviewed,
+  onReReview,
   onSaveEvidence,
   saveNotice,
   saved,
+  busy,
   activeExcerpt,
   maxText,
 }: {
@@ -31,27 +32,24 @@ export function ContractSheet({
   signingDate: string;
   onSigningDateChange: (value: string) => void;
   onTextChange: (value: string) => void;
-  onConfirmReviewed: () => void;
+  onReReview: () => void;
   onSaveEvidence: () => void;
   saveNotice: string;
   saved: boolean;
+  busy: boolean;
   activeExcerpt: Excerpt | null;
   maxText: number;
 }) {
   const [mode, setMode] = useState<"view" | "edit">("view");
   const markRef = useRef<HTMLElement>(null);
 
-  const ocrPending = !!doc && doc.meta.ocrUsed && !doc.reviewed;
+  const ocrUsed = !!doc && doc.meta.ocrUsed;
   const over = !!doc && doc.text.length > maxText;
 
   useEffect(() => {
     if (!open) return;
-    if (activeExcerpt) {
-      setMode("view");
-      return;
-    }
-    setMode(doc?.meta.ocrUsed && !doc.reviewed ? "edit" : "view");
-  }, [open, activeExcerpt, doc?.meta.ocrUsed, doc?.reviewed]);
+    setMode("view");
+  }, [open, activeExcerpt]);
 
   useEffect(() => {
     if (open && mode === "view" && activeExcerpt) {
@@ -81,7 +79,7 @@ export function ContractSheet({
             {doc.meta.pageCount != null && <Badge variant="outline">{doc.meta.pageCount} 页</Badge>}
           </div>
           <SheetDescription className="text-[11px]">
-            {doc.text.length} 字符 · {ocrPending ? "OCR 识别文本，请核对后发送" : "已确认文本"}
+            {doc.text.length} 字符 · {ocrUsed ? "OCR 识别文本，可核对后重新审查" : "文本提取"}
           </SheetDescription>
         </SheetHeader>
 
@@ -100,12 +98,12 @@ export function ContractSheet({
             </Alert>
           )}
 
-          {ocrPending && (
+          {ocrUsed && (
             <Alert className="border-amber-500/50 bg-amber-500/10">
               <AlertTriangle className="size-4 text-amber-600" />
-              <AlertTitle>OCR 识别待核对</AlertTitle>
+              <AlertTitle>OCR 识别提示</AlertTitle>
               <AlertDescription>
-                识别文本可能有错字、漏字或数字错误，请对照原件检查；核对前不会发送审查请求。
+                识别文本可能有错字、漏字或数字错误；可直接编辑，改完点「重新审查」使用新文本。
               </AlertDescription>
             </Alert>
           )}
@@ -164,7 +162,7 @@ export function ContractSheet({
 
           {mode === "edit" && (
             <p className="text-[11px] text-muted-foreground">
-              修改后，后续追问会使用新文本；已完成的审查不会自动重跑。
+              修改后点「重新审查」使用新文本；已完成的审查不会自动重跑。
             </p>
           )}
 
@@ -216,15 +214,18 @@ export function ContractSheet({
               {saved ? "更新证据" : "存为证据"}
             </Button>
             {saveNotice && <p className="text-[11px] text-primary">{saveNotice}</p>}
-            <div className="ml-auto flex gap-2">
-              {ocrPending && (
-                <Button size="sm" onClick={onConfirmReviewed} disabled={!doc.text.trim() || over}>
-                  <Check className="size-3.5" />
-                  核对无误
-                </Button>
-              )}
-              <Button size="sm" variant={ocrPending ? "ghost" : "default"} onClick={() => onOpenChange(false)}>
-                {ocrPending ? "稍后" : "完成"}
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onReReview}
+                disabled={!doc.text.trim() || over || busy}
+              >
+                <RefreshCw className="size-3.5" />
+                重新审查
+              </Button>
+              <Button size="sm" onClick={() => onOpenChange(false)}>
+                完成
               </Button>
             </div>
           </div>
