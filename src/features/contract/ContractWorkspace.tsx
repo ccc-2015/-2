@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Loader2, ArrowLeft, ShieldAlert, Upload, AlertTriangle, Files, ArrowUp, RefreshCw, RotateCw, MapPin, Copy, ClipboardCopy, Undo2, Check } from "lucide-react";
+import { FileText, Loader2, ArrowLeft, ShieldAlert, Upload, AlertTriangle, Files, ArrowUp, RefreshCw, RotateCw, MapPin, Copy, ClipboardCopy, Undo2, Check, Save } from "lucide-react";
 import type { ContractResult, ContractIntent, Finding, ExtractResult, ExtractPage, Excerpt, ConversationTurn } from "@/shared/api";
 import { PRIORITY_LABELS } from "@/shared/api";
 import { api, ApiError, errorMessage } from "../../lib/api";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { newId, saveRecordChecked, type EvidenceRecord } from "../evidence/store";
 
 type Stage = "input" | "proofread" | "review";
 
@@ -100,6 +101,7 @@ export function ContractWorkspace() {
       {stage === "review" && (
         <ReviewStage
           text={confirmed}
+          sourceName={sourceName}
           onReinput={() => {
             setDraft(confirmed);
             setStage("proofread");
@@ -399,10 +401,12 @@ const INTENT_LABELS: Record<ContractIntent, string> = {
   draft_revision: "起草修订",
 };
 
-function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void }) {
+function ReviewStage({ text, sourceName, onReinput }: { text: string; sourceName: string; onReinput: () => void }) {
   const { config } = useConfig();
   const [cityCode, setCityCode] = useState("CN");
   const [eventDate, setEventDate] = useState("");
+  const [textRecordId, setTextRecordId] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState("");
   const [question, setQuestion] = useState("");
   const [intent, setIntent] = useState<ContractIntent>("review");
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
@@ -436,6 +440,30 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
     setQuestion(q);
     setIntent("ask");
     composerRef.current?.focus();
+  }
+
+  function saveContractText() {
+    const existing = textRecordId != null;
+    const record: EvidenceRecord = {
+      id: textRecordId ?? newId(),
+      stage: "signing",
+      occurredAt: eventDate || null,
+      recordedAt: new Date().toISOString(),
+      description: `合同原文（已确认，${text.length} 字符）`,
+      contractClause: "",
+      materialName: sourceName,
+      materialType: "合同文本",
+      materialStatus: "present",
+      amountCents: null,
+      reading: null,
+      content: text,
+    };
+    if (!saveRecordChecked(record, existing)) {
+      setSaveNotice("本地存储空间不足，未能保存为证据。");
+      return;
+    }
+    setTextRecordId(record.id);
+    setSaveNotice(existing ? "已更新证据画布中的合同原文。" : "已存为签约证据，可在证据画布查看。");
   }
 
   async function run(id: string, q: string, it: ContractIntent, conv: ConversationTurn[]) {
@@ -491,6 +519,10 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
             <Button variant="ghost" size="sm" onClick={() => setShowText((v) => !v)}>
               {showText ? "收起原文" : "查看原文"}
             </Button>
+            <Button variant="ghost" size="sm" onClick={saveContractText}>
+              <Save className="size-3.5" />
+              {textRecordId ? "更新证据" : "原文存为证据"}
+            </Button>
             <Button variant={copyOpen ? "secondary" : "ghost"} size="sm" onClick={() => setCopyOpen((v) => !v)}>
               <Copy className="size-3.5" />
               {copyOpen ? "收起副本" : "修订副本"}
@@ -499,6 +531,7 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
             <Button variant="ghost" size="sm" onClick={onReinput}>重新校对</Button>
           </div>
         </div>
+        {saveNotice && <p className="mt-2 text-[11px] text-primary">{saveNotice}</p>}
         {showText && (
           <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-secondary/60 p-3 font-mono text-xs leading-relaxed">
             {active ? (
@@ -524,6 +557,8 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
       {copyOpen && (
         <RevisionCopyPanel
           originalText={text}
+          sourceName={sourceName}
+          signingDate={eventDate}
           suggestions={suggestions}
           aiAvailable={aiAvailable}
           originalFindingCount={originalFindingCount}
@@ -560,7 +595,7 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
       ) : (
         <div className="space-y-5">
           {exchanges.map((ex) => (
-            <ExchangeView key={ex.id} exchange={ex} busy={busy} onRetry={() => retry(ex.id)} onLocate={locate} onFollowUp={followUp} />
+            <ExchangeView key={ex.id} exchange={ex} busy={busy} signingDate={eventDate} onRetry={() => retry(ex.id)} onLocate={locate} onFollowUp={followUp} />
           ))}
         </div>
       )}
@@ -634,12 +669,14 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
 function ExchangeView({
   exchange,
   busy,
+  signingDate,
   onRetry,
   onLocate,
   onFollowUp,
 }: {
   exchange: Exchange;
   busy: boolean;
+  signingDate: string;
   onRetry: () => void;
   onLocate: (ex: Excerpt) => void;
   onFollowUp: (q: string) => void;
@@ -674,17 +711,19 @@ function ExchangeView({
         </Alert>
       )}
 
-      {exchange.result && <ResultView result={exchange.result} onLocate={onLocate} onFollowUp={onFollowUp} />}
+      {exchange.result && <ResultView result={exchange.result} signingDate={signingDate} onLocate={onLocate} onFollowUp={onFollowUp} />}
     </div>
   );
 }
 
 function ResultView({
   result,
+  signingDate,
   onLocate,
   onFollowUp,
 }: {
   result: ContractResult;
+  signingDate: string;
   onLocate: (ex: Excerpt) => void;
   onFollowUp: (q: string) => void;
 }) {
@@ -700,7 +739,7 @@ function ResultView({
         <div className="space-y-2">
           <h3 className="text-[13px] font-semibold text-muted-foreground">风险提示（按审查优先级）</h3>
           {result.findings.map((f, i) => (
-            <FindingCard key={i} finding={f} onLocate={onLocate} />
+            <FindingCard key={i} finding={f} signingDate={signingDate} onLocate={onLocate} />
           ))}
         </div>
       )}
@@ -746,13 +785,46 @@ function ResultView({
   );
 }
 
-function FindingCard({ finding, onLocate }: { finding: Finding; onLocate: (ex: Excerpt) => void }) {
+function FindingCard({ finding, signingDate, onLocate }: { finding: Finding; signingDate: string; onLocate: (ex: Excerpt) => void }) {
+  const [saved, setSaved] = useState(false);
+  const [notice, setNotice] = useState("");
   const tone =
     finding.priority === "confirm_first"
       ? "text-amber-600"
       : finding.priority === "needs_attention"
         ? "text-primary"
         : "text-muted-foreground";
+
+  function saveFinding() {
+    if (saved) return;
+    const excerpt = finding.excerpt?.text.trim() ?? "";
+    const description = [
+      `风险提示（${PRIORITY_LABELS[finding.priority]}）：${finding.issue}`,
+      finding.impact,
+      excerpt ? `原文：「${excerpt}」` : "",
+      finding.suggestedQuestion ? `建议确认：${finding.suggestedQuestion}` : "",
+    ].filter(Boolean).join("\n");
+    const record: EvidenceRecord = {
+      id: newId(),
+      stage: "signing",
+      occurredAt: signingDate || null,
+      recordedAt: new Date().toISOString(),
+      description,
+      contractClause: excerpt,
+      materialName: finding.issue.slice(0, 40),
+      materialType: "合同审查风险",
+      materialStatus: "to_confirm",
+      amountCents: null,
+      reading: null,
+    };
+    if (!saveRecordChecked(record)) {
+      setNotice("本地存储空间不足，未能保存。");
+      return;
+    }
+    setSaved(true);
+    setNotice("已存为签约证据。");
+  }
+
   return (
     <div className="rounded-xl border border-border/70 bg-background p-3">
       <div className="mb-1 flex flex-wrap items-baseline gap-2">
@@ -781,17 +853,28 @@ function FindingCard({ finding, onLocate }: { finding: Finding; onLocate: (ex: E
           {finding.uncertainties.map((u, i) => <li key={i}>{u}</li>)}
         </ul>
       )}
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+        {notice && <p className="mr-auto text-[11px] text-primary">{notice}</p>}
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] text-muted-foreground" onClick={saveFinding} disabled={saved}>
+          <Save className="size-3" />
+          {saved ? "已存为证据" : "存为证据"}
+        </Button>
+      </div>
     </div>
   );
 }
 
 function RevisionCopyPanel({
   originalText,
+  sourceName,
+  signingDate,
   suggestions,
   aiAvailable,
   originalFindingCount,
 }: {
   originalText: string;
+  sourceName: string;
+  signingDate: string;
   suggestions: RevisionSuggestion[];
   aiAvailable: boolean;
   originalFindingCount: number | null;
@@ -804,6 +887,8 @@ function RevisionCopyPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [copied, setCopied] = useState(false);
+  const [archivedId, setArchivedId] = useState<string | null>(null);
+  const [archiveNotice, setArchiveNotice] = useState("");
 
   const dirty = copy !== originalText;
   const pendingCount = suggestions.filter((s) => !applied.has(s.id)).length;
@@ -890,6 +975,32 @@ function RevisionCopyPanel({
     } catch {
       setNotice("复制失败，请手动选择副本文本复制。");
     }
+  }
+
+  function saveCopy() {
+    if (!copy.trim()) return;
+    const existing = archivedId != null;
+    const record: EvidenceRecord = {
+      id: archivedId ?? newId(),
+      stage: "signing",
+      occurredAt: signingDate || null,
+      recordedAt: new Date().toISOString(),
+      description: `合同修订副本（${copy.length} 字符，含原文对比）`,
+      contractClause: "",
+      materialName: `${sourceName} · 修订副本`,
+      materialType: "合同修订副本",
+      materialStatus: "present",
+      amountCents: null,
+      reading: null,
+      content: copy,
+      originalText,
+    };
+    if (!saveRecordChecked(record, existing)) {
+      setArchiveNotice("本地存储空间不足，未能保存。");
+      return;
+    }
+    setArchivedId(record.id);
+    setArchiveNotice(existing ? "已更新证据画布中的修订副本。" : "修订副本已存为签约证据，含原文对比。");
   }
 
   async function reReview() {
@@ -993,6 +1104,10 @@ function RevisionCopyPanel({
           <ClipboardCopy className="size-4" />
           {copied ? "已复制" : "复制副本"}
         </Button>
+        <Button size="sm" variant="outline" onClick={saveCopy} disabled={!copy.trim()}>
+          <Save className="size-4" />
+          {archivedId ? "更新证据存档" : "存为签约证据"}
+        </Button>
         <Button size="sm" variant="outline" onClick={discard} disabled={!dirty && applied.size === 0}>
           <Undo2 className="size-4" />
           放弃修改
@@ -1002,6 +1117,8 @@ function RevisionCopyPanel({
           {loading ? "复查中…" : "复查副本"}
         </Button>
       </div>
+
+      {archiveNotice && <p className="mt-2 text-xs text-primary">{archiveNotice}</p>}
 
       {!aiAvailable && <p className="mt-2 text-xs text-muted-foreground">服务端未配置模型密钥，复查暂不可用。</p>}
 

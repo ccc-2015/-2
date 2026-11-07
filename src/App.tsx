@@ -34,9 +34,18 @@ function ConfigGate({ children }: { children: ReactNode }) {
 
 function Views() {
   const [view, setView] = useState<ViewId>("contract");
+  // 三个视图常驻挂载，只切换可见性：切模块不丢失合同文本、对话、修订副本与争议表单。
   return (
     <AppShell active={view} onNavigate={setView}>
-      {view === "contract" ? <ContractWorkspace /> : view === "evidence" ? <EvidenceCanvas onNavigate={setView} /> : <DisputePanel onNavigate={setView} />}
+      <div className={view === "contract" ? undefined : "hidden"}>
+        <ContractWorkspace />
+      </div>
+      <div className={view === "evidence" ? undefined : "hidden"}>
+        <EvidenceCanvas onNavigate={setView} />
+      </div>
+      <div className={view === "dispute" ? undefined : "hidden"}>
+        <DisputePanel onNavigate={setView} />
+      </div>
     </AppShell>
   );
 }

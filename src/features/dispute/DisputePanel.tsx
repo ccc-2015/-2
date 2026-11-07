@@ -10,6 +10,7 @@ import {
   CalendarClock,
   AlertTriangle,
   Check,
+  BookmarkPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,9 @@ import {
   selection,
   toSelectedEvidence,
   yuanToCents,
+  newId,
+  saveRecordChecked,
+  type EvidenceRecord,
 } from "../evidence/store";
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -45,6 +49,12 @@ const STATUS_OPTIONS = [
   { id: "resolved", label: "已解决" },
   { id: "unresolved", label: "未解决" },
 ];
+
+function todayLocal(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 
 export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => void }) {
   const { config } = useConfig();
@@ -72,7 +82,14 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const [error, setError] = useState<ApiError | null>(null);
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("not_contacted");
+  const [progressNotice, setProgressNotice] = useState("");
+  const [scriptNotice, setScriptNotice] = useState("");
+  const [archivedScripts, setArchivedScripts] = useState<Record<string, string>>({});
 
+  const selectedChannelLabel = selectedChannelId
+    ? CHANNEL_LABELS[selectedChannelId] ?? selectedChannelId
+    : "未选择方向";
+  const scriptArchiveId = archivedScripts[selectedChannelId ?? "unknown"];
   const busy = loading;
   const canSubmit = aiAvailable && issue.trim().length > 0 && !overEvidenceLimit && !busy;
 
@@ -131,6 +148,54 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     } catch {
       setError(new ApiError("internal_error", "复制失败，请手动选择话术文本复制。", false));
     }
+  }
+
+  function logProgress() {
+    const statusLabel = STATUS_OPTIONS.find((s) => s.id === status)?.label ?? status;
+    const record: EvidenceRecord = {
+      id: newId(),
+      stage: "dispute",
+      occurredAt: todayLocal(),
+      recordedAt: new Date().toISOString(),
+      description: `争议状态：${statusLabel}｜联系：${counterparty.trim() || "未填"}｜渠道：${selectedChannelLabel}｜事项：${issue.trim()}`,
+      contractClause: "",
+      materialName: "争议处理进展",
+      materialType: "进展记录",
+      materialStatus: "present",
+      amountCents: yuanToCents(amountYuan),
+      reading: null,
+    };
+    if (!saveRecordChecked(record)) {
+      setProgressNotice("本地存储空间不足，未能写入证据。");
+      return;
+    }
+    setProgressNotice("已写入证据画布「争议处理」。");
+  }
+
+  function archiveScript() {
+    if (!scriptDraft.trim()) return;
+    const key = selectedChannelId ?? "unknown";
+    const existingId = archivedScripts[key];
+    const record: EvidenceRecord = {
+      id: existingId ?? newId(),
+      stage: "dispute",
+      occurredAt: todayLocal(),
+      recordedAt: new Date().toISOString(),
+      description: `沟通话术 · ${selectedChannelLabel}｜事项：${issue.trim()}`,
+      contractClause: "",
+      materialName: "沟通话术",
+      materialType: "话术草稿",
+      materialStatus: "present",
+      amountCents: null,
+      reading: null,
+      content: scriptDraft,
+    };
+    if (!saveRecordChecked(record, !!existingId)) {
+      setScriptNotice("本地存储空间不足，未能存档。");
+      return;
+    }
+    if (!existingId) setArchivedScripts((prev) => ({ ...prev, [key]: record.id }));
+    setScriptNotice(existingId ? "已更新证据画布中的话术存档。" : "话术已存档到证据画布「争议处理」。");
   }
 
   return (
@@ -321,6 +386,39 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                 </div>
               )}
 
+              <div className="panel p-4">
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold">处理进展</h3>
+                  <button type="button" onClick={() => onNavigate("evidence")} className="text-xs text-primary hover:underline">
+                    去证据画布
+                  </button>
+                </div>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  联系对象：{counterparty.trim() || "未填"} · 渠道：{selectedChannelLabel} · 时间：今天
+                </p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-36 flex-1 space-y-1">
+                    <Label htmlFor="dp-status" className="text-xs">处理状态</Label>
+                    <Select value={status} onValueChange={setStatus}>
+                      <SelectTrigger id="dp-status" size="sm" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={logProgress}>
+                    <BookmarkPlus className="size-3.5" />
+                    记录到证据
+                  </Button>
+                </div>
+                <p className="mt-2 text-[11px] text-muted-foreground">每次记录会在「争议处理」时间轴新增一条状态记录，刷新后仍保留。</p>
+                {progressNotice && <p className="mt-1 text-xs text-primary">{progressNotice}</p>}
+              </div>
+
               {selectedChannelId && result.script && (
                 <div className="panel p-4">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -346,26 +444,16 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                       <ClipboardCopy className="size-4" />
                       {copied ? "已复制" : "复制话术"}
                     </Button>
+                    <Button size="sm" variant="outline" onClick={archiveScript} disabled={!scriptDraft.trim()}>
+                      <BookmarkPlus className="size-4" />
+                      {scriptArchiveId ? "更新话术存档" : "存档话术"}
+                    </Button>
                     <Button size="sm" variant="outline" onClick={regenerate} disabled={busy}>
                       {busy ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
                       更新事实后重新生成
                     </Button>
                   </div>
-
-                  <div className="mt-3 space-y-1 rounded-md bg-secondary/50 p-3">
-                    <Label htmlFor="dp-status" className="text-xs">处理状态（自行记录）</Label>
-                    <Select value={status} onValueChange={setStatus}>
-                      <SelectTrigger id="dp-status" size="sm" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[11px] text-muted-foreground">状态仅在本页记录，刷新后重置；可据此更新事实并重新生成话术。</p>
-                  </div>
+                  {scriptNotice && <p className="mt-2 text-xs text-primary">{scriptNotice}</p>}
                 </div>
               )}
 

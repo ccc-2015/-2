@@ -398,6 +398,28 @@ function RecordRow({
           {record.reading && <div className="flex gap-1"><dt>读数：</dt><dd>{record.reading}</dd></div>}
         </dl>
 
+        {record.content && (
+          <details className="mt-2 rounded-lg bg-secondary/50 px-2.5 py-2">
+            <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground">
+              查看材料全文（{record.content.length} 字符{record.originalText ? " · 可对比原文" : ""}）
+            </summary>
+            {record.originalText ? (
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div>
+                  <p className="mb-1 text-[11px] text-muted-foreground">原文</p>
+                  <pre className="max-h-60 overflow-auto whitespace-pre-wrap rounded border bg-background p-2 font-mono text-[11px] leading-relaxed">{record.originalText}</pre>
+                </div>
+                <div>
+                  <p className="mb-1 text-[11px] text-muted-foreground">修订副本</p>
+                  <pre className="max-h-60 overflow-auto whitespace-pre-wrap rounded border bg-background p-2 font-mono text-[11px] leading-relaxed">{record.content}</pre>
+                </div>
+              </div>
+            ) : (
+              <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap rounded border bg-background p-2 font-mono text-[11px] leading-relaxed">{record.content}</pre>
+            )}
+          </details>
+        )}
+
         {attachments.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {attachments.map((a) => (
@@ -667,6 +689,8 @@ function RecordForm({
       amountCents: yuanToCents(draft.amountYuan),
       reading: draft.reading.trim() || null,
       attachments: draft.attachments,
+      content: initial?.content,
+      originalText: initial?.originalText,
     };
     const projected = storeSizeChars(
       initial ? records.getAll().map((r) => (r.id === record.id ? record : r)) : [...records.getAll(), record],

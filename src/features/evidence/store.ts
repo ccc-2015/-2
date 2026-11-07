@@ -55,6 +55,8 @@ export interface EvidenceRecord {
   amountCents: number | null; // 金额整数分，null 不等于零
   reading: string | null; // 表读数等，保留用户原始格式
   attachments?: EvidenceAttachment[]; // 本机压缩存储的图片材料
+  content?: string; // 材料全文（如已确认合同原文、修订副本、话术）
+  originalText?: string; // 仅修订副本：对应原文，供事后对比
 }
 
 export interface UtilityAccount {
@@ -413,4 +415,14 @@ export async function compressImage(file: File): Promise<EvidenceAttachment> {
 /** 估算整库字符量（localStorage 按字符计），用于保存前拦截超限。 */
 export function storeSizeChars(recordList: EvidenceRecord[], utilityList: UtilityAccount[]): number {
   return JSON.stringify({ r: recordList, u: utilityList }).length;
+}
+
+/** 带容量检查地写入一条证据；返回 false 表示超出本机存储上限，未写入。 */
+export function saveRecordChecked(record: EvidenceRecord, existing = false): boolean {
+  const list = records.getAll();
+  const next = existing ? list.map((r) => (r.id === record.id ? record : r)) : [...list, record];
+  if (storeSizeChars(next, utilities.getAll()) > MAX_STORE_CHARS) return false;
+  if (existing) records.update(record.id, record);
+  else records.add(record);
+  return true;
 }
