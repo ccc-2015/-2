@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   CalendarClock,
   Plus,
@@ -11,6 +11,7 @@ import {
   Check,
   AlertTriangle,
   ChevronDown,
+  ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +59,11 @@ import {
   readingUsage,
   utilityBalance,
   utilityStage,
+  compressImage,
+  storeSizeChars,
+  MAX_ATTACHMENTS,
+  MAX_STORE_CHARS,
+  type EvidenceAttachment,
   type EvidenceRecord,
   type EvidenceStage,
   type UtilityAccount,
@@ -112,21 +124,19 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">证据画布</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        按阶段串起的租住时间轴：签约、入住、居住中、退租、争议处理。记录事件、材料与水电账目，勾选后可带入争议处理。
+      <header className="border-b border-border/60 pb-5">
+        <h1 className="text-[26px] font-semibold leading-tight tracking-tight">证据画布</h1>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+          按阶段串起的租住时间轴：签约、入住、居住中、退租、争议处理。记录事件、材料与水电账目，勾选后可带入争议处理。
+        </p>
+      </header>
+
+      <p className="mt-4 rounded-xl bg-secondary/60 px-3.5 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+        记录跨会话保存在本机浏览器，仅含你录入的结构化记录、描述、状态与账目；合同全文、原始附件、对话与模型结果不在此持久化。
+        清理浏览器数据或更换设备可能导致本地记录丢失，可随时查看与清空。这不是云备份，也不代表已验证证据。
       </p>
 
-      <Alert className="mt-4">
-        <ShieldAlert className="size-4" />
-        <AlertTitle>本机本地保存</AlertTitle>
-        <AlertDescription>
-          记录跨会话保存在本机浏览器，仅含你录入的结构化记录、描述、状态与账目；合同全文、原始附件、对话与模型结果不在此持久化。
-          清理浏览器数据或更换设备可能导致本地记录丢失。本地记录不是云备份，也不代表已验证证据。
-        </AlertDescription>
-      </Alert>
-
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/70 bg-border/60 sm:grid-cols-4">
         <StatCard
           label="时间跨度"
           value={stats.span ? `${stats.span.from} → ${stats.span.to}` : "未记录日期"}
@@ -147,17 +157,17 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Label htmlFor="stage-filter" className="text-xs text-muted-foreground">阶段聚焦</Label>
-        <NativeSelect
-          id="stage-filter"
-          size="sm"
-          value={stageFilter}
-          onChange={(e) => setStageFilter(e.target.value as "all" | EvidenceStage)}
-        >
-          <NativeSelectOption value="all">全部阶段</NativeSelectOption>
-          {STAGES.map((s) => (
-            <NativeSelectOption key={s.id} value={s.id}>{s.label}</NativeSelectOption>
-          ))}
-        </NativeSelect>
+        <Select value={stageFilter} onValueChange={(v) => setStageFilter(v as "all" | EvidenceStage)}>
+          <SelectTrigger id="stage-filter" size="sm" className="w-[132px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部阶段</SelectItem>
+            {STAGES.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => selection.clear()} disabled={selectedCount === 0}>
             <X className="size-4" />
@@ -300,9 +310,9 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-card px-3 py-2">
+    <div className="bg-card px-4 py-3">
       <div className="text-[11px] text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-xs font-medium">{value}</div>
+      <div className="mt-1 text-[12px] font-medium leading-snug">{value}</div>
     </div>
   );
 }
@@ -339,15 +349,20 @@ function StageLane({
 
   return (
     <section aria-label={`${label}阶段`}>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold">{label}</h2>
-        <Badge variant="secondary">{recordCount} 条记录</Badge>
-        {utilityCount > 0 && <Badge variant="outline">{utilityCount} 项账目</Badge>}
-        <span className="text-[11px] text-muted-foreground">{hint}</span>
-        <Button size="sm" variant="ghost" className="ml-auto" onClick={onAdd}>
-          <Plus className="size-4" />
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h2 className="text-[13px] font-semibold">{label}</h2>
+        <span className="text-[11px] text-muted-foreground">
+          {recordCount} 条记录{utilityCount > 0 ? ` · ${utilityCount} 项账目` : ""}
+        </span>
+        <span className="hidden text-[11px] text-muted-foreground/70 sm:inline">{hint}</span>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="ml-auto inline-flex items-center gap-0.5 text-[11px] text-primary hover:underline"
+        >
+          <Plus className="size-3" />
           添加
-        </Button>
+        </button>
       </div>
 
       {hints.length > 0 && (
@@ -413,40 +428,65 @@ function RecordNode({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const [preview, setPreview] = useState<EvidenceAttachment | null>(null);
   return (
-    <div className={selected ? "rounded-lg border border-primary/50 bg-primary/5 p-3" : "rounded-lg border bg-card p-3"}>
+    <div className={selected ? "rounded-xl border border-primary/30 bg-primary/[0.04] p-3 backdrop-blur-md" : "rounded-xl border border-white/60 bg-white/60 p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)] backdrop-blur-md"}>
       <div className="flex items-start gap-3">
         <Checkbox checked={selected} onCheckedChange={onToggle} aria-label="选择此记录用于争议处理" className="mt-1" />
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <Badge variant={record.occurredAt ? "outline" : "secondary"} className="font-mono">
-              {record.occurredAt ?? "时间待补"}
-            </Badge>
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-              <span className={"size-2 rounded-full " + statusDot(record.materialStatus)} />
+          <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+            <span className="font-mono text-foreground/80">{record.occurredAt ?? "时间待补"}</span>
+            <span className="inline-flex items-center gap-1">
+              <span className={"size-1.5 rounded-full " + statusDot(record.materialStatus)} />
               {EVIDENCE_STATUS_LABELS[record.materialStatus]}
             </span>
-            <span className="text-[11px] text-muted-foreground">录入：{formatRecorded(record.recordedAt)}</span>
+            <span className="text-muted-foreground/70">录入 {formatRecorded(record.recordedAt)}</span>
           </div>
-          <p className="whitespace-pre-wrap text-sm">{record.description}</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {record.contractClause && <Badge variant="secondary">条款：{record.contractClause}</Badge>}
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{record.description}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted-foreground">
+            {record.contractClause && <span>条款：{record.contractClause}</span>}
             {record.materialName && (
-              <Badge variant="outline">{record.materialName}{record.materialType ? `（${record.materialType}）` : ""}</Badge>
+              <span>{record.materialName}{record.materialType ? `（${record.materialType}）` : ""}</span>
             )}
-            {record.amountCents != null && <Badge variant="outline">金额 {formatCents(record.amountCents)}</Badge>}
-            {record.reading && <Badge variant="outline">读数 {record.reading}</Badge>}
+            {record.amountCents != null && <span>金额 {formatCents(record.amountCents)}</span>}
+            {record.reading && <span>读数 {record.reading}</span>}
           </div>
+          {record.attachments && record.attachments.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {record.attachments.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setPreview(a)}
+                  className="size-14 overflow-hidden rounded-lg border border-black/[0.06] transition-opacity hover:opacity-90"
+                  aria-label={`查看图片 ${a.name}`}
+                >
+                  <img src={a.dataUrl} alt={a.name} className="size-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="flex shrink-0 gap-1">
-          <Button size="sm" variant="ghost" onClick={onEdit} aria-label="编辑记录">
-            <Pencil className="size-4" />
+        <div className="flex shrink-0 gap-0.5">
+          <Button size="sm" variant="ghost" className="size-7 p-0" onClick={onEdit} aria-label="编辑记录">
+            <Pencil className="size-3.5" />
           </Button>
-          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={onDelete} aria-label="删除记录">
-            <Trash2 className="size-4" />
+          <Button size="sm" variant="ghost" className="size-7 p-0 text-muted-foreground hover:text-destructive" onClick={onDelete} aria-label="删除记录">
+            <Trash2 className="size-3.5" />
           </Button>
         </div>
       </div>
+
+      <Dialog open={!!preview} onOpenChange={(open) => { if (!open) setPreview(null); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm">{preview?.name ?? "图片"}</DialogTitle>
+          </DialogHeader>
+          {preview && (
+            <img src={preview.dataUrl} alt={preview.name} className="max-h-[70vh] w-full rounded-lg object-contain" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -465,28 +505,28 @@ function UtilityNode({
   const usage = readingUsage(account.startReading, account.endReading);
   const balance = utilityBalance(account);
   return (
-    <div className="rounded-lg border border-sky-500/30 bg-card p-3">
+    <div className="rounded-xl border border-white/60 bg-white/60 p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)] backdrop-blur-md">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <Badge className="bg-sky-500/15 text-sky-700 dark:text-sky-300" variant="secondary">
-              <Droplets className="size-3" />
+          <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium">
+              <Droplets className="size-3 text-sky-500" />
               {UTILITY_KIND_LABELS[account.kind]}
-            </Badge>
-            <Badge variant="outline" className="font-mono">{account.periodStart ?? "周期未填"}</Badge>
-            <span className="text-[11px] text-muted-foreground">{stageLabel} · 录入 {formatRecorded(account.recordedAt)}</span>
+            </span>
+            <span className="font-mono text-[11px] text-muted-foreground">{account.periodStart ?? "周期未填"}</span>
+            <span className="text-[11px] text-muted-foreground/70">{stageLabel} · 录入 {formatRecorded(account.recordedAt)}</span>
           </div>
-          <div className="flex flex-wrap gap-1.5 text-[11px]">
-            {account.contractPrice && <span className="text-muted-foreground">单价/分摊：{account.contractPrice}</span>}
-            {account.cycle && <span className="text-muted-foreground">周期：{account.cycle}</span>}
-            <span className="text-muted-foreground">账单 {formatCents(account.billCents)} · 已付 {formatCents(account.paidCents)}</span>
+          <div className="flex flex-wrap gap-x-2.5 gap-y-1 text-[11px] text-muted-foreground">
+            {account.contractPrice && <span>单价/分摊：{account.contractPrice}</span>}
+            {account.cycle && <span>周期：{account.cycle}</span>}
+            <span>账单 {formatCents(account.billCents)} · 已付 {formatCents(account.paidCents)}</span>
           </div>
           <details className="group mt-2">
-            <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-xs text-primary hover:underline">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[11px] text-primary hover:underline">
               <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
               查看核对明细
             </summary>
-            <div className="mt-1.5 space-y-1 rounded-md bg-secondary/50 px-3 py-2 text-xs">
+            <div className="mt-1.5 space-y-1 rounded-lg bg-secondary/60 px-3 py-2 text-[11px] leading-relaxed">
               <p>起止读数：{account.startReading ?? "未填"} → {account.endReading ?? "未填"}</p>
               <p>
                 用量核对：
@@ -501,12 +541,12 @@ function UtilityNode({
             </div>
           </details>
         </div>
-        <div className="flex shrink-0 gap-1">
-          <Button size="sm" variant="ghost" onClick={onEdit} aria-label="编辑账目">
-            <Pencil className="size-4" />
+        <div className="flex shrink-0 gap-0.5">
+          <Button size="sm" variant="ghost" className="size-7 p-0" onClick={onEdit} aria-label="编辑账目">
+            <Pencil className="size-3.5" />
           </Button>
-          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={onDelete} aria-label="删除账目">
-            <Trash2 className="size-4" />
+          <Button size="sm" variant="ghost" className="size-7 p-0 text-muted-foreground hover:text-destructive" onClick={onDelete} aria-label="删除账目">
+            <Trash2 className="size-3.5" />
           </Button>
         </div>
       </div>
@@ -569,6 +609,7 @@ interface RecordDraft {
   materialStatus: EvidenceStatus;
   amountYuan: string;
   reading: string;
+  attachments: EvidenceAttachment[];
 }
 
 function draftFrom(record: EvidenceRecord | null, initialStage: EvidenceStage): RecordDraft {
@@ -582,6 +623,7 @@ function draftFrom(record: EvidenceRecord | null, initialStage: EvidenceStage): 
     materialStatus: record?.materialStatus ?? "to_confirm",
     amountYuan: record?.amountCents != null ? (record.amountCents / 100).toFixed(2) : "",
     reading: record?.reading ?? "",
+    attachments: record?.attachments ?? [],
   };
 }
 
@@ -598,7 +640,52 @@ function RecordForm({
 }) {
   const [draft, setDraft] = useState<RecordDraft>(() => draftFrom(initial, initialStage));
   const [error, setError] = useState("");
+  const [compressing, setCompressing] = useState(false);
+  const imageRef = useRef<HTMLInputElement>(null);
   const stageHint = STAGES.find((s) => s.id === draft.stage)?.hint ?? "";
+
+  async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    const room = MAX_ATTACHMENTS - draft.attachments.length;
+    if (room <= 0) {
+      setError(`最多添加 ${MAX_ATTACHMENTS} 张图片。`);
+      return;
+    }
+    setCompressing(true);
+    setError("");
+    try {
+      const added: EvidenceAttachment[] = [];
+      for (const file of files.slice(0, room)) {
+        if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+          setError("仅支持 PNG / JPG / WEBP 图片。");
+          continue;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+          setError("单张图片超过 8MB，请压缩后再添加。");
+          continue;
+        }
+        added.push(await compressImage(file));
+      }
+      if (added.length > 0) {
+        setDraft((prev) => ({
+          ...prev,
+          attachments: [...prev.attachments, ...added],
+          materialStatus: prev.materialStatus === "to_confirm" ? "present" : prev.materialStatus,
+          materialName: prev.materialName || added[0].name.replace(/\.[^.]+$/, ""),
+        }));
+      }
+    } catch {
+      setError("图片处理失败，请换一张或稍后重试。");
+    } finally {
+      setCompressing(false);
+    }
+  }
+
+  function removeAttachment(id: string) {
+    setDraft((prev) => ({ ...prev, attachments: prev.attachments.filter((a) => a.id !== id) }));
+  }
 
   function set<K extends keyof RecordDraft>(key: K, value: RecordDraft[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -621,7 +708,16 @@ function RecordForm({
       materialStatus: draft.materialStatus,
       amountCents: yuanToCents(draft.amountYuan),
       reading: draft.reading.trim() || null,
+      attachments: draft.attachments,
     };
+    const projected = storeSizeChars(
+      initial ? records.getAll().map((r) => (r.id === record.id ? record : r)) : [...records.getAll(), record],
+      utilities.getAll(),
+    );
+    if (projected > MAX_STORE_CHARS) {
+      setError("本地存储空间不足：图片过多或过大。请减少图片，或清空历史记录后再保存。");
+      return;
+    }
     onSave(record);
   }
 
@@ -631,11 +727,16 @@ function RecordForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="rec-stage" className="text-xs">阶段</Label>
-          <NativeSelect id="rec-stage" size="sm" value={draft.stage} onChange={(e) => set("stage", e.target.value as EvidenceStage)}>
-            {STAGES.map((s) => (
-              <NativeSelectOption key={s.id} value={s.id}>{s.label}</NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Select value={draft.stage} onValueChange={(v) => set("stage", v as EvidenceStage)}>
+            <SelectTrigger id="rec-stage" size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STAGES.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <p className="text-[11px] text-muted-foreground">{stageHint}</p>
         </div>
         <div className="space-y-1">
@@ -661,11 +762,16 @@ function RecordForm({
         </div>
         <div className="space-y-1">
           <Label htmlFor="rec-status" className="text-xs">材料状态</Label>
-          <NativeSelect id="rec-status" size="sm" value={draft.materialStatus} onChange={(e) => set("materialStatus", e.target.value as EvidenceStatus)}>
-            {STATUS_OPTIONS.map((s) => (
-              <NativeSelectOption key={s} value={s}>{EVIDENCE_STATUS_LABELS[s]}</NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Select value={draft.materialStatus} onValueChange={(v) => set("materialStatus", v as EvidenceStatus)}>
+            <SelectTrigger id="rec-status" size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>{EVIDENCE_STATUS_LABELS[s]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <Label htmlFor="rec-amount" className="text-xs">金额（元，可选）</Label>
@@ -674,6 +780,46 @@ function RecordForm({
         <div className="space-y-1 sm:col-span-2">
           <Label htmlFor="rec-reading" className="text-xs">读数（可选）</Label>
           <Input id="rec-reading" value={draft.reading} onChange={(e) => set("reading", e.target.value)} placeholder="例如：水表 123.5 / 电表 4567" />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label className="text-xs">图片材料（可选）</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            {draft.attachments.map((a) => (
+              <div key={a.id} className="relative size-16 overflow-hidden rounded-lg border border-black/[0.06]">
+                <img src={a.dataUrl} alt={a.name} className="size-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(a.id)}
+                  aria-label={`移除 ${a.name}`}
+                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+            {draft.attachments.length < MAX_ATTACHMENTS && (
+              <button
+                type="button"
+                onClick={() => imageRef.current?.click()}
+                disabled={compressing}
+                className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground disabled:opacity-60"
+              >
+                <ImagePlus className="size-4" />
+                <span className="text-[10px]">{compressing ? "处理中" : "添加"}</span>
+              </button>
+            )}
+          </div>
+          <input
+            ref={imageRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            className="hidden"
+            onChange={onPickImages}
+          />
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            图片会压缩后保存在本机浏览器（每条最多 {MAX_ATTACHMENTS} 张）；清理浏览器数据会丢失。
+          </p>
         </div>
       </div>
       {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
@@ -757,19 +903,29 @@ function UtilityForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="util-kind" className="text-xs">费用类型</Label>
-          <NativeSelect id="util-kind" size="sm" value={draft.kind} onChange={(e) => set("kind", e.target.value as UtilityKind)}>
-            {(Object.keys(UTILITY_KIND_LABELS) as UtilityKind[]).map((k) => (
-              <NativeSelectOption key={k} value={k}>{UTILITY_KIND_LABELS[k]}</NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Select value={draft.kind} onValueChange={(v) => set("kind", v as UtilityKind)}>
+            <SelectTrigger id="util-kind" size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(UTILITY_KIND_LABELS) as UtilityKind[]).map((k) => (
+                <SelectItem key={k} value={k}>{UTILITY_KIND_LABELS[k]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <Label htmlFor="util-stage" className="text-xs">归属阶段</Label>
-          <NativeSelect id="util-stage" size="sm" value={draft.stage} onChange={(e) => set("stage", e.target.value as EvidenceStage)}>
-            {STAGES.map((s) => (
-              <NativeSelectOption key={s.id} value={s.id}>{s.label}</NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Select value={draft.stage} onValueChange={(v) => set("stage", v as EvidenceStage)}>
+            <SelectTrigger id="util-stage" size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STAGES.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <Label htmlFor="util-period" className="text-xs">计费周期开始（可选）</Label>

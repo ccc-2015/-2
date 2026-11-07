@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, Loader2, ArrowLeft, ShieldAlert, Sparkles, Upload, AlertTriangle, Files, Send, RotateCw, MapPin, MessageSquare, Copy, ClipboardCopy, Undo2, Check } from "lucide-react";
+import { FileText, Loader2, ArrowLeft, ShieldAlert, Upload, AlertTriangle, Files, ArrowUp, RefreshCw, RotateCw, MapPin, Copy, ClipboardCopy, Undo2, Check } from "lucide-react";
 import type { ContractResult, ContractIntent, Finding, ExtractResult, ExtractPage, Excerpt, ConversationTurn } from "@/shared/api";
 import { PRIORITY_LABELS } from "@/shared/api";
 import { api, ApiError, errorMessage } from "../../lib/api";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type Stage = "input" | "proofread" | "review";
@@ -58,9 +59,9 @@ export function ContractWorkspace() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">合同审查</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+      <header className="mb-6 border-b border-border/60 pb-5">
+        <h1 className="text-[26px] font-semibold leading-tight tracking-tight">合同审查</h1>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
           导入合同 → 校对确认 → 对话审查与原文定位。所有识别结果须由你检查确认后才发起分析。
         </p>
         <Stepper stage={stage} />
@@ -113,19 +114,11 @@ function Stepper({ stage }: { stage: Stage }) {
   const steps = ["导入", "校对确认", "审查"];
   const index = stage === "input" ? 0 : stage === "proofread" ? 1 : 2;
   return (
-    <ol className="mt-4 flex items-center gap-2 text-xs">
+    <ol className="mt-2 flex items-center gap-1.5 text-[12px] text-muted-foreground">
       {steps.map((label, i) => (
-        <li key={label} className="flex items-center gap-2">
-          <span
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium",
-              i === index ? "bg-primary text-primary-foreground" : i < index ? "bg-secondary text-foreground" : "bg-secondary text-muted-foreground",
-            )}
-          >
-            <span className="tabular-nums">{i + 1}</span>
-            {label}
-          </span>
-          {i < steps.length - 1 && <span className="text-muted-foreground">→</span>}
+        <li key={label} className="flex items-center gap-1.5">
+          <span className={i === index ? "font-medium text-foreground" : undefined}>{label}</span>
+          {i < steps.length - 1 && <span aria-hidden="true" className="text-border">/</span>}
         </li>
       ))}
     </ol>
@@ -183,103 +176,97 @@ function InputStage({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border bg-card p-4">
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-          <Files className="size-4 text-primary" />
-          导入合同文件
-        </div>
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label="选择或拖拽合同文件"
-          onClick={() => !uploading && fileRef.current?.click()}
-          onKeyDown={(e) => {
-            if ((e.key === "Enter" || e.key === " ") && !uploading) {
+      <div className="overflow-hidden panel">
+        <div className="p-5">
+          <div className="mb-3 flex items-center gap-2 text-[13px] font-medium">
+            <Files className="size-4 text-muted-foreground" />
+            导入合同文件
+          </div>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="选择或拖拽合同文件"
+            onClick={() => !uploading && fileRef.current?.click()}
+            onKeyDown={(e) => {
+              if ((e.key === "Enter" || e.key === " ") && !uploading) {
+                e.preventDefault();
+                fileRef.current?.click();
+              }
+            }}
+            onDragOver={(e) => {
               e.preventDefault();
-              fileRef.current?.click();
-            }
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            if (!uploading) setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-          className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-4 py-8 text-center transition-colors",
-            dragOver ? "border-primary bg-secondary" : "border-input hover:border-primary/50 hover:bg-secondary/50",
-            uploading && "pointer-events-none opacity-60",
-          )}
-        >
-          {uploading ? (
-            <>
-              <Loader2 className="size-6 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">正在本机提取文本 / OCR 识别…</span>
-            </>
-          ) : (
-            <>
-              <Upload className="size-6 text-muted-foreground" />
-              <span className="text-sm font-medium">点击选择或拖拽文件到此处</span>
-              <span className="text-xs text-muted-foreground">
-                支持 TXT / MD / DOCX / PDF / 图片（PNG·JPG·WEBP）；单文件 ≤ {maxFileMB}MB，PDF ≤ {maxPdfPages} 页
-              </span>
-            </>
+              if (!uploading) setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={onDrop}
+            className={cn(
+              "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed px-4 py-10 text-center transition-colors",
+              dragOver ? "border-primary/60 bg-primary/[0.04]" : "border-border hover:border-foreground/20 hover:bg-secondary/40",
+              uploading && "pointer-events-none opacity-60",
+            )}
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                <span className="text-[13px] text-muted-foreground">正在提取文本 / 识别中…</span>
+              </>
+            ) : (
+              <>
+                <Upload className="size-5 text-muted-foreground" />
+                <span className="mt-1 text-[13px] font-medium">点击选择，或拖拽文件到此处</span>
+                <span className="text-[11px] text-muted-foreground">
+                  TXT / MD / DOCX / PDF / PNG / JPG / WEBP · 单文件 ≤ {maxFileMB}MB · PDF ≤ {maxPdfPages} 页
+                </span>
+              </>
+            )}
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept={ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleFile(file);
+            }}
+          />
+          <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
+            文件仅提交到本机后端临时解析，不自动持久化；扫描 PDF 与图片用本地 OCR 识别，提取后须由你校对确认才会分析。
+          </p>
+          {uploadError && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg bg-destructive/[0.06] px-3 py-2 text-[12px] text-destructive">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              <span>{uploadError.message}{uploadError.retryable && " 你可以稍后手动重试。"}</span>
+            </div>
           )}
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept={ACCEPT}
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handleFile(file);
-          }}
-        />
-        <p className="mt-2 text-xs text-muted-foreground">
-          文件仅提交到本机后端临时解析，不自动持久化；扫描 PDF 与图片用本地 OCR 识别。提取后须由你校对确认才会分析。
-        </p>
-        {uploadError && (
-          <Alert variant="destructive" className="mt-3">
-            <AlertTriangle className="size-4" />
-            <AlertTitle>导入未完成</AlertTitle>
-            <AlertDescription>
-              {uploadError.message}
-              {uploadError.retryable && " 你可以稍后手动重试。"}
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
 
-      <div className="rounded-lg border bg-card p-4">
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-          <FileText className="size-4 text-primary" />
-          或粘贴合同文本
-        </div>
-        <Textarea
-          value={pasted}
-          onChange={(e) => setPasted(e.target.value)}
-          placeholder="将合同全文粘贴到此处…"
-          className="min-h-48 font-mono text-sm"
-          aria-label="合同文本"
-        />
-        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span className={cn(over && "text-destructive")}>
-            {pasted.length} / {maxText} 字符{over && "（超出限制，请缩小或选择片段）"}
-          </span>
-          <Button size="sm" disabled={!pasted.trim() || over} onClick={onContinue}>
-            继续校对
-          </Button>
+        <div className="border-t border-border/60 p-5">
+          <div className="mb-2 flex items-center gap-2 text-[13px] font-medium">
+            <FileText className="size-4 text-muted-foreground" />
+            或粘贴合同文本
+          </div>
+          <Textarea
+            value={pasted}
+            onChange={(e) => setPasted(e.target.value)}
+            placeholder="将合同全文粘贴到此处…"
+            aria-label="合同文本"
+            className="min-h-44 resize-y border-0 bg-transparent px-0 text-[15px] leading-relaxed shadow-none focus-visible:border-0 focus-visible:ring-0"
+          />
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <span className={cn("text-[11px] text-muted-foreground", over && "text-destructive")}>
+              {pasted.length} / {maxText} 字符{over && "（超出限制，请缩小或选择片段）"}
+            </span>
+            <Button size="sm" disabled={!pasted.trim() || over} onClick={onContinue}>
+              继续校对
+            </Button>
+          </div>
         </div>
       </div>
 
-      <Alert>
-        <ShieldAlert className="size-4" />
-        <AlertTitle>隐私提示</AlertTitle>
-        <AlertDescription>
-          合同全文、对话与模型结果默认不自动持久化。点击分析即表示你将所确认的文本提交给模型服务；未经核实不承诺零留存。
-        </AlertDescription>
-      </Alert>
+      <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+        合同全文、对话与模型结果默认不自动持久化。点击分析即表示你将所确认的文本提交给模型服务；未经核实不承诺零留存。
+      </p>
     </section>
   );
 }
@@ -491,32 +478,33 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
   const submitDisabled = busy || !aiAvailable || (intent === "ask" && !question.trim());
 
   return (
-    <section className="space-y-4">
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Badge variant="outline" className="border-primary/40 text-primary">已确认</Badge>
-            <span className="text-muted-foreground">{text.length} 字符</span>
-            {active && <Badge variant="secondary">已定位引文</Badge>}
+    <section className="flex flex-col gap-4 md:min-h-[calc(100dvh-12rem)]">
+      <div className="panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium">已确认文本</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-[13px] text-muted-foreground">{text.length} 字符</span>
+            {active && <span className="text-[13px] text-muted-foreground">· 已定位引文</span>}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-1">
             <Button variant="ghost" size="sm" onClick={() => setShowText((v) => !v)}>
               {showText ? "收起原文" : "查看原文"}
             </Button>
             <Button variant={copyOpen ? "secondary" : "ghost"} size="sm" onClick={() => setCopyOpen((v) => !v)}>
-              <Copy className="size-4" />
-              {copyOpen ? "收起修订副本" : "修订副本"}
-              {suggestions.length > 0 && <Badge variant="outline" className="ml-1">{suggestions.length}</Badge>}
+              <Copy className="size-3.5" />
+              {copyOpen ? "收起副本" : "修订副本"}
+              {suggestions.length > 0 && <span className="ml-1 text-[13px] text-muted-foreground">{suggestions.length}</span>}
             </Button>
             <Button variant="ghost" size="sm" onClick={onReinput}>重新校对</Button>
           </div>
         </div>
         {showText && (
-          <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-secondary p-3 font-mono text-xs leading-relaxed">
+          <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-secondary/60 p-3 font-mono text-xs leading-relaxed">
             {active ? (
               <>
                 {text.slice(0, active.start)}
-                <mark ref={markRef} className="rounded bg-primary/25 px-0.5 text-foreground ring-1 ring-primary/50">
+                <mark ref={markRef} className="rounded bg-primary/15 px-0.5 text-foreground">
                   {text.slice(active.start, active.end)}
                 </mark>
                 {text.slice(active.end)}
@@ -547,16 +535,16 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="city">城市（仅一般建议，本地渠道待核实）</Label>
-            <select
-              id="city"
-              value={cityCode}
-              onChange={(e) => setCityCode(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {(config?.cities ?? [{ code: "CN", name: "不限 / 全国一般建议" }]).map((c) => (
-                <option key={c.code} value={c.code}>{c.name}</option>
-              ))}
-            </select>
+            <Select value={cityCode} onValueChange={setCityCode}>
+              <SelectTrigger id="city" className="w-full">
+                <SelectValue placeholder="选择城市" />
+              </SelectTrigger>
+              <SelectContent>
+                {(config?.cities ?? [{ code: "CN", name: "不限 / 全国一般建议" }]).map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="date">签约 / 拟签约日期（可选）</Label>
@@ -566,69 +554,77 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
       </details>
 
       {exchanges.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-card/50 p-6 text-center text-sm text-muted-foreground">
-          <MessageSquare className="mx-auto mb-2 size-5" />
-          选择分析意图并发起首次审查；此后可继续追问，对话会保留上下文。
+        <div className="rounded-lg border border-dashed border-border/70 px-6 py-12 text-center text-[13px] text-muted-foreground">
+          选择分析意图并发送第一条消息；此后可继续追问，对话会保留上下文。
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {exchanges.map((ex) => (
             <ExchangeView key={ex.id} exchange={ex} busy={busy} onRetry={() => retry(ex.id)} onLocate={locate} onFollowUp={followUp} />
           ))}
         </div>
       )}
 
-      <div className="rounded-lg border bg-card p-4">
-        <div className="space-y-1.5">
-          <Label>分析意图</Label>
-          <div className="flex flex-wrap gap-2">
-            {INTENTS.map((it) => (
+      <div className="sticky bottom-0 z-10 mt-auto -mx-4 border-t border-border/70 bg-background/85 px-4 py-3 backdrop-blur-xl md:-mx-8 md:px-8">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="panel p-2.5">
+            <div className="mb-1.5 flex flex-wrap items-center gap-2 px-1">
+              <div className="inline-flex rounded-full bg-secondary p-0.5" role="group" aria-label="分析意图">
+                {INTENTS.map((it) => (
+                  <button
+                    key={it.id}
+                    type="button"
+                    onClick={() => setIntent(it.id)}
+                    aria-pressed={intent === it.id}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs transition-colors",
+                      intent === it.id
+                        ? "bg-background font-medium text-foreground shadow-sm ring-1 ring-black/5"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {it.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-end gap-2">
+              <Textarea
+                id="question"
+                ref={composerRef}
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    submit();
+                  }
+                }}
+                placeholder={intent === "ask" ? "描述你的问题，例如：押金条款是否对我不利？" : "可补充说明，或直接发送（可选）"}
+                aria-label="你的问题"
+                className="max-h-40 min-h-[54px] flex-1 resize-none border-0 bg-transparent px-2 py-1 text-[15px] shadow-none focus-visible:border-0 focus-visible:ring-0"
+              />
               <Button
-                key={it.id}
-                type="button"
-                size="sm"
-                variant={intent === it.id ? "default" : "outline"}
-                onClick={() => setIntent(it.id)}
+                onClick={submit}
+                disabled={submitDisabled}
+                size="icon"
+                className="mb-0.5 size-9 shrink-0 rounded-full"
+                aria-label={busy ? "分析中" : "发送"}
               >
-                {it.label}
+                {busy ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
               </Button>
-            ))}
+            </div>
+
+            <div className="mt-0.5 flex flex-wrap items-center justify-between gap-2 px-2 text-[11px] text-muted-foreground">
+              <span>
+                {!aiAvailable
+                  ? "服务端未配置模型密钥，分析暂不可用。配置 backend/.env 中的 MODEL_API_KEY 与 MODEL_NAME 后重启后端。"
+                  : "Ctrl/⌘ + Enter 发送 · 点击分析即表示将所确认文本提交给模型服务"}
+              </span>
+              {aiAvailable && intent === "ask" && !question.trim() && <span>请填写问题</span>}
+            </div>
           </div>
-        </div>
-
-        <div className="mt-4 space-y-1.5">
-          <Label htmlFor="question">{intent === "ask" ? "你的问题" : "你的问题（可选）"}</Label>
-          <Textarea
-            id="question"
-            ref={composerRef}
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder="例如：押金条款是否对我不利？提前退租要注意什么？（Ctrl/⌘ + Enter 发送）"
-            className="min-h-20"
-          />
-        </div>
-
-        {!aiAvailable && (
-          <Alert className="mt-4">
-            <ShieldAlert className="size-4" />
-            <AlertDescription>
-              服务端尚未配置模型密钥，分析暂不可用。配置 backend/.env 中的 MODEL_API_KEY 与 MODEL_NAME 后重启后端即可。
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">点击分析即表示将所确认文本提交给模型服务。</span>
-          <Button onClick={submit} disabled={submitDisabled}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-            {busy ? "分析中…" : exchanges.length ? "继续追问" : "发起分析"}
-          </Button>
         </div>
       </div>
     </section>
@@ -650,15 +646,15 @@ function ExchangeView({
 }) {
   return (
     <div className="space-y-2">
-      <div className="flex items-start justify-end gap-2">
-        <div className="max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
-          <div className="mb-0.5 text-[11px] opacity-80">{INTENT_LABELS[exchange.intent]}</div>
+      <div className="flex justify-end">
+        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-3.5 py-2 text-sm">
+          <div className="mb-0.5 text-[11px] text-muted-foreground">{INTENT_LABELS[exchange.intent]}</div>
           <p className="whitespace-pre-wrap">{exchange.question}</p>
         </div>
       </div>
 
       {exchange.loading && (
-        <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-3 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card px-4 py-3 text-[13px] text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
           正在分析并核验引文…
         </div>
@@ -693,21 +689,16 @@ function ResultView({
   onFollowUp: (q: string) => void;
 }) {
   return (
-    <div className="space-y-3 rounded-lg border bg-card p-4">
-      <Alert>
-        <Sparkles className="size-4" />
-        <AlertTitle>AI 辅助意见</AlertTitle>
-        <AlertDescription>
-          一期无自有审核知识库，以下为模型辅助意见，不构成确定性法律结论。
-          {result.coverage !== "supported" && " 覆盖有限，请结合实际情况核实。"}
-        </AlertDescription>
-      </Alert>
+    <div className="space-y-3 panel p-4">
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        AI 辅助意见，覆盖有限，不构成确定性法律结论；请结合实际情况核实。
+      </p>
 
       {result.answer && <p className="whitespace-pre-wrap text-sm leading-relaxed">{result.answer}</p>}
 
       {result.findings.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold">风险提示（按审查优先级）</h3>
+          <h3 className="text-[13px] font-semibold text-muted-foreground">风险提示（按审查优先级）</h3>
           {result.findings.map((f, i) => (
             <FindingCard key={i} finding={f} onLocate={onLocate} />
           ))}
@@ -715,10 +706,10 @@ function ResultView({
       )}
 
       {result.revision && (
-        <div className="rounded-md border border-primary/30 bg-secondary/40 p-3">
-          <div className="mb-1 flex items-center gap-2">
-            <Badge variant="outline" className="border-primary/40 text-primary">修订草稿</Badge>
-            <span className="text-xs text-muted-foreground">协商用，须自行检查；在「修订副本」面板中逐条或批量应用。</span>
+        <div className="rounded-xl bg-secondary/60 p-3">
+          <div className="mb-1 flex flex-wrap items-baseline gap-2">
+            <span className="text-[11px] font-medium">修订草稿</span>
+            <span className="text-[11px] text-muted-foreground">协商用，须自行检查；在「修订副本」面板中逐条或批量应用。</span>
           </div>
           {result.revision.targetExcerpt && (
             <button
@@ -736,12 +727,17 @@ function ResultView({
 
       {result.followUpQuestions.length > 0 && (
         <div>
-          <h3 className="mb-1 text-sm font-semibold">可继续追问</h3>
-          <div className="flex flex-wrap gap-2">
+          <h3 className="mb-1.5 text-[13px] font-semibold text-muted-foreground">可继续追问</h3>
+          <div className="flex flex-wrap gap-1.5">
             {result.followUpQuestions.map((q, i) => (
-              <Button key={i} variant="outline" size="sm" className="h-auto py-1 text-xs" onClick={() => onFollowUp(q)}>
+              <button
+                key={i}
+                type="button"
+                onClick={() => onFollowUp(q)}
+                className="rounded-full border border-border/80 px-3 py-1 text-xs text-foreground/80 transition-colors hover:border-foreground/30 hover:text-foreground"
+              >
                 {q}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
@@ -753,23 +749,23 @@ function ResultView({
 function FindingCard({ finding, onLocate }: { finding: Finding; onLocate: (ex: Excerpt) => void }) {
   const tone =
     finding.priority === "confirm_first"
-      ? "border-l-amber-500"
+      ? "text-amber-600"
       : finding.priority === "needs_attention"
-        ? "border-l-primary"
-        : "border-l-muted-foreground";
+        ? "text-primary"
+        : "text-muted-foreground";
   return (
-    <div className={cn("rounded-md border border-l-4 bg-card p-3", tone)}>
-      <div className="mb-1 flex flex-wrap items-center gap-2">
-        <Badge variant="secondary">{PRIORITY_LABELS[finding.priority]}</Badge>
+    <div className="rounded-xl border border-border/70 bg-background p-3">
+      <div className="mb-1 flex flex-wrap items-baseline gap-2">
+        <span className={cn("text-[11px] font-medium", tone)}>{PRIORITY_LABELS[finding.priority]}</span>
         <span className="text-sm font-medium">{finding.issue}</span>
       </div>
-      {finding.impact && <p className="text-sm text-muted-foreground">{finding.impact}</p>}
+      {finding.impact && <p className="text-[13px] leading-relaxed text-muted-foreground">{finding.impact}</p>}
       {finding.excerpt && (
-        <div className="mt-2 rounded border-l-2 border-primary/40 bg-secondary/60 px-3 py-1.5">
-          <blockquote className="font-mono text-xs">“{finding.excerpt.text}”</blockquote>
+        <div className="mt-2 rounded-lg bg-secondary/70 px-3 py-2">
+          <blockquote className="font-mono text-xs leading-relaxed">“{finding.excerpt.text}”</blockquote>
           <button
             type="button"
-            className="mt-1 flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
+            className="mt-1 flex items-center gap-1 text-[11px] text-primary underline-offset-2 hover:underline"
             onClick={() => onLocate(finding.excerpt!)}
           >
             <MapPin className="size-3" />
@@ -778,10 +774,10 @@ function FindingCard({ finding, onLocate }: { finding: Finding; onLocate: (ex: E
         </div>
       )}
       {finding.suggestedQuestion && (
-        <p className="mt-2 text-xs text-muted-foreground">建议确认：{finding.suggestedQuestion}</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">建议确认：{finding.suggestedQuestion}</p>
       )}
       {finding.uncertainties.length > 0 && (
-        <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
+        <ul className="mt-1 list-inside list-disc text-[11px] text-muted-foreground">
           {finding.uncertainties.map((u, i) => <li key={i}>{u}</li>)}
         </ul>
       )}
@@ -917,14 +913,14 @@ function RevisionCopyPanel({
   }
 
   return (
-    <div className="rounded-lg border border-primary/30 bg-card p-4">
+    <div className="panel p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <Copy className="size-4 text-primary" />
+          <Copy className="size-4 text-muted-foreground" />
           修订副本
-          <Badge variant="outline">{dirty ? "已修改" : "与原文一致"}</Badge>
+          <span className="text-[11px] text-muted-foreground">{dirty ? "已修改" : "与原文一致"}</span>
         </div>
-        <span className="text-xs text-muted-foreground">原文只读保留，所有修改仅发生在副本。</span>
+        <span className="text-[11px] text-muted-foreground">原文只读保留，所有修改仅发生在副本。</span>
       </div>
 
       <Alert className="mb-3">
@@ -1002,7 +998,7 @@ function RevisionCopyPanel({
           放弃修改
         </Button>
         <Button size="sm" onClick={reReview} disabled={loading || !aiAvailable || !copy.trim()}>
-          {loading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
           {loading ? "复查中…" : "复查副本"}
         </Button>
       </div>

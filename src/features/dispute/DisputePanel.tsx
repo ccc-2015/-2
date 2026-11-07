@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Scale,
-  Sparkles,
+  ArrowUp,
   Loader2,
   ShieldAlert,
   Copy,
@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EVIDENCE_STATUS_LABELS, type DisputeResult } from "@/shared/api";
 import { useConfig } from "../../lib/config-context";
 import { api, ApiError, errorMessage } from "../../lib/api";
@@ -135,22 +135,20 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">争议处理</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        选择争议与证据，补充必要事实，匹配少量一般处理方向；选定方向后生成可编辑话术，由你核对后自行提交。
-      </p>
+      <header className="border-b border-border/60 pb-5">
+        <h1 className="text-[26px] font-semibold leading-tight tracking-tight">争议处理</h1>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+          选择争议与证据，补充必要事实，匹配少量一般处理方向；选定方向后生成可编辑话术，由你核对后自行提交。
+        </p>
+      </header>
 
-      <Alert className="mt-4">
-        <ShieldAlert className="size-4" />
-        <AlertTitle>一期仅一般方向</AlertTitle>
-        <AlertDescription>
-          本地渠道、资格与职责待核实，不提供经核验的本地渠道推荐。话术为 AI 辅助草稿，不得补造金额、日期、对方行为、法规、电话或网址；未知项保留待补。系统不代你提交。
-        </AlertDescription>
-      </Alert>
+      <p className="mt-3 rounded-xl bg-secondary/60 px-3.5 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+        一期仅一般方向：本地渠道、资格与职责待核实，不提供经核验的本地渠道推荐。话术为辅助草稿，不得补造金额、日期、对方行为、法规、电话或网址；未知项保留待补，系统不代你提交。
+      </p>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <div className="space-y-4">
-          <div className="rounded-lg border bg-card p-4">
+          <div className="panel p-4">
             <h2 className="mb-3 text-sm font-semibold">争议与必要事实</h2>
             <div className="space-y-3">
               <div className="space-y-1">
@@ -160,12 +158,17 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label htmlFor="dp-city" className="text-xs">城市（可选）</Label>
-                  <NativeSelect id="dp-city" size="sm" value={cityCode} onChange={(e) => setCityCode(e.target.value)}>
-                    <NativeSelectOption value="">未选择</NativeSelectOption>
-                    {(config?.cities ?? []).map((c) => (
-                      <NativeSelectOption key={c.code} value={c.code}>{c.name}</NativeSelectOption>
-                    ))}
-                  </NativeSelect>
+                  <Select value={cityCode || "none"} onValueChange={(v) => setCityCode(v === "none" ? "" : v)}>
+                    <SelectTrigger id="dp-city" size="sm" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">未选择</SelectItem>
+                      {(config?.cities ?? []).map((c) => (
+                        <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="dp-date" className="text-xs">事件日期（可选）</Label>
@@ -195,7 +198,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
             </div>
           </div>
 
-          <div className="rounded-lg border bg-card p-4">
+          <div className="panel p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold">相关证据（{selectedEvidence.length}）</h2>
               <Button size="sm" variant="ghost" onClick={() => onNavigate("evidence")}>
@@ -235,7 +238,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
           </div>
 
           <Button onClick={submitCandidates} disabled={!canSubmit} className="w-full">
-            {loading && !selectedChannelId ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+            {loading && !selectedChannelId ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
             {loading && !selectedChannelId ? "整理中…" : "整理事实并匹配方向"}
           </Button>
           {!aiAvailable && <p className="text-xs text-muted-foreground">服务端未配置模型密钥，争议分析暂不可用。</p>}
@@ -266,7 +269,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
           {result && (
             <>
               {result.factsSummary.length > 0 && (
-                <div className="rounded-lg border bg-card p-4">
+                <div className="panel p-4">
                   <h3 className="mb-2 text-sm font-semibold">已整理的事实</h3>
                   <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
                     {result.factsSummary.map((f, i) => <li key={i}>{f}</li>)}
@@ -287,7 +290,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
               )}
 
               {result.recommendations.length > 0 && (
-                <div className="rounded-lg border bg-card p-4">
+                <div className="panel p-4">
                   <h3 className="mb-2 text-sm font-semibold">一般处理方向</h3>
                   <p className="mb-3 text-xs text-muted-foreground">均为一般方向，本地渠道与资格待核实；选定一个方向后生成专属话术。</p>
                   <div className="space-y-2">
@@ -308,7 +311,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                             </ul>
                           )}
                           <Button size="sm" variant={active ? "secondary" : "outline"} className="mt-2" onClick={() => selectChannel(id)} disabled={busy || !id}>
-                            {active ? <Check className="size-4" /> : <Sparkles className="size-4" />}
+                            {active ? <Check className="size-4" /> : <ArrowUp className="size-4" />}
                             {active ? "已选定 · 重新生成话术" : "选择此方向生成话术"}
                           </Button>
                         </div>
@@ -319,7 +322,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
               )}
 
               {selectedChannelId && result.script && (
-                <div className="rounded-lg border border-primary/30 bg-card p-4">
+                <div className="panel p-4">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Copy className="size-4 text-primary" />
                     <h3 className="text-sm font-semibold">话术草稿</h3>
@@ -351,11 +354,16 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
                   <div className="mt-3 space-y-1 rounded-md bg-secondary/50 p-3">
                     <Label htmlFor="dp-status" className="text-xs">处理状态（自行记录）</Label>
-                    <NativeSelect id="dp-status" size="sm" value={status} onChange={(e) => setStatus(e.target.value)}>
-                      {STATUS_OPTIONS.map((s) => (
-                        <NativeSelectOption key={s.id} value={s.id}>{s.label}</NativeSelectOption>
-                      ))}
-                    </NativeSelect>
+                    <Select value={status} onValueChange={setStatus}>
+                      <SelectTrigger id="dp-status" size="sm" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <p className="text-[11px] text-muted-foreground">状态仅在本页记录，刷新后重置；可据此更新事实并重新生成话术。</p>
                   </div>
                 </div>

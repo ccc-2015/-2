@@ -34,6 +34,14 @@ export const UTILITY_KIND_LABELS: Record<UtilityKind, string> = {
   other: "其他",
 };
 
+export interface EvidenceAttachment {
+  id: string;
+  name: string;
+  type: string;
+  dataUrl: string;
+  bytes: number;
+}
+
 export interface EvidenceRecord {
   id: string;
   stage: EvidenceStage;
@@ -46,6 +54,7 @@ export interface EvidenceRecord {
   materialStatus: EvidenceStatus;
   amountCents: number | null; // 金额整数分，null 不等于零
   reading: string | null; // 表读数等，保留用户原始格式
+  attachments?: EvidenceAttachment[]; // 本机压缩存储的图片材料
 }
 
 export interface UtilityAccount {
@@ -346,4 +355,62 @@ export function gapHints(
   const missing = inStage.filter((r) => r.materialStatus === "missing").length;
   if (missing > 0) hints.push(`本阶段有 ${missing} 项材料标记为「缺失」。`);
   return hints.slice(0, 3);
+}
+// ---- 附件（图片）----
+
+export const MAX_ATTACHMENTS = 4;
+export const MAX_STORE_CHARS = 4_000_000;
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error("读取图片失败"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("图片无法解码"));
+    img.src = src;
+  });
+}
+
+/** 压缩为最长边 1280 的 JPEG；压缩无收益时保留原图。仅在浏览器执行。 */
+export async function compressImage(file: File): Promise<EvidenceAttachment> {
+  const original = await readAsDataUrl(file);
+  const img = await loadImage(original);
+  const maxEdge = 1280;
+  const scale = Math.min(1, maxEdge / Math.max(img.width || 1, img.height || 1));
+  const width = Math.max(1, Math.round((img.width || 1) * scale));
+  const height = Math.max(1, Math.round((img.height || 1) * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  let dataUrl = original;
+  let type = file.type;
+  if (ctx) {
+    ctx.drawImage(img, 0, 0, width, height);
+    const jpeg = canvas.toDataURL("image/jpeg", 0.78);
+    if (jpeg.length < original.length) {
+      dataUrl = jpeg;
+      type = "image/jpeg";
+    }
+  }
+  return {
+    id: newId(),
+    name: file.name,
+    type,
+    dataUrl,
+    bytes: Math.round((dataUrl.length * 3) / 4),
+  };
+}
+
+/** 估算整库字符量（localStorage 按字符计），用于保存前拦截超限。 */
+export function storeSizeChars(recordList: EvidenceRecord[], utilityList: UtilityAccount[]): number {
+  return JSON.stringify({ r: recordList, u: utilityList }).length;
 }
