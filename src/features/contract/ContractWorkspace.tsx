@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
-import { FileText, Loader2, ArrowLeft, ShieldAlert, Sparkles, Upload, AlertTriangle, Files } from "lucide-react";
-import type { ContractResult, ContractIntent, Finding, ExtractResult, ExtractPage } from "@/shared/api";
+import { useEffect, useRef, useState } from "react";
+import { FileText, Loader2, ArrowLeft, ShieldAlert, Sparkles, Upload, AlertTriangle, Files, Send, RotateCw, MapPin, MessageSquare } from "lucide-react";
+import type { ContractResult, ContractIntent, Finding, ExtractResult, ExtractPage, Excerpt, ConversationTurn } from "@/shared/api";
 import { PRIORITY_LABELS } from "@/shared/api";
 import { api, ApiError, errorMessage } from "../../lib/api";
 import { useConfig } from "../../lib/config-context";
@@ -379,39 +379,103 @@ function ProofreadStage({
   );
 }
 
+interface Exchange {
+  id: string;
+  question: string;
+  intent: ContractIntent;
+  result: ContractResult | null;
+  error: ApiError | null;
+  loading: boolean;
+}
+
+function buildConversation(list: Exchange[]): ConversationTurn[] {
+  const turns: ConversationTurn[] = [];
+  for (const e of list) {
+    if (e.result) {
+      turns.push({ role: "user", content: e.question });
+      turns.push({ role: "assistant", content: e.result.answer });
+    }
+  }
+  return turns;
+}
+
+const INTENT_LABELS: Record<ContractIntent, string> = {
+  ask: "回答问题",
+  review: "整体审查",
+  suggest_revision: "修改建议",
+  draft_revision: "起草修订",
+};
+
 function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void }) {
   const { config } = useConfig();
   const [cityCode, setCityCode] = useState("CN");
   const [eventDate, setEventDate] = useState("");
   const [question, setQuestion] = useState("");
   const [intent, setIntent] = useState<ContractIntent>("review");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<ContractResult | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [showText, setShowText] = useState(false);
+  const [active, setActive] = useState<Excerpt | null>(null);
+  const markRef = useRef<HTMLElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   const aiAvailable = config?.aiAvailable ?? false;
+  const busy = exchanges.some((e) => e.loading);
 
-  async function analyze() {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    if (showText && active && markRef.current) {
+      markRef.current.scrollIntoView({ block: "center" });
+    }
+  }, [active, showText]);
+
+  function locate(ex: Excerpt) {
+    setActive(ex);
+    setShowText(true);
+  }
+
+  function followUp(q: string) {
+    setQuestion(q);
+    setIntent("ask");
+    composerRef.current?.focus();
+  }
+
+  async function run(id: string, q: string, it: ContractIntent, conv: ConversationTurn[]) {
+    setExchanges((prev) => prev.map((e) => (e.id === id ? { ...e, loading: true, error: null } : e)));
     try {
       const { data } = await api.analyzeContract({
         text,
         textScope: "full",
-        question,
-        conversation: [],
-        intent,
+        question: q,
+        conversation: conv,
+        intent: it,
         cityCode,
         eventDate: eventDate || null,
       });
-      setResult(data);
+      setExchanges((prev) => prev.map((e) => (e.id === id ? { ...e, loading: false, result: data } : e)));
     } catch (err) {
-      setError(err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false));
-    } finally {
-      setLoading(false);
+      const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
+      setExchanges((prev) => prev.map((e) => (e.id === id ? { ...e, loading: false, error } : e)));
     }
   }
+
+  function submit() {
+    const q = question.trim();
+    if (busy || !aiAvailable || (intent === "ask" && !q)) return;
+    const conv = buildConversation(exchanges);
+    const id = crypto.randomUUID();
+    const displayQ = q || "请审查这份合同。";
+    setExchanges((prev) => [...prev, { id, question: displayQ, intent, result: null, error: null, loading: true }]);
+    setQuestion("");
+    void run(id, displayQ, intent, conv);
+  }
+
+  function retry(id: string) {
+    const idx = exchanges.findIndex((e) => e.id === id);
+    if (idx === -1 || busy) return;
+    const ex = exchanges[idx];
+    void run(id, ex.question, ex.intent, buildConversation(exchanges.slice(0, idx)));
+  }
+
+  const submitDisabled = busy || !aiAvailable || (intent === "ask" && !question.trim());
 
   return (
     <section className="space-y-4">
@@ -420,6 +484,7 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
           <div className="flex items-center gap-2 text-sm font-medium">
             <Badge variant="outline" className="border-primary/40 text-primary">已确认</Badge>
             <span className="text-muted-foreground">{text.length} 字符</span>
+            {active && <Badge variant="secondary">已定位引文</Badge>}
           </div>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowText((v) => !v)}>
@@ -429,14 +494,30 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
           </div>
         </div>
         {showText && (
-          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-secondary p-3 font-mono text-xs leading-relaxed">
-            {text}
+          <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-secondary p-3 font-mono text-xs leading-relaxed">
+            {active ? (
+              <>
+                {text.slice(0, active.start)}
+                <mark ref={markRef} className="rounded bg-primary/25 px-0.5 text-foreground ring-1 ring-primary/50">
+                  {text.slice(active.start, active.end)}
+                </mark>
+                {text.slice(active.end)}
+              </>
+            ) : (
+              text
+            )}
           </pre>
+        )}
+        {showText && active && (
+          <button type="button" className="mt-2 text-xs text-primary underline-offset-2 hover:underline" onClick={() => setActive(null)}>
+            清除定位高亮
+          </button>
         )}
       </div>
 
-      <div className="rounded-lg border bg-card p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+      <details className="rounded-lg border bg-card p-4" open={exchanges.length === 0}>
+        <summary className="cursor-pointer text-sm font-medium">审查上下文（城市 / 日期）</summary>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="city">城市（仅一般建议，本地渠道待核实）</Label>
             <select
@@ -455,8 +536,23 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
             <Input id="date" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
           </div>
         </div>
+      </details>
 
-        <div className="mt-4 space-y-1.5">
+      {exchanges.length === 0 ? (
+        <div className="rounded-lg border border-dashed bg-card/50 p-6 text-center text-sm text-muted-foreground">
+          <MessageSquare className="mx-auto mb-2 size-5" />
+          选择分析意图并发起首次审查；此后可继续追问，对话会保留上下文。
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {exchanges.map((ex) => (
+            <ExchangeView key={ex.id} exchange={ex} busy={busy} onRetry={() => retry(ex.id)} onLocate={locate} onFollowUp={followUp} />
+          ))}
+        </div>
+      )}
+
+      <div className="rounded-lg border bg-card p-4">
+        <div className="space-y-1.5">
           <Label>分析意图</Label>
           <div className="flex flex-wrap gap-2">
             {INTENTS.map((it) => (
@@ -474,12 +570,19 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
         </div>
 
         <div className="mt-4 space-y-1.5">
-          <Label htmlFor="question">你的问题（可选）</Label>
+          <Label htmlFor="question">{intent === "ask" ? "你的问题" : "你的问题（可选）"}</Label>
           <Textarea
             id="question"
+            ref={composerRef}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="例如：押金条款是否对我不利？提前退租要注意什么？"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            placeholder="例如：押金条款是否对我不利？提前退租要注意什么？（Ctrl/⌘ + Enter 发送）"
             className="min-h-20"
           />
         </div>
@@ -493,33 +596,77 @@ function ReviewStage({ text, onReinput }: { text: string; onReinput: () => void 
           </Alert>
         )}
 
-        <div className="mt-4 flex justify-end">
-          <Button onClick={analyze} disabled={loading || !aiAvailable}>
-            {loading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {loading ? "分析中…" : "发起分析"}
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">点击分析即表示将所确认文本提交给模型服务。</span>
+          <Button onClick={submit} disabled={submitDisabled}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            {busy ? "分析中…" : exchanges.length ? "继续追问" : "发起分析"}
           </Button>
         </div>
       </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <ShieldAlert className="size-4" />
-          <AlertTitle>分析未完成</AlertTitle>
-          <AlertDescription>
-            {error.message}
-            {error.retryable && " 你可以保留输入，稍后手动重试。"}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {result && <ResultView result={result} />}
     </section>
   );
 }
 
-function ResultView({ result }: { result: ContractResult }) {
+function ExchangeView({
+  exchange,
+  busy,
+  onRetry,
+  onLocate,
+  onFollowUp,
+}: {
+  exchange: Exchange;
+  busy: boolean;
+  onRetry: () => void;
+  onLocate: (ex: Excerpt) => void;
+  onFollowUp: (q: string) => void;
+}) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
+      <div className="flex items-start justify-end gap-2">
+        <div className="max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
+          <div className="mb-0.5 text-[11px] opacity-80">{INTENT_LABELS[exchange.intent]}</div>
+          <p className="whitespace-pre-wrap">{exchange.question}</p>
+        </div>
+      </div>
+
+      {exchange.loading && (
+        <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-3 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          正在分析并核验引文…
+        </div>
+      )}
+
+      {exchange.error && (
+        <Alert variant="destructive">
+          <ShieldAlert className="size-4" />
+          <AlertTitle>分析未完成</AlertTitle>
+          <AlertDescription>
+            <p>{exchange.error.message}{exchange.error.retryable && " 输入已保留，可稍后手动重试。"}</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={onRetry} disabled={busy}>
+              <RotateCw className="size-4" />
+              手动重试
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {exchange.result && <ResultView result={exchange.result} onLocate={onLocate} onFollowUp={onFollowUp} />}
+    </div>
+  );
+}
+
+function ResultView({
+  result,
+  onLocate,
+  onFollowUp,
+}: {
+  result: ContractResult;
+  onLocate: (ex: Excerpt) => void;
+  onFollowUp: (q: string) => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-lg border bg-card p-4">
       <Alert>
         <Sparkles className="size-4" />
         <AlertTitle>AI 辅助意见</AlertTitle>
@@ -529,35 +676,54 @@ function ResultView({ result }: { result: ContractResult }) {
         </AlertDescription>
       </Alert>
 
-      {result.answer && (
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-2 text-sm font-semibold">回答</h3>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{result.answer}</p>
-        </div>
-      )}
+      {result.answer && <p className="whitespace-pre-wrap text-sm leading-relaxed">{result.answer}</p>}
 
       {result.findings.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold">风险提示（按审查优先级）</h3>
           {result.findings.map((f, i) => (
-            <FindingCard key={i} finding={f} />
+            <FindingCard key={i} finding={f} onLocate={onLocate} />
           ))}
         </div>
       )}
 
+      {result.revision && (
+        <div className="rounded-md border border-primary/30 bg-secondary/40 p-3">
+          <div className="mb-1 flex items-center gap-2">
+            <Badge variant="outline" className="border-primary/40 text-primary">修订草稿</Badge>
+            <span className="text-xs text-muted-foreground">协商用，须自行检查；副本应用将在后续里程碑接入。</span>
+          </div>
+          {result.revision.targetExcerpt && (
+            <button
+              type="button"
+              className="mb-2 flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
+              onClick={() => onLocate(result.revision!.targetExcerpt!)}
+            >
+              <MapPin className="size-3" />
+              定位目标原文
+            </button>
+          )}
+          <p className="whitespace-pre-wrap font-mono text-xs leading-relaxed">{result.revision.text}</p>
+        </div>
+      )}
+
       {result.followUpQuestions.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-2 text-sm font-semibold">可继续追问</h3>
-          <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-            {result.followUpQuestions.map((q, i) => <li key={i}>{q}</li>)}
-          </ul>
+        <div>
+          <h3 className="mb-1 text-sm font-semibold">可继续追问</h3>
+          <div className="flex flex-wrap gap-2">
+            {result.followUpQuestions.map((q, i) => (
+              <Button key={i} variant="outline" size="sm" className="h-auto py-1 text-xs" onClick={() => onFollowUp(q)}>
+                {q}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function FindingCard({ finding }: { finding: Finding }) {
+function FindingCard({ finding, onLocate }: { finding: Finding; onLocate: (ex: Excerpt) => void }) {
   const tone =
     finding.priority === "confirm_first"
       ? "border-l-amber-500"
@@ -566,18 +732,31 @@ function FindingCard({ finding }: { finding: Finding }) {
         : "border-l-muted-foreground";
   return (
     <div className={cn("rounded-md border border-l-4 bg-card p-3", tone)}>
-      <div className="mb-1 flex items-center gap-2">
+      <div className="mb-1 flex flex-wrap items-center gap-2">
         <Badge variant="secondary">{PRIORITY_LABELS[finding.priority]}</Badge>
         <span className="text-sm font-medium">{finding.issue}</span>
       </div>
       {finding.impact && <p className="text-sm text-muted-foreground">{finding.impact}</p>}
       {finding.excerpt && (
-        <blockquote className="mt-2 border-l-2 border-primary/40 bg-secondary/60 px-3 py-1.5 font-mono text-xs">
-          “{finding.excerpt.text}”
-        </blockquote>
+        <div className="mt-2 rounded border-l-2 border-primary/40 bg-secondary/60 px-3 py-1.5">
+          <blockquote className="font-mono text-xs">“{finding.excerpt.text}”</blockquote>
+          <button
+            type="button"
+            className="mt-1 flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
+            onClick={() => onLocate(finding.excerpt!)}
+          >
+            <MapPin className="size-3" />
+            定位原文
+          </button>
+        </div>
       )}
       {finding.suggestedQuestion && (
         <p className="mt-2 text-xs text-muted-foreground">建议确认：{finding.suggestedQuestion}</p>
+      )}
+      {finding.uncertainties.length > 0 && (
+        <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
+          {finding.uncertainties.map((u, i) => <li key={i}>{u}</li>)}
+        </ul>
       )}
     </div>
   );
