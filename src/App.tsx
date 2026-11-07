@@ -36,7 +36,7 @@ function Views() {
   const [view, setView] = useState<ViewId>("contract");
   return (
     <AppShell active={view} onNavigate={setView}>
-      {view === "contract" ? <ContractWorkspace /> : view === "evidence" ? <EvidenceCanvas onNavigate={setView} /> : <DisputePanel />}
+      {view === "contract" ? <ContractWorkspace /> : view === "evidence" ? <EvidenceCanvas onNavigate={setView} /> : <DisputePanel onNavigate={setView} />}
     </AppShell>
   );
 }
