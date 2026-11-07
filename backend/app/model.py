@@ -21,6 +21,16 @@ async def chat(messages: list[dict], temperature: float = 0.2, max_tokens: int =
     if not settings.model_configured:
         raise ApiError("service_not_configured", "模型服务尚未配置，无法完成分析。")
 
+    payload: dict = {
+        "model": settings.model_name,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": False,
+    }
+    if settings.reasoning_effort:
+        payload["reasoning_effort"] = settings.reasoning_effort
+
     try:
         # trust_env=False：出站不继承本机代理环境变量。httpx 0.28 解析 IPv6 形式的
         # NO_PROXY（如 [::1]）会在构造客户端时抛 InvalidURL，导致接口 500。
@@ -31,13 +41,7 @@ async def chat(messages: list[dict], temperature: float = 0.2, max_tokens: int =
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {settings.model_api_key}",
                 },
-                json={
-                    "model": settings.model_name,
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                    "stream": False,
-                },
+                json=payload,
             )
     except httpx.TimeoutException:
         raise ApiError("upstream_timeout", "模型服务响应超时，请保留输入稍后手动重试。")

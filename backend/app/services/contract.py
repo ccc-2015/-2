@@ -14,6 +14,7 @@ from ..validation import close_excerpt
 
 _PRIORITIES = ("confirm_first", "needs_attention", "insufficient_info")
 _PRIORITY_ORDER = {"confirm_first": 0, "needs_attention": 1, "insufficient_info": 2}
+_MAX_TOKENS = {"ask": 2048, "review": 3072, "suggest_revision": 3072, "draft_revision": 3072}
 
 
 def _str(value, fallback: str = "") -> str:
@@ -33,7 +34,7 @@ async def analyze_contract(inp: AnalyzeContractInput) -> ContractResult:
             {"role": "user", "content": _build_user_prompt(inp)},
         ],
         temperature=0.2,
-        max_tokens=4096,
+        max_tokens=_MAX_TOKENS.get(inp.intent, 3072),
     )
     return ContractResult(
         answer=_str(raw.get("answer"), "模型未返回有效回答，请重试或调整问题。"),

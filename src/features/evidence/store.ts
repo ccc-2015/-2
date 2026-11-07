@@ -51,6 +51,8 @@ export interface EvidenceRecord {
 export interface UtilityAccount {
   id: string;
   kind: UtilityKind;
+  stage?: EvidenceStage; // 归属阶段，缺省按「居住中」
+  periodStart?: string | null; // 计费周期开始 YYYY-MM-DD，用于时间轴定位
   contractPrice: string; // 合同单价/分摊方式（自由文本）
   cycle: string; // 计费周期
   startReading: string | null;
@@ -218,4 +220,130 @@ export function toSelectedEvidence(list: EvidenceRecord[], ids: string[]): Selec
     description: r.description,
     status: r.materialStatus,
   }));
+}
+
+// ---- 时间轴（阶段泳道）辅助 ----
+
+export type LaneItem =
+  | { kind: "record"; date: string | null; recordedAt: string; record: EvidenceRecord }
+  | { kind: "utility"; date: string | null; recordedAt: string; account: UtilityAccount };
+
+export function utilityStage(u: UtilityAccount): EvidenceStage {
+  return u.stage ?? "living";
+}
+
+export function laneItemsFor(
+  stage: EvidenceStage,
+  recordList: EvidenceRecord[],
+  utilityList: UtilityAccount[],
+): LaneItem[] {
+  const items: LaneItem[] = [
+    ...recordList
+      .filter((r) => r.stage === stage)
+      .map((r) => ({ kind: "record" as const, date: r.occurredAt, recordedAt: r.recordedAt, record: r })),
+    ...utilityList
+      .filter((u) => utilityStage(u) === stage)
+      .map((u) => ({ kind: "utility" as const, date: u.periodStart ?? null, recordedAt: u.recordedAt, account: u })),
+  ];
+  return items.sort((a, b) => {
+    if (a.date && !b.date) return -1;
+    if (!a.date && b.date) return 1;
+    if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return a.recordedAt < b.recordedAt ? -1 : 1;
+  });
+}
+
+export interface OverviewStats {
+  span: { from: string; to: string } | null;
+  totalRecords: number;
+  present: number;
+  missing: number;
+  toConfirm: number;
+  utilityCount: number;
+  balanceCents: number | null;
+  balanceIncomplete: number;
+}
+
+export function overviewStats(recordList: EvidenceRecord[], utilityList: UtilityAccount[]): OverviewStats {
+  const dates = recordList.map((r) => r.occurredAt).filter((d): d is string => !!d).sort();
+  let present = 0;
+  let missing = 0;
+  let toConfirm = 0;
+  for (const r of recordList) {
+    if (r.materialStatus === "present") present++;
+    else if (r.materialStatus === "missing") missing++;
+    else toConfirm++;
+  }
+  let balanceCents: number | null = null;
+  let balanceIncomplete = 0;
+  for (const u of utilityList) {
+    if (u.billCents != null && u.paidCents != null) {
+      balanceCents = (balanceCents ?? 0) + (u.billCents - u.paidCents);
+    } else {
+      balanceIncomplete++;
+    }
+  }
+  return {
+    span: dates.length ? { from: dates[0], to: dates[dates.length - 1] } : null,
+    totalRecords: recordList.length,
+    present,
+    missing,
+    toConfirm,
+    utilityCount: utilityList.length,
+    balanceCents,
+    balanceIncomplete,
+  };
+}
+
+export function readingUsage(start: string | null, end: string | null): number | null {
+  if (start == null || end == null) return null;
+  const s = Number(start);
+  const e = Number(end);
+  if (!Number.isFinite(s) || !Number.isFinite(e) || e < s) return null;
+  return e - s;
+}
+
+export function utilityBalance(u: UtilityAccount): number | null {
+  if (u.billCents == null || u.paidCents == null) return null;
+  return u.billCents - u.paidCents;
+}
+
+/** 规则化缺口提示：只依据用户已录入数据，不调模型、不下结论。 */
+export function gapHints(
+  stage: EvidenceStage,
+  recordList: EvidenceRecord[],
+  utilityList: UtilityAccount[],
+): string[] {
+  const inStage = recordList.filter((r) => r.stage === stage);
+  const utilInStage = utilityList.filter((u) => utilityStage(u) === stage);
+  const hints: string[] = [];
+
+  if (stage === "signing" && inStage.length === 0) {
+    hints.push("建议补充：签署版本、押金与费用约定、双方确认事项。");
+  }
+  if (stage === "move_in") {
+    if (inStage.length === 0) hints.push("建议补充入住交接、设施瑕疵与照片/视频清单。");
+    else if (!inStage.some((r) => r.materialName)) hints.push("入住记录未关联材料名称（如交接照片）。");
+  }
+  if (stage === "living") {
+    if (inStage.length === 0 && utilInStage.length === 0) {
+      hints.push("建议补充租金/费用账单、缴费凭证与水电气表读数。");
+    }
+    if (utilInStage.length > 0 && !inStage.some((r) => r.materialName)) {
+      hints.push("已有费用账目，但缺少缴费凭证类材料记录。");
+    }
+  }
+  if (stage === "move_out") {
+    if (inStage.length === 0) hints.push("建议补充退租通知、交接、表读数与押金结算明细。");
+    if (inStage.some((r) => r.amountCents != null) && !inStage.some((r) => r.materialName)) {
+      hints.push("退租段有金额记录，但缺少对应的结算明细/凭证材料。");
+    }
+  }
+  if (stage === "dispute" && inStage.length === 0) {
+    hints.push("如已进入争议处理，建议记录联系对象、时间、渠道与处理状态。");
+  }
+
+  const missing = inStage.filter((r) => r.materialStatus === "missing").length;
+  if (missing > 0) hints.push(`本阶段有 ${missing} 项材料标记为「缺失」。`);
+  return hints.slice(0, 3);
 }

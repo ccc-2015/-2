@@ -37,7 +37,7 @@ async def diagnose_dispute(inp: DiagnoseDisputeInput) -> DisputeResult:
             {"role": "user", "content": _build_user_prompt(inp)},
         ],
         temperature=0.2,
-        max_tokens=3072,
+        max_tokens=2048,
     )
     return DisputeResult(
         factsSummary=_str_array(raw.get("factsSummary")),

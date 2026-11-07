@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     model_name: str = ""
     model_api_base_url: str = "https://api.openai.com/v1"
     model_timeout_ms: int = 60000
+    # 推理强度：minimal 关闭冗余推理、显著提速（实测 63s→16s）；留空则不发送该参数。
+    model_reasoning_effort: str = "minimal"
     host: str = "127.0.0.1"
     port: int = 8000
 
@@ -29,6 +31,11 @@ class Settings(BaseSettings):
         if self.model_timeout_ms > 0:
             return min(self.model_timeout_ms, 180000) / 1000
         return 60.0
+
+    @property
+    def reasoning_effort(self) -> str | None:
+        value = (self.model_reasoning_effort or "").strip()
+        return value or None
 
 
 @lru_cache
