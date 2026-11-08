@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Scale,
   ArrowUp,
@@ -88,6 +88,8 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const [status, setStatus] = useState("not_contacted");
   const [progressNotice, setProgressNotice] = useState("");
   const [scriptNotice, setScriptNotice] = useState("");
+  const [analysisOpen, setAnalysisOpen] = useState(true);
+  const scriptRef = useRef<HTMLDivElement>(null);
   const [archivedScripts, setArchivedScripts] = useState<Record<string, string>>({});
   const selectedChannelLabel = selectedChannelId
     ? result?.recommendations.find((rec) => rec.channelId === selectedChannelId)?.title ??
@@ -97,6 +99,12 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const scriptArchiveId = archivedScripts[selectedChannelId ?? "unknown"];
   const busy = loading;
   const canSubmit = aiAvailable && issue.trim().length > 0 && !overEvidenceLimit && !busy;
+
+  useEffect(() => {
+    if (selectedChannelId && result?.script) {
+      scriptRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }, [selectedChannelId, result?.script]);
 
   async function diagnose(channelId: string | null) {
     if (!aiAvailable || !issue.trim() || overEvidenceLimit) return;
@@ -121,7 +129,9 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
       if (channelId && data.script) {
         setScriptDraft(data.script.text);
         setCopied(false);
+        setAnalysisOpen(false);
       } else if (!channelId) {
+        setAnalysisOpen(true);
         setScriptDraft("");
       }
     } catch (err) {
@@ -329,154 +339,188 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
           {result && (
             <>
-              {result.factsSummary.length > 0 && (
-                <div className="panel p-4">
-                  <h3 className="mb-2 text-sm font-semibold">已整理的事实</h3>
-                  <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-                    {result.factsSummary.map((f, i) => <li key={i}>{f}</li>)}
-                  </ul>
-                </div>
-              )}
-
-              {result.missingFacts.length > 0 && (
-                <Alert>
-                  <AlertTriangle className="size-4" />
-                  <AlertTitle>关键缺项（建议补充）</AlertTitle>
-                  <AlertDescription>
-                    <ul className="list-inside list-disc space-y-0.5">
-                      {result.missingFacts.map((f, i) => <li key={i}>{f}</li>)}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {result.recommendations.length > 0 && (
-                <div className="panel p-4">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-semibold">一般处理方向</h3>
-                    {resultMeta && (
-                      <Badge variant="outline">
-                        {resultMeta.coverage === "supported"
-                          ? "知识库已覆盖"
-                          : resultMeta.coverage === "limited"
-                            ? "知识库覆盖有限"
-                            : "暂无渠道知识库"}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="mb-3 text-xs text-muted-foreground">本地渠道与资格以审核资料为准；未核验方向仍为一般建议。</p>
-                  <div className="space-y-2">
-                    {result.recommendations.map((rec, i) => {
-                      const id = rec.channelId ?? "";
-                      const active = selectedChannelId === id;
-                      return (
-                        <div key={id || i} className={active ? "rounded-md border border-primary/50 bg-primary/5 p-3" : "rounded-md border bg-secondary/30 p-3"}>
-                          <div className="mb-1 flex flex-wrap items-center gap-2">
-                            {i === 0 && <Badge variant="secondary">优先方向</Badge>}
-                            <span className="text-sm font-medium">{rec.title || CHANNEL_LABELS[id] || id}</span>
-                            {rec.eligibility === "local_verified" ? (
-                              <Badge variant="secondary">本地已核验</Badge>
-                            ) : (
-                              <Badge variant="outline">一般 · 待核实</Badge>
-                            )}
-                            {rec.sourceRefs.length > 0 && <Badge variant="outline">有依据</Badge>}
-                          </div>
-                          {rec.reason && <p className="text-xs text-muted-foreground">{rec.reason}</p>}
-                          {rec.preparations.length > 0 && (
-                            <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
-                              {rec.preparations.map((p, j) => <li key={j}>{p}</li>)}
-                            </ul>
-                          )}
-                          <Button size="sm" variant={active ? "secondary" : "outline"} className="mt-2" onClick={() => selectChannel(id)} disabled={busy || !id}>
-                            {active ? <Check className="size-4" /> : <ArrowUp className="size-4" />}
-                            {active ? "已选定 · 重新生成话术" : "选择此方向生成话术"}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <SourceList
-                sources={result.references}
-                knowledgeVersion={resultMeta?.knowledgeVersion ?? null}
-                warnings={resultMeta?.warnings ?? []}
-              />
-              {result.references.length === 0 && (resultMeta?.warnings.length ?? 0) > 0 && (
-                <p className="text-[11px] leading-relaxed text-muted-foreground">{resultMeta!.warnings.join(" ")}</p>
-              )}
-
-              <div className="panel p-4">
-                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">处理进展</h3>
-                  <button type="button" onClick={() => onNavigate("evidence")} className="text-xs text-primary hover:underline">
-                    去证据画布
-                  </button>
-                </div>
-                <p className="mb-2 text-xs text-muted-foreground">
-                  联系对象：{counterparty.trim() || "未填"} · 渠道：{selectedChannelLabel} · 时间：今天
-                </p>
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="min-w-36 flex-1 space-y-1">
-                    <Label htmlFor="dp-status" className="text-xs">处理状态</Label>
-                    <Select value={status} onValueChange={setStatus}>
-                      <SelectTrigger id="dp-status" size="sm" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={logProgress}>
-                    <BookmarkPlus className="size-3.5" />
-                    记录到证据
-                  </Button>
-                </div>
-                <p className="mt-2 text-[11px] text-muted-foreground">每次记录会在「争议处理」时间轴新增一条状态记录，刷新后仍保留。</p>
-                {progressNotice && <p className="mt-1 text-xs text-primary">{progressNotice}</p>}
-              </div>
-
-              {selectedChannelId && result.script && (
-                <div className="panel p-4">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
+              {selectedChannelId && result.script ? (
+                <div ref={scriptRef} className="panel overflow-hidden">
+                  <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-4 py-3">
                     <Copy className="size-4 text-primary" />
                     <h3 className="text-sm font-semibold">话术草稿</h3>
                     <Badge variant="outline">{selectedChannelLabel}</Badge>
+                    <span className="ml-auto text-[11px] text-muted-foreground">{scriptDraft.length} 字 · 可编辑</span>
                   </div>
-                  <Alert className="mb-2">
-                    <ShieldAlert className="size-4" />
-                    <AlertDescription>请核对并补全待补项后自行提交；系统不代发，话术不构成法律文书。</AlertDescription>
-                  </Alert>
-                  {result.script.placeholders.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-xs font-medium">待补项：</p>
-                      <ul className="list-inside list-disc text-xs text-muted-foreground">
-                        {result.script.placeholders.map((p, i) => <li key={i}>{p}</li>)}
-                      </ul>
-                    </div>
-                  )}
-                  <Textarea value={scriptDraft} onChange={(e) => setScriptDraft(e.target.value)} className="min-h-48 font-mono text-sm" aria-label="话术草稿（可编辑）" />
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={copyScript}>
+
+                  <div className="space-y-3 px-4 py-3">
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      已按选定方向和已有材料生成；请补全待补项、核对事实后自行提交，系统不代发。
+                    </p>
+                    {result.script.placeholders.length > 0 && (
+                      <div className="rounded-lg bg-amber-500/10 px-3 py-2">
+                        <p className="mb-1.5 text-[11px] font-medium text-amber-700">待补项（提交前请替换）</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {result.script.placeholders.map((p, i) => (
+                            <span
+                              key={i}
+                              className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] text-amber-800 ring-1 ring-amber-500/25"
+                            >
+                              {p}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <Textarea
+                      value={scriptDraft}
+                      onChange={(e) => setScriptDraft(e.target.value)}
+                      className="min-h-[320px] resize-y bg-background text-[14px] leading-7"
+                      aria-label="话术草稿（可编辑）"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 border-t border-border/60 bg-secondary/30 px-4 py-3">
+                    <Button size="sm" onClick={copyScript}>
                       <ClipboardCopy className="size-4" />
                       {copied ? "已复制" : "复制话术"}
                     </Button>
                     <Button size="sm" variant="outline" onClick={archiveScript} disabled={!scriptDraft.trim()}>
                       <BookmarkPlus className="size-4" />
-                      {scriptArchiveId ? "更新话术存档" : "存档话术"}
+                      {scriptArchiveId ? "更新存档" : "存档到证据"}
                     </Button>
-                    <Button size="sm" variant="outline" onClick={regenerate} disabled={busy}>
+                    <Button size="sm" variant="ghost" onClick={regenerate} disabled={busy} className="ml-auto">
                       {busy ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
-                      更新事实后重新生成
+                      重新生成
                     </Button>
+                    {scriptNotice && <p className="w-full text-[11px] text-primary">{scriptNotice}</p>}
                   </div>
-                  {scriptNotice && <p className="mt-2 text-xs text-primary">{scriptNotice}</p>}
                 </div>
-              )}
+              ) : null}
+
+              <div className="panel overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setAnalysisOpen((open) => !open)}
+                  aria-expanded={analysisOpen}
+                  className="flex w-full flex-wrap items-center gap-2 px-4 py-3 text-left"
+                >
+                  <h3 className="text-sm font-semibold">分析依据</h3>
+                  <span className="text-[11px] text-muted-foreground">
+                    事实 {result.factsSummary.length} · 缺项 {result.missingFacts.length} · 方向 {result.recommendations.length}
+                  </span>
+                  <span className="ml-auto text-[11px] text-muted-foreground">{analysisOpen ? "收起" : "展开"}</span>
+                </button>
+
+                {analysisOpen && (
+                  <div className="space-y-3 border-t border-border/60 p-4">
+                    {result.factsSummary.length > 0 && (
+                      <div>
+                        <h4 className="mb-1.5 text-xs font-medium">已整理的事实</h4>
+                        <ul className="list-inside list-disc space-y-1 text-[13px] text-muted-foreground">
+                          {result.factsSummary.map((f, i) => <li key={i}>{f}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    {result.missingFacts.length > 0 && (
+                      <Alert className="border-amber-500/40 bg-amber-500/5">
+                        <AlertTriangle className="size-4 text-amber-600" />
+                        <AlertTitle>关键缺项（建议补充）</AlertTitle>
+                        <AlertDescription>
+                          <ul className="list-inside list-disc space-y-0.5">
+                            {result.missingFacts.map((f, i) => <li key={i}>{f}</li>)}
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {result.recommendations.length > 0 && (
+                      <div>
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <h4 className="text-xs font-medium">一般处理方向</h4>
+                          {resultMeta && (
+                            <Badge variant="outline">
+                              {resultMeta.coverage === "supported"
+                                ? "知识库已覆盖"
+                                : resultMeta.coverage === "limited"
+                                  ? "知识库覆盖有限"
+                                  : "暂无渠道知识库"}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="mb-2 text-[11px] text-muted-foreground">本地渠道与资格以审核资料为准；未核验方向仍为一般建议。</p>
+                        <div className="space-y-2">
+                          {result.recommendations.map((rec, i) => {
+                            const id = rec.channelId ?? "";
+                            const active = selectedChannelId === id;
+                            return (
+                              <div key={id || i} className={active ? "rounded-md border border-primary/50 bg-primary/5 p-3" : "rounded-md border bg-secondary/30 p-3"}>
+                                <div className="mb-1 flex flex-wrap items-center gap-2">
+                                  {i === 0 && <Badge variant="secondary">优先方向</Badge>}
+                                  <span className="text-sm font-medium">{rec.title || CHANNEL_LABELS[id] || id}</span>
+                                  {rec.eligibility === "local_verified" ? (
+                                    <Badge variant="secondary">本地已核验</Badge>
+                                  ) : (
+                                    <Badge variant="outline">一般 · 待核实</Badge>
+                                  )}
+                                  {rec.sourceRefs.length > 0 && <Badge variant="outline">有依据</Badge>}
+                                </div>
+                                {rec.reason && <p className="text-xs text-muted-foreground">{rec.reason}</p>}
+                                {rec.preparations.length > 0 && (
+                                  <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
+                                    {rec.preparations.map((p, j) => <li key={j}>{p}</li>)}
+                                  </ul>
+                                )}
+                                <Button size="sm" variant={active ? "secondary" : "outline"} className="mt-2" onClick={() => selectChannel(id)} disabled={busy || !id}>
+                                  {active ? <Check className="size-4" /> : <ArrowUp className="size-4" />}
+                                  {active ? "已选定 · 重新生成话术" : "选择此方向生成话术"}
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <SourceList
+                      sources={result.references}
+                      knowledgeVersion={resultMeta?.knowledgeVersion ?? null}
+                      warnings={resultMeta?.warnings ?? []}
+                    />
+                    {result.references.length === 0 && (resultMeta?.warnings.length ?? 0) > 0 && (
+                      <p className="text-[11px] leading-relaxed text-muted-foreground">{resultMeta!.warnings.join(" ")}</p>
+                    )}
+
+                    <div className="rounded-lg border border-border/70 p-3">
+                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="text-xs font-medium">处理进展</h4>
+                        <button type="button" onClick={() => onNavigate("evidence")} className="text-[11px] text-primary hover:underline">
+                          去证据画布
+                        </button>
+                      </div>
+                      <p className="mb-2 text-[11px] text-muted-foreground">
+                        联系对象：{counterparty.trim() || "未填"} · 渠道：{selectedChannelLabel} · 时间：今天
+                      </p>
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="min-w-36 flex-1 space-y-1">
+                          <Label htmlFor="dp-status" className="text-xs">处理状态</Label>
+                          <Select value={status} onValueChange={setStatus}>
+                            <SelectTrigger id="dp-status" size="sm" className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={logProgress}>
+                          <BookmarkPlus className="size-3.5" />
+                          记录到证据
+                        </Button>
+                      </div>
+                      {progressNotice && <p className="mt-1 text-xs text-primary">{progressNotice}</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {selectedChannelId && !result.script && !loading && (
                 <p className="text-xs text-muted-foreground">该方向暂未生成话术，可补充事实后重新生成。</p>
