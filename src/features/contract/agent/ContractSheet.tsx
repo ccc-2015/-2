@@ -197,7 +197,7 @@ export function ContractSheet({
         <SheetFooter className="border-t px-5 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <Label htmlFor="signing-date" className="text-[11px] text-muted-foreground">
-              签约 / 拟签约日期
+              签约 / 起租日期
             </Label>
             <Input
               id="signing-date"
