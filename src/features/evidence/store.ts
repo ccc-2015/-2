@@ -25,6 +25,45 @@ export const STAGE_LABELS: Record<EvidenceStage, string> = {
   dispute: "争议处理",
 };
 
+/** 入住交接必拍清单：按争议时最有用的顺序排列。 */
+export interface ChecklistItem {
+  id: string;
+  label: string;
+  detail: string;
+  /** 对应到材料类型，用于判断是否已录入。 */
+  materialType: string;
+}
+
+export const MOVE_IN_CHECKLIST: ChecklistItem[] = [
+  { id: "meters", label: "水电燃气底数", detail: "水表、电表、燃气表读数并拍表盘；退租时再拍一次对比", materialType: "表读数" },
+  { id: "walls", label: "墙面与地面", detail: "逐面拍墙、踢脚线、地板瓷砖；划痕、空鼓、霉斑拍特写", materialType: "房屋现状" },
+  { id: "furniture", label: "家具家电", detail: "桌椅、床、衣柜、空调、冰箱、洗衣机逐件拍全貌与瑕疵", materialType: "家具家电" },
+  { id: "doors", label: "门窗与五金", detail: "门锁、门框、窗框、纱窗、把手、合页", materialType: "门窗五金" },
+  { id: "kitchen_bath", label: "厨卫与水流", detail: "水槽、马桶、花洒、地漏；开水龙头拍水流大小视频", materialType: "厨卫设施" },
+  { id: "functions", label: "功能测试", detail: "插座通电、灯具、网络、燃气点火、空调制冷", materialType: "功能测试" },
+  { id: "handover", label: "交接文件", detail: "钥匙/门禁卡数量、交接单、双方签字、物业联系方式", materialType: "交接文件" },
+];
+
+export interface ChecklistProgress {
+  item: ChecklistItem;
+  done: boolean;
+  recordId: string | null;
+}
+
+/** 入住清单完成度：按材料类型或描述关键词判断是否已录入。 */
+export function moveInChecklist(recordList: EvidenceRecord[]): ChecklistProgress[] {
+  const inStage = recordList.filter((r) => r.stage === "move_in");
+  return MOVE_IN_CHECKLIST.map((item) => {
+    const match = inStage.find(
+      (r) =>
+        r.materialType === item.materialType ||
+        r.materialName.includes(item.label) ||
+        r.description.includes(item.label),
+    );
+    return { item, done: !!match, recordId: match?.id ?? null };
+  });
+}
+
 export type UtilityKind = "water" | "electricity" | "gas" | "other";
 
 export const UTILITY_KIND_LABELS: Record<UtilityKind, string> = {

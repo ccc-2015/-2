@@ -38,6 +38,7 @@ import { EVIDENCE_STATUS_LABELS, type EvidenceStatus } from "@/shared/api";
 import { cn } from "@/lib/utils";
 import type { ViewId } from "../../components/AppShell";
 import { RentalProfileCard } from "../rental/RentalProfileCard";
+import { MoveInChecklist } from "./MoveInChecklist";
 import {
   STAGES,
   UTILITY_KIND_LABELS,
@@ -108,10 +109,16 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
   const selectedIds = useSelectedIds();
 
   const [stageFilter, setStageFilter] = useState<"all" | EvidenceStage>("all");
-  const [recordForm, setRecordForm] = useState<{ open: boolean; initial: EvidenceRecord | null; stage: EvidenceStage }>({
+  const [recordForm, setRecordForm] = useState<{
+    open: boolean;
+    initial: EvidenceRecord | null;
+    stage: EvidenceStage;
+    preset?: { description: string; materialType: string } | null;
+  }>({
     open: false,
     initial: null,
     stage: "signing",
+    preset: null,
   });
   const [utilityForm, setUtilityForm] = useState<{ open: boolean; initial: UtilityAccount | null }>({
     open: false,
@@ -138,12 +145,32 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         : `${formatCents(stats.balanceCents)}${stats.balanceIncomplete ? `（${stats.balanceIncomplete} 项未计入）` : ""}`;
 
   function closeForms() {
-    setRecordForm((f) => ({ ...f, open: false, initial: null }));
+    setRecordForm((f) => ({ ...f, open: false, initial: null, preset: null }));
     setUtilityForm((f) => ({ ...f, open: false, initial: null }));
   }
   function openRecord(stage?: EvidenceStage) {
     closeForms();
-    setRecordForm({ open: true, initial: null, stage: stage ?? (stageFilter === "all" ? "signing" : stageFilter) });
+    setRecordForm({
+      open: true,
+      initial: null,
+      stage: stage ?? (stageFilter === "all" ? "signing" : stageFilter),
+      preset: null,
+    });
+  }
+  function openChecklistRecord(label: string, materialType: string, detail: string) {
+    closeForms();
+    setRecordForm({
+      open: true,
+      initial: null,
+      stage: "move_in",
+      preset: { description: `${label}：${detail}`, materialType },
+    });
+  }
+  function editRecord(id: string) {
+    const record = allRecords.find((item) => item.id === id);
+    if (!record) return;
+    closeForms();
+    setRecordForm({ open: true, initial: record, stage: record.stage, preset: null });
   }
   function openUtility() {
     closeForms();
@@ -199,6 +226,8 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
 
       <RentalProfileCard />
 
+      <MoveInChecklist records={allRecords} onAdd={openChecklistRecord} onEdit={editRecord} />
+
       {hints.length > 0 && (
         <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-amber-600">
           <AlertTriangle className="mt-0.5 size-3 shrink-0" />
@@ -224,7 +253,13 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
 
       {recordForm.open && (
         <div className="mt-3">
-          <RecordForm initial={recordForm.initial} initialStage={recordForm.stage} onSave={saveRecord} onCancel={closeForms} />
+          <RecordForm
+            initial={recordForm.initial}
+            initialStage={recordForm.stage}
+            preset={recordForm.preset ?? null}
+            onSave={saveRecord}
+            onCancel={closeForms}
+          />
         </div>
       )}
       {utilityForm.open && (
@@ -613,15 +648,27 @@ function draftFrom(record: EvidenceRecord | null, initialStage: EvidenceStage): 
 function RecordForm({
   initial,
   initialStage,
+  preset,
   onSave,
   onCancel,
 }: {
   initial: EvidenceRecord | null;
   initialStage: EvidenceStage;
+  preset?: { description: string; materialType: string } | null;
   onSave: (record: EvidenceRecord) => void;
   onCancel: () => void;
 }) {
-  const [draft, setDraft] = useState<RecordDraft>(() => draftFrom(initial, initialStage));
+  const [draft, setDraft] = useState<RecordDraft>(() => {
+    const base = draftFrom(initial, initialStage);
+    if (initial || !preset) return base;
+    return {
+      ...base,
+      stage: "move_in" as EvidenceStage,
+      description: preset.description,
+      materialType: preset.materialType,
+      materialName: preset.materialType,
+    };
+  });
   const [error, setError] = useState("");
   const [compressing, setCompressing] = useState(false);
   const imageRef = useRef<HTMLInputElement>(null);
