@@ -350,7 +350,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
                   <div className="space-y-3 px-4 py-3">
                     <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      已按选定方向和已有材料生成；请补全待补项、核对事实后自行提交，系统不代发。
+                      已按选定方向生成，并自动引用所选证据中的金额、日期与材料名称；剩余待补项是证据里也没有的信息，请补全后自行提交。
                     </p>
                     {result.script.placeholders.length > 0 && (
                       <div className="rounded-lg bg-amber-500/10 px-3 py-2">

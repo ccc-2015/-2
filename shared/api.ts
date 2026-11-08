@@ -166,6 +166,12 @@ export interface SelectedEvidence {
   occurredAt: string | null;
   description: string;
   status: EvidenceStatus;
+  /** 以下为可选结构化信息，用于让话术直接引用已存材料。 */
+  materialName?: string;
+  materialType?: string;
+  amountCents?: number | null;
+  contractClause?: string;
+  content?: string;
 }
 
 export interface DiagnoseDisputeInput {

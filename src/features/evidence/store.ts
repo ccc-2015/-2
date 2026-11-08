@@ -230,6 +230,11 @@ export function toSelectedEvidence(list: EvidenceRecord[], ids: string[]): Selec
     occurredAt: r.occurredAt,
     description: r.description,
     status: r.materialStatus,
+    materialName: r.materialName,
+    materialType: r.materialType,
+    amountCents: r.amountCents,
+    contractClause: r.contractClause,
+    content: r.content?.slice(0, 1200) ?? "",
   }));
 }
 

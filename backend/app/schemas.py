@@ -91,6 +91,11 @@ class SelectedEvidence(_Base):
     occurredAt: str | None = None
     description: str = ""
     status: EvidenceStatus = "to_confirm"
+    materialName: str = ""
+    materialType: str = ""
+    amountCents: int | None = None
+    contractClause: str = ""
+    content: str = ""
 
 
 class DiagnoseDisputeInput(_Base):
