@@ -1,19 +1,33 @@
 # 知识库资料包
 
-一期只开放郑州，资料放在 `zz.json`。后续上传资料时直接替换该文件，然后运行校验脚本并重启后端。
+一期只开放郑州，资料放在 `zz.json`。JSON 是审核与版本发布的权威源；PostgreSQL 16 + pgvector 是检索索引。后续上传资料时替换该文件，校验后 ingest 到 PG。
 
 ## 上传步骤
 
-1. 按下面的结构编辑 `zz.json`，不要把未审核资料标成 `approved`。
-2. 运行校验：
+1. 启动 PostgreSQL（仓库根目录）：
+
+```sh
+docker compose up -d
+```
+
+2. 按下面的结构编辑 `zz.json`，不要把未审核资料标成 `approved`。
+3. 运行校验：
 
 ```sh
 cd backend
 ./.venv/Scripts/python.exe -m app.knowledge.validate app/knowledge/data/zz.json
 ```
 
-3. 校验通过后重启后端；`/api/config` 的 `knowledgeBase` 会随已审核条目自动变化。
-4. 在郑州地区发起合同审查，回答下会出现「依据」折叠区；其他城市仍返回空来源。
+4. 校验通过后同步到 PG 并生成 embedding：
+
+```sh
+./.venv/Scripts/python.exe -m app.knowledge.ingest app/knowledge/data/zz.json
+```
+
+5. 接口直接读 PG，通常无需重启；只有改表结构或 embedding 模型/维度时才重启后端。
+6. 在郑州地区发起合同审查，回答下会出现「依据」折叠区；其他城市仍返回空来源。
+
+`/api/config` 的 `knowledgeBase` 会随 PG 中已审核条目自动变化。embedding 首次下载约百 MB，可用 `HF_ENDPOINT` 指定镜像。
 
 ## 资料包结构
 

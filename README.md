@@ -9,6 +9,7 @@
 - **前端**：React 19 + TypeScript + Vite + Tailwind CSS 4 + shadcn 组件目录。
 - **后端**：Python 3.10+ + FastAPI + Pydantic v2，httpx 调用单一 OpenAI 兼容模型 API。
 - **文档解析**：PyMuPDF（PDF 文本层）、python-docx（DOCX）、RapidOCR（扫描 PDF / 图片 OCR，本机处理）。
+- **知识库**：PostgreSQL 16 + pgvector；fastembed（BAAI/bge-small-zh-v1.5，512 维，CPU）；审核 JSON 为权威源，PG 为检索索引。
 
 ## 目录结构
 
@@ -20,15 +21,17 @@
 │   ├── app/
 │   │   ├── main.py       # FastAPI 入口
 │   │   ├── config.py     # 设置、输入限制、城市
+│   │   ├── knowledge/    # 审核资料包、ingest、PG/pgvector 检索
 │   │   ├── schemas.py    # Pydantic 模型
 │   │   ├── responses.py  # 统一 envelope 与错误处理
 │   │   ├── model.py      # OpenAI 兼容模型客户端（密钥仅服务端）
 │   │   ├── validation.py # 输入限制 + 引文闭合校验（UTF-16）
 │   │   ├── prompts.py    # 系统提示词
-│   │   ├── routers/      # config / contract / dispute / extract
+│   │   ├── routers/      # config / contract / dispute / extract / sources
 │   │   └── services/     # 合同 / 争议 / 提取业务逻辑
 │   ├── requirements.txt
 │   └── .env.example
+├── docker-compose.yml    # PostgreSQL 16 + pgvector（端口 5433）
 └── 开发文档/             # 产品基线与设计说明（不纳入版本控制）
 ```
 
@@ -37,15 +40,19 @@
 ### 后端
 
 ```sh
+# 仓库根目录：启动 PostgreSQL 16 + pgvector（端口 5433）
+docker compose up -d
+
 cd backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate ；macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-copy .env.example .env   # 填写 MODEL_API_KEY / MODEL_NAME / MODEL_API_BASE_URL（可选 MODEL_REASONING_EFFORT）
+copy .env.example .env   # 填写模型密钥；DATABASE_URL 与 compose 密码保持一致
+python -m app.knowledge.ingest app/knowledge/data/zz.json   # 审核 JSON → PG + embedding
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-未配置模型密钥时，分析类接口返回 `503 service_not_configured`，配置读取与校验仍可用。
+未配置模型密钥时，分析类接口返回 `503 service_not_configured`，配置读取与校验仍可用。未配置 `DATABASE_URL` 或 `KNOWLEDGE_BACKEND=json` 时，知识库回退文件型 JSON；生产/演示使用 PG。首次 ingest 会下载本地中文 embedding 模型（约百 MB），可用 `HF_ENDPOINT` 指定镜像。
 
 ### 前端
 
@@ -88,3 +95,4 @@ npm run build            # 类型检查 + 静态构建到 dist/
 9. ✅ 二期知识库骨架：郑州试点资料包、关键词检索、按场景 coverage、资料校验脚本、合同回答「依据」折叠区与 knowledgeVersion；非郑州返回空来源并降级。
 10. ✅ 二期争议渠道来源骨架：争议方向 sourceRefs → references，争议页依据折叠区与覆盖提示；渠道资料待上传。
 11. ✅ 二期渠道资格骨架：channel 资料对象、general_only/local_verified、服务端 eligibility 与「本地已核验」展示；渠道数据待上传。
+12. ✅ 二期知识库落地：PostgreSQL 16 + pgvector、本地 bge-small-zh、ingest、语义检索、来源引用与覆盖/渠道资格骨架；郑州种子已入库。

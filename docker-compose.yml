@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: zzyj-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zzyj_dev_pw}
+      POSTGRES_DB: zzyj
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - zzyj_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d zzyj"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  zzyj_pg_data:
+    name: zzyj_pg_data

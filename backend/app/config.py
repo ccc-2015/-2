@@ -15,12 +15,24 @@ class Settings(BaseSettings):
     model_timeout_ms: int = 60000
     # 推理强度：minimal 关闭冗余推理、显著提速（实测 63s→16s）；留空则不发送该参数。
     model_reasoning_effort: str = "minimal"
+
+    # 二期知识库：PostgreSQL + pgvector；未配置 DATABASE_URL 时回退文件型 JSON 知识库。
+    knowledge_backend: str = "json"
+    database_url: str = ""
+    model_embedding_name: str = ""
+    embedding_dim: int = 512
+    embedding_min_score: float = 0.2
+    hf_endpoint: str = ""
     host: str = "127.0.0.1"
     port: int = 8000
 
     @property
     def model_configured(self) -> bool:
         return bool(self.model_api_key.strip() and self.model_name.strip())
+
+    @property
+    def embedding_configured(self) -> bool:
+        return bool(self.model_embedding_name.strip())
 
     @property
     def base_url(self) -> str:
