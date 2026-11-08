@@ -128,4 +128,21 @@ cd backend && ./.venv/Scripts/python.exe -m app.knowledge.validate app/knowledge
 
 `scripts/build_knowledge_pack.py` 只挑与合同、押金、维修、退租、经纪相关的条文；公告、配租名单、处罚程序等不入库。`scripts/eval_retrieval.py` 用 16 条标注 query 比较向量/关键词权重（当前 0.5/0.5，top1 10/16，Recall@4 16/16）。
 
+## 检索链路与精排序（rerank）
+
+1. **粗排**：pgvector 余弦召回 `RERANK_CANDIDATES` 条（未启用精排时只取 `top_k`），再按「向量 0.5 + 关键词 0.5」加权融合。
+2. **精排**：若配置了 `RERANK_MODEL_NAME`，把粗排候选送 `POST {RERANK_API_BASE_URL}/rerank` 重排；未配置或调用失败则直接用粗排顺序，不阻断审查。
+3. `RERANK_MIN_SCORE` 过滤低分候选，全部被过滤时回退粗排。
+
+```env
+RERANK_MODEL_NAME=BAAI/bge-reranker-v2-m3   # 留空即关闭精排
+RERANK_API_BASE_URL=                        # 留空复用 MODEL_API_BASE_URL
+RERANK_API_KEY=                             # 留空复用 MODEL_API_KEY
+RERANK_TIMEOUT_MS=8000
+RERANK_CANDIDATES=12
+RERANK_MIN_SCORE=0.0
+```
+
+接口按 OpenAI 兼容格式返回 `{"results":[{"index":0,"relevance_score":0.87}]}`（也兼容 Cohere 的 `data` 字段）。改完 `.env` 需重启后端。
+
 更新资料时请同步 `version`、`checkedAt`、`coverage`、`topicCoverage` 和每条资料的 `limitations`。

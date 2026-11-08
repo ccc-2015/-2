@@ -14,6 +14,7 @@ from psycopg_pool import ConnectionPool
 
 from ..config import get_settings
 from .embeddings import embed_query, embed_texts
+from .rerank import rerank as rerank_api
 from .models import ChannelProfile, KnowledgeEntry, KnowledgePack
 from .store import SCENARIO_TOPICS
 
@@ -276,26 +277,66 @@ class PostgresKnowledgeStore:
     ) -> list[KnowledgeEntry]:
         if not city_code:
             return []
+        candidates, _ = self._rank_candidates(city_code, event_date, query, scenario, top_k)
+        if not candidates:
+            return []
+        ranked = self._rerank(query, candidates, top_k)
+        if ranked is None:
+            ranked = candidates[:top_k]
+        return [entry for _, entry in ranked]
+
+    def _rank_candidates(
+        self,
+        city_code: str,
+        event_date: str | None,
+        query: str,
+        scenario: str | None,
+        top_k: int,
+    ) -> tuple[list[tuple[float, KnowledgeEntry]], bool]:
+        """粗排：向量 + 关键词融合，取 rerank 候选窗口。"""
         settings = get_settings()
+        window = max(top_k, settings.rerank_candidates) if settings.rerank_configured else top_k
         if query.strip() and settings.embedding_configured:
             try:
                 vector = embed_query(query)
                 if vector:
-                    pairs = self._vector_rows(city_code, event_date, scenario, vector, top_k * 3)
+                    pairs = self._vector_rows(city_code, event_date, scenario, vector, window)
                     if pairs:
-                        return self._fused(pairs, query, top_k)
+                        return self._fuse_scored(pairs, query), True
             except Exception as exc:  # 语义检索失败不应阻断关键词回退
                 logger.warning("semantic retrieval fallback: %s", type(exc).__name__)
         rows = self._applicable_rows(city_code, event_date, scenario)
-        return self._keyword_rank(rows, query, top_k)
+        return self._keyword_scored(rows, query)[:window], False
 
-    def _fused(self, pairs: list[tuple[dict, float]], query: str, top_k: int) -> list[KnowledgeEntry]:
-        """向量相似度与关键词命中加权融合。
+    def _rerank(
+        self,
+        query: str,
+        candidates: list[tuple[float, KnowledgeEntry]],
+        top_k: int,
+    ) -> list[tuple[float, KnowledgeEntry]] | None:
+        """精排序：调用 rerank 模型重排候选；未配置/失败返回 None 由调用方回退。"""
+        settings = get_settings()
+        if not settings.rerank_configured or not candidates:
+            return None
+        documents = [self._rerank_text(entry) for _, entry in candidates]
+        scores = rerank_api(query, documents)
+        if scores is None:
+            return None
+        ranked = [
+            (score, entry)
+            for score, (_, entry) in zip(scores, candidates)
+            if score >= settings.rerank_min_score
+        ]
+        ranked.sort(key=lambda item: (-item[0], item[1].id))
+        return ranked[:top_k] or None
 
-        纯向量常把「消费警示」这类泛化文本排到法规条款前；关键词命中能给押金、
-        维修、涨租等具体诉求更准的位置。16 条标注 query 实测：纯向量 top1 6/16，
-        0.5/0.5 融合 top1 10/16；Recall@4 两者都是 16/16，因此取 0.5/0.5。
-        """
+    @staticmethod
+    def _rerank_text(entry: KnowledgeEntry) -> str:
+        return "\n".join(
+            part for part in (entry.title, entry.summary, entry.text[:400]) if part
+        )
+
+    def _fuse_scored(self, pairs: list[tuple[dict, float]], query: str) -> list[tuple[float, KnowledgeEntry]]:
         q = (query or "").lower()
         scored: list[tuple[float, str, KnowledgeEntry]] = []
         for row, similarity in pairs:
@@ -304,7 +345,16 @@ class PostgresKnowledgeStore:
             total = similarity * 0.5 + keyword_boost * 0.5
             scored.append((total, row["id"], self._entry_from_row(row)))
         scored.sort(key=lambda item: (-item[0], item[1]))
-        return [entry for _, _, entry in scored[:top_k]]
+        return [(total, entry) for total, _, entry in scored]
+
+    def _fused(self, pairs: list[tuple[dict, float]], query: str, top_k: int) -> list[KnowledgeEntry]:
+        """向量相似度与关键词命中加权融合。
+
+        纯向量常把「消费警示」这类泛化文本排到法规条款前；关键词命中能给押金、
+        维修、涨租等具体诉求更准的位置。16 条标注 query 实测：纯向量 top1 6/16，
+        0.5/0.5 融合 top1 10/16；Recall@4 两者都是 16/16，因此取 0.5/0.5。
+        """
+        return [entry for _, entry in self._fuse_scored(pairs, query)[:top_k]]
 
     def source_by_id(self, source_id: str) -> KnowledgeEntry | None:
         row = self._fetchone(

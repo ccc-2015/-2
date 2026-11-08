@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     embedding_dim: int = 512
     embedding_min_score: float = 0.2
     hf_endpoint: str = ""
+
+    # 精排序（rerank）：留空 RERANK_MODEL_NAME 则不启用，直接用向量+关键词融合顺序。
+    rerank_model_name: str = ""
+    rerank_api_base_url: str = ""
+    rerank_api_key: str = ""
+    rerank_timeout_ms: int = 8000
+    rerank_candidates: int = 12
+    rerank_min_score: float = 0.0
+
     host: str = "127.0.0.1"
     port: int = 8000
 
@@ -48,6 +57,23 @@ class Settings(BaseSettings):
     def reasoning_effort(self) -> str | None:
         value = (self.model_reasoning_effort or "").strip()
         return value or None
+
+    @property
+    def rerank_configured(self) -> bool:
+        return bool(self.rerank_model_name.strip())
+
+    @property
+    def rerank_base_url(self) -> str:
+        return (self.rerank_api_base_url or self.model_api_base_url or "https://api.openai.com/v1").rstrip("/")
+
+    @property
+    def rerank_key(self) -> str:
+        return (self.rerank_api_key or self.model_api_key).strip()
+
+    @property
+    def rerank_timeout_seconds(self) -> float:
+        value = self.rerank_timeout_ms if self.rerank_timeout_ms > 0 else 8000
+        return min(value, 30000) / 1000
 
 
 @lru_cache
