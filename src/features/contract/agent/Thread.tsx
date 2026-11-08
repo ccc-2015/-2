@@ -1,5 +1,6 @@
 import { FileText, Loader2, MapPin, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { ContractIntent, ContractResult, Excerpt } from "@/shared/api";
+import { SourceList } from "@/components/SourceList";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -214,47 +215,7 @@ function ResultBlock({
         </div>
       )}
 
-      {result.references.length > 0 && (
-        <details className="border-t border-border/60 pt-2">
-          <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">
-            依据（{result.references.length}）
-            {knowledgeVersion ? ` · 知识库 ${knowledgeVersion}` : ""}
-          </summary>
-          <ul className="mt-2 space-y-2.5">
-            {result.references.map((source) => (
-              <li key={source.id} className="text-[11px] leading-relaxed text-muted-foreground">
-                <div className="font-medium text-foreground">{source.title}</div>
-                <div>
-                  {source.publisher}
-                  {source.effectiveFrom ? ` · 生效 ${source.effectiveFrom}` : ""}
-                  {source.version ? ` · 版本 ${source.version}` : ""}
-                  {source.checkedAt ? ` · 核验 ${source.checkedAt}` : ""}
-                </div>
-                {source.excerpt && (
-                  <blockquote className="mt-1 border-l-2 border-border pl-2 font-mono text-[11px]">
-                    {source.excerpt}
-                  </blockquote>
-                )}
-                {source.url && (
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 inline-block text-primary underline-offset-2 hover:underline"
-                  >
-                    官方来源
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-          {warnings.length > 0 && (
-            <p className="mt-2 border-t border-border/60 pt-1.5 text-[10px] leading-relaxed">
-              {warnings.join(" ")}
-            </p>
-          )}
-        </details>
-      )}
+      <SourceList sources={result.references} knowledgeVersion={knowledgeVersion} warnings={warnings} />
 
       {result.followUpQuestions.length > 0 && (
         <div>

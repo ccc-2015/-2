@@ -191,6 +191,7 @@ export interface DisputeResult {
   missingFacts: string[];
   recommendations: Recommendation[];
   script: DisputeScript | null;
+  references: SourceRef[];
 }
 
 // ---- 错误码（基线 §6）----

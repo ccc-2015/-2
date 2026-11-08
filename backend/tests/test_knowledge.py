@@ -12,12 +12,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
 
 from app.knowledge import knowledge_store
+from app.knowledge.citations import collect_cited_ids
 from app.knowledge.store import DATA_DIR
 from app.knowledge.validate import validate_pack
 from app.main import app
 from app.schemas import AnalyzeContractInput
 from app.services import contract as contract_service
-from app.services.contract import _build_user_prompt, _collect_cited_ids, analyze_contract
+from app.services.contract import _build_user_prompt, analyze_contract
 
 
 class KnowledgeStoreTests(unittest.TestCase):
@@ -100,7 +101,7 @@ class ContractKnowledgeTests(unittest.TestCase):
 
     def test_collect_cited_ids_filters_unknown(self):
         raw = {"sourceRefs": ["S1"], "findings": [{"sourceRefs": ["S2", "S99"]}]}
-        ids = _collect_cited_ids(raw, self.source_map)
+        ids = collect_cited_ids(raw, self.source_map)
         self.assertEqual(ids, [self.sources[0].id, self.sources[1].id])
 
     def test_analyze_maps_sources_and_meta(self):

@@ -20,8 +20,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SourceList } from "@/components/SourceList";
 import { RegionSelect } from "../../components/RegionSelect";
-import { EVIDENCE_STATUS_LABELS, type DisputeResult } from "@/shared/api";
+import { EVIDENCE_STATUS_LABELS, type DisputeResult, type ResponseMeta } from "@/shared/api";
 import { useConfig } from "../../lib/config-context";
 import { useRegionCode } from "../../lib/region";
 import { api, ApiError, errorMessage } from "../../lib/api";
@@ -79,6 +80,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [result, setResult] = useState<DisputeResult | null>(null);
+  const [resultMeta, setResultMeta] = useState<ResponseMeta | null>(null);
   const [scriptDraft, setScriptDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
@@ -100,7 +102,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.diagnoseDispute({
+      const { data, meta } = await api.diagnoseDispute({
         issue: issue.trim(),
         cityCode,
         eventDate: eventDate || null,
@@ -113,6 +115,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
         selectedChannelId: channelId,
       });
       setResult(data);
+      setResultMeta(meta);
       setSelectedChannelId(channelId);
       if (channelId && data.script) {
         setScriptDraft(data.script.text);
@@ -348,7 +351,18 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
               {result.recommendations.length > 0 && (
                 <div className="panel p-4">
-                  <h3 className="mb-2 text-sm font-semibold">一般处理方向</h3>
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-semibold">一般处理方向</h3>
+                    {resultMeta && (
+                      <Badge variant="outline">
+                        {resultMeta.coverage === "supported"
+                          ? "知识库已覆盖"
+                          : resultMeta.coverage === "limited"
+                            ? "知识库覆盖有限"
+                            : "暂无渠道知识库"}
+                      </Badge>
+                    )}
+                  </div>
                   <p className="mb-3 text-xs text-muted-foreground">均为一般方向，本地渠道与资格待核实；选定一个方向后生成专属话术。</p>
                   <div className="space-y-2">
                     {result.recommendations.map((rec, i) => {
@@ -360,6 +374,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                             {i === 0 && <Badge variant="secondary">优先方向</Badge>}
                             <span className="text-sm font-medium">{rec.title || CHANNEL_LABELS[id] || id}</span>
                             <Badge variant="outline">一般 · 待核实</Badge>
+                            {rec.sourceRefs.length > 0 && <Badge variant="outline">有依据</Badge>}
                           </div>
                           {rec.reason && <p className="text-xs text-muted-foreground">{rec.reason}</p>}
                           {rec.preparations.length > 0 && (
@@ -376,6 +391,15 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                     })}
                   </div>
                 </div>
+              )}
+
+              <SourceList
+                sources={result.references}
+                knowledgeVersion={resultMeta?.knowledgeVersion ?? null}
+                warnings={resultMeta?.warnings ?? []}
+              />
+              {result.references.length === 0 && (resultMeta?.warnings.length ?? 0) > 0 && (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">{resultMeta!.warnings.join(" ")}</p>
               )}
 
               <div className="panel p-4">

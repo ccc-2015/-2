@@ -11,9 +11,11 @@ router = APIRouter(prefix="/dispute", tags=["dispute"])
 @router.post("/diagnose")
 async def diagnose(inp: DiagnoseDisputeInput):
     validate_dispute_limits(inp)
-    result = await diagnose_dispute(inp)
+    analysis = await diagnose_dispute(inp)
     return success(
-        result,
-        coverage="limited",
-        warnings=["一期仅提供一般处理方向，本地渠道与资格待核实；话术须由用户核对后自行提交。"],
+        analysis.result,
+        coverage=analysis.coverage,
+        warnings=analysis.warnings,
+        processing_mode=analysis.processing_mode,
+        knowledge_version=analysis.knowledge_version,
     )

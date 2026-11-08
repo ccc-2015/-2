@@ -14,6 +14,24 @@ from .models import KnowledgeEntry, KnowledgePack
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 
+_SCENARIO_TOPICS = {
+    "contract_review": {
+        "contract",
+        "rent",
+        "repair",
+        "wear",
+        "return",
+        "termination",
+        "renewal",
+        "priority",
+        "deposit",
+        "alteration",
+        "restoration",
+        "safety",
+    },
+    "dispute": {"dispute", "channel"},
+}
+
 
 class KnowledgeStore:
     def __init__(self, data_dir: Path | None = None) -> None:
@@ -79,23 +97,7 @@ class KnowledgeStore:
         scenario: str | None = None,
     ) -> list[KnowledgeEntry]:
         entries = self._applicable(city_code, event_date)
-        topics = {
-            "contract_review": {
-                "contract",
-                "rent",
-                "repair",
-                "wear",
-                "return",
-                "termination",
-                "renewal",
-                "priority",
-                "deposit",
-                "alteration",
-                "restoration",
-                "safety",
-            },
-            "dispute": {"dispute", "channel"},
-        }.get(scenario or "")
+        topics = _SCENARIO_TOPICS.get(scenario or "")
         if topics:
             entries = [entry for entry in entries if topics.intersection(entry.topics)]
         return entries
@@ -106,10 +108,15 @@ class KnowledgeStore:
         event_date: str | None,
         query: str,
         top_k: int = 4,
+        scenario: str | None = None,
     ) -> list[KnowledgeEntry]:
         q = (query or "").lower()
+        entries = self._applicable(city_code, event_date)
+        topics = _SCENARIO_TOPICS.get(scenario or "")
+        if topics:
+            entries = [entry for entry in entries if topics.intersection(entry.topics)]
         scored: list[tuple[int, str, KnowledgeEntry]] = []
-        for entry in self._applicable(city_code, event_date):
+        for entry in entries:
             score = 0
             for keyword in entry.keywords:
                 if keyword and keyword.lower() in q:

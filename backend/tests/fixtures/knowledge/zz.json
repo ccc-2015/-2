@@ -1,0 +1,31 @@
+{
+  "cityCode": "ZZ",
+  "cityName": "郑州",
+  "version": "zz-test-1",
+  "coverage": "limited",
+  "topicCoverage": {
+    "contract_review": "unsupported",
+    "dispute": "limited"
+  },
+  "checkedAt": "2026-11-08",
+  "entries": [
+    {
+      "id": "zz-test-12345",
+      "title": "郑州市 12345 政务服务便民热线（测试夹具）",
+      "publisher": "郑州市人民政府",
+      "url": "https://www.zhengzhou.gov.cn/",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2024-01-01",
+      "effectiveTo": null,
+      "version": "2024-01-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": ["channel", "dispute"],
+      "keywords": ["12345", "投诉", "咨询", "押金"],
+      "text": "12345 政务服务便民热线受理咨询、投诉、建议等非紧急诉求。",
+      "summary": "测试用渠道资料，不构成真实渠道结论。",
+      "limitations": "测试夹具，仅用于验证来源映射。"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..knowledge import knowledge_store
+from ..knowledge.citations import collect_cited_ids, map_source_refs
 from ..knowledge.models import KnowledgeEntry
 from ..model import chat_json
 from ..prompts import CONTRACT_SYSTEM_PROMPT
@@ -39,48 +40,6 @@ def _str_array(value, max_items: int = 8) -> list[str]:
     return [x for x in value if isinstance(x, str) and x.strip()][:max_items]
 
 
-def _resolve_source_id(value, source_map: dict[str, KnowledgeEntry]) -> str | None:
-    if not isinstance(value, str):
-        return None
-    key = value.strip().upper()
-    entry = source_map.get(key)
-    if entry:
-        return entry.id
-    raw = value.strip()
-    for candidate in source_map.values():
-        if candidate.id == raw:
-            return candidate.id
-    return None
-
-
-def _map_source_refs(raw, source_map: dict[str, KnowledgeEntry]) -> list[str]:
-    if not isinstance(raw, list):
-        return []
-    ids: list[str] = []
-    for value in raw:
-        source_id = _resolve_source_id(value, source_map)
-        if source_id and source_id not in ids:
-            ids.append(source_id)
-    return ids
-
-
-def _collect_cited_ids(raw, source_map: dict[str, KnowledgeEntry]) -> list[str]:
-    ids: list[str] = []
-
-    def add(values) -> None:
-        for source_id in _map_source_refs(values, source_map):
-            if source_id not in ids:
-                ids.append(source_id)
-
-    add(raw.get("sourceRefs"))
-    findings = raw.get("findings")
-    if isinstance(findings, list):
-        for item in findings:
-            if isinstance(item, dict):
-                add(item.get("sourceRefs"))
-    return ids
-
-
 def _warnings(sources: list[KnowledgeEntry], cited_ids: list[str], coverage: str, city: str) -> list[str]:
     if not sources:
         if knowledge_store.pack_for(city) is None:
@@ -97,7 +56,7 @@ def _warnings(sources: list[KnowledgeEntry], cited_ids: list[str], coverage: str
 async def analyze_contract(inp: AnalyzeContractInput) -> ContractAnalysis:
     city = inp.cityCode or "CN"
     query = "\n".join(part for part in (inp.text, inp.question, inp.intent) if part)
-    sources = knowledge_store.retrieve(city, inp.eventDate, query, top_k=4)
+    sources = knowledge_store.retrieve(city, inp.eventDate, query, top_k=4, scenario="contract_review")
     source_map = {f"S{index + 1}": entry for index, entry in enumerate(sources)}
     raw = await chat_json(
         [
@@ -107,7 +66,7 @@ async def analyze_contract(inp: AnalyzeContractInput) -> ContractAnalysis:
         temperature=0.2,
         max_tokens=_MAX_TOKENS.get(inp.intent, 3072),
     )
-    cited_ids = _collect_cited_ids(raw, source_map)
+    cited_ids = collect_cited_ids(raw, source_map)
     references = [entry.to_source_ref() for entry in sources if entry.id in cited_ids]
     coverage = knowledge_store.coverage_for(city, "contract_review")
     result = ContractResult(
@@ -176,7 +135,7 @@ def _normalize_findings(raw, full_text: str, source_map: dict[str, KnowledgeEntr
                 excerpt=close_excerpt(item.get("excerpt"), full_text),
                 suggestedQuestion=_str(item.get("suggestedQuestion")),
                 uncertainties=_str_array(item.get("uncertainties")),
-                sourceRefs=_map_source_refs(item.get("sourceRefs"), source_map),
+                sourceRefs=map_source_refs(item.get("sourceRefs"), source_map),
             )
         )
     findings.sort(key=lambda f: _PRIORITY_ORDER[f.priority])

@@ -115,6 +115,7 @@ class DisputeResult(_Base):
     missingFacts: list[str] = Field(default_factory=list)
     recommendations: list[Recommendation] = Field(default_factory=list)
     script: DisputeScript | None = None
+    references: list[SourceRef] = Field(default_factory=list)
 
 
 class CityOption(_Base):
