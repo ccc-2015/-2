@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SourceList } from "@/components/SourceList";
 import { RegionSelect } from "../../components/RegionSelect";
 import { EVIDENCE_STATUS_LABELS, type DisputeResult, type ResponseMeta } from "@/shared/api";
+import { disputePrefill, useDisputePrefill } from "../evidence/disputePrefill";
 import { useConfig } from "../../lib/config-context";
 import { useRegionCode } from "../../lib/region";
 import { api, ApiError, errorMessage } from "../../lib/api";
@@ -87,9 +88,28 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState("not_contacted");
   const [progressNotice, setProgressNotice] = useState("");
+  const [notice, setNotice] = useState("");
   const [scriptNotice, setScriptNotice] = useState("");
   const [tab, setTab] = useState<"script" | "analysis" | "progress">("analysis");
   const [archivedScripts, setArchivedScripts] = useState<Record<string, string>>({});
+  const prefill = useDisputePrefill();
+  useEffect(() => {
+    if (!prefill) return;
+    const next = disputePrefill.take();
+    if (!next) return;
+    setIssue(next.issue);
+    if (next.facts) setFacts(next.facts);
+    selection.set(next.evidenceIds);
+    setResult(null);
+    setResultMeta(null);
+    setSelectedChannelId(null);
+    setScriptDraft("");
+    setError(null);
+    setNotice("已从证据带入所选材料，可补充事实后整理方向。");
+    // 仅在证据页发出预填时消费一次。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
+
   const selectedChannelLabel = selectedChannelId
     ? result?.recommendations.find((rec) => rec.channelId === selectedChannelId)?.title ??
       CHANNEL_LABELS[selectedChannelId] ??
@@ -219,6 +239,10 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
           选择争议与证据，补充必要事实，匹配处理方向；选定方向后生成可编辑话术。话术为辅助草稿，未知项保留待补，系统不代你提交。
         </p>
       </header>
+
+      {notice && (
+        <p className="mt-3 rounded-lg bg-primary/5 px-3 py-2 text-[11px] leading-relaxed text-primary">{notice}</p>
+      )}
 
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
         <div className="space-y-4">

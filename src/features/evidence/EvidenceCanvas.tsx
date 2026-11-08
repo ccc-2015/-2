@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import type { ViewId } from "../../components/AppShell";
 import { RentalProfileCard } from "../rental/RentalProfileCard";
 import { MoveInChecklist } from "./MoveInChecklist";
+import { disputePrefill } from "./disputePrefill";
 import {
   STAGES,
   UTILITY_KIND_LABELS,
@@ -298,6 +299,17 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
                     records.remove(r.id);
                     if (selectedSet.has(r.id)) selection.toggle(r.id);
                   }}
+                  onStartDispute={() => {
+                    if (!selectedSet.has(r.id)) selection.toggle(r.id);
+                    disputePrefill.set({
+                      issue: r.description.split("\n")[0].slice(0, 80),
+                      facts: [r.description, r.contractClause ? `关联条款：${r.contractClause}` : ""]
+                        .filter(Boolean)
+                        .join("\n"),
+                      evidenceIds: Array.from(new Set([...selectedIds, r.id])),
+                    });
+                    onNavigate("dispute");
+                  }}
                 />
               ))}
             </div>
@@ -397,6 +409,7 @@ function RecordRow({
   onToggle,
   onEdit,
   onDelete,
+  onStartDispute,
 }: {
   record: EvidenceRecord;
   selected: boolean;
@@ -404,6 +417,7 @@ function RecordRow({
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onStartDispute: () => void;
 }) {
   const [preview, setPreview] = useState<EvidenceAttachment | null>(null);
   const attachments = record.attachments ?? [];
@@ -482,6 +496,10 @@ function RecordRow({
           <Button size="sm" variant="ghost" onClick={onEdit}>
             <Pencil className="size-3.5" />
             编辑
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onStartDispute}>
+            <Scale className="size-3.5" />
+            就此发起争议
           </Button>
           <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={onDelete}>
             <Trash2 className="size-3.5" />

@@ -404,7 +404,7 @@ export function gapHints(
 }
 // ---- 附件（图片）----
 
-export const MAX_ATTACHMENTS = 4;
+export const MAX_ATTACHMENTS = 9;
 export const MAX_STORE_CHARS = 4_000_000;
 
 function readAsDataUrl(file: File): Promise<string> {
