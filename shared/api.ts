@@ -170,7 +170,7 @@ export interface DiagnoseDisputeInput {
   selectedChannelId: string | null;
 }
 
-export type Eligibility = "general_only";
+export type Eligibility = "general_only" | "local_verified";
 
 export interface Recommendation {
   channelId: string | null;

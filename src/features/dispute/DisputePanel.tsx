@@ -91,7 +91,9 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const [archivedScripts, setArchivedScripts] = useState<Record<string, string>>({});
 
   const selectedChannelLabel = selectedChannelId
-    ? CHANNEL_LABELS[selectedChannelId] ?? selectedChannelId
+    ? result?.recommendations.find((rec) => rec.channelId === selectedChannelId)?.title ??
+      CHANNEL_LABELS[selectedChannelId] ??
+      selectedChannelId
     : "未选择方向";
   const scriptArchiveId = archivedScripts[selectedChannelId ?? "unknown"];
   const busy = loading;
@@ -363,7 +365,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                       </Badge>
                     )}
                   </div>
-                  <p className="mb-3 text-xs text-muted-foreground">均为一般方向，本地渠道与资格待核实；选定一个方向后生成专属话术。</p>
+                  <p className="mb-3 text-xs text-muted-foreground">本地渠道与资格以审核资料为准；未核验方向仍为一般建议。</p>
                   <div className="space-y-2">
                     {result.recommendations.map((rec, i) => {
                       const id = rec.channelId ?? "";
@@ -373,7 +375,11 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                           <div className="mb-1 flex flex-wrap items-center gap-2">
                             {i === 0 && <Badge variant="secondary">优先方向</Badge>}
                             <span className="text-sm font-medium">{rec.title || CHANNEL_LABELS[id] || id}</span>
-                            <Badge variant="outline">一般 · 待核实</Badge>
+                            {rec.eligibility === "local_verified" ? (
+                              <Badge variant="secondary">本地已核验</Badge>
+                            ) : (
+                              <Badge variant="outline">一般 · 待核实</Badge>
+                            )}
                             {rec.sourceRefs.length > 0 && <Badge variant="outline">有依据</Badge>}
                           </div>
                           {rec.reason && <p className="text-xs text-muted-foreground">{rec.reason}</p>}
@@ -440,7 +446,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Copy className="size-4 text-primary" />
                     <h3 className="text-sm font-semibold">话术草稿</h3>
-                    <Badge variant="outline">{CHANNEL_LABELS[selectedChannelId] ?? selectedChannelId}</Badge>
+                    <Badge variant="outline">{selectedChannelLabel}</Badge>
                   </div>
                   <Alert className="mb-2">
                     <ShieldAlert className="size-4" />

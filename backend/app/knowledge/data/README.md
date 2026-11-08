@@ -51,6 +51,43 @@ cd backend
 }
 ```
 
+## 渠道条目
+
+渠道资料在普通条目上增加 `channel` 对象。只有 `reviewStatus: "approved"` 且有官方 `url` 的资料才能标 `local_verified`；服务端以这里的 `eligibility` 为准，模型不能自行提升资格。
+
+```json
+{
+  "id": "zz-12345",
+  "title": "郑州市 12345 政务服务便民热线",
+  "publisher": "郑州市人民政府",
+  "url": "https://官方地址",
+  "scope": "city",
+  "cityCode": "ZZ",
+  "effectiveFrom": "2025-01-01",
+  "effectiveTo": null,
+  "version": "2025-01-01",
+  "checkedAt": "2026-11-08",
+  "reviewStatus": "approved",
+  "topics": ["channel", "dispute"],
+  "keywords": ["12345", "投诉", "咨询", "押金"],
+  "text": "渠道职责与受理范围的官方原文",
+  "limitations": "按当地公开受理条件；不承诺受理结果。",
+  "channel": {
+    "id": "zz_12345",
+    "title": "郑州市 12345 政务服务便民热线",
+    "eligibility": "local_verified",
+    "responsibilities": ["受理咨询、投诉、建议等非紧急诉求"],
+    "conditions": ["按当地公开受理条件"],
+    "materials": ["合同", "付款凭证", "沟通记录"]
+  }
+}
+```
+
+- `channel.id` 在同一资料包内必须唯一；`channel.title` 用于界面展示。
+- `local_verified` 只能来自 approved 且有官方 url 的资料；否则校验失败。
+- `topics` 必须包含 `channel` 或 `dispute`，否则不会进入争议检索。
+- 没有 `channel` 的条目仍可作为争议的法律依据来源，但不会新增渠道目录。
+
 ## 字段约束
 
 - `reviewStatus`：`draft` 不入检索；`source_verified` / `approved` 才会被使用。当前检索只取 `approved`。

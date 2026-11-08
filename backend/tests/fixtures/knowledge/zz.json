@@ -25,7 +25,15 @@
       "keywords": ["12345", "投诉", "咨询", "押金"],
       "text": "12345 政务服务便民热线受理咨询、投诉、建议等非紧急诉求。",
       "summary": "测试用渠道资料，不构成真实渠道结论。",
-      "limitations": "测试夹具，仅用于验证来源映射。"
+      "limitations": "测试夹具，仅用于验证来源映射。",
+      "channel": {
+        "id": "zz_12345",
+        "title": "郑州市 12345 政务服务便民热线（测试夹具）",
+        "eligibility": "local_verified",
+        "responsibilities": ["受理咨询、投诉、建议等非紧急诉求"],
+        "conditions": ["按当地公开受理条件"],
+        "materials": ["合同", "付款凭证"]
+      }
     }
   ]
 }

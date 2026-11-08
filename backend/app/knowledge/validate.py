@@ -48,6 +48,7 @@ def validate_pack(path: Path) -> tuple[KnowledgePack | None, list[str]]:
             errors.append(f"topicCoverage[{scenario}] 覆盖状态无效：{coverage}")
 
     seen: set[str] = set()
+    channel_ids: set[str] = set()
     for index, entry in enumerate(pack.entries):
         prefix = f"entries[{index}]"
         if entry.id in seen:
@@ -69,6 +70,22 @@ def validate_pack(path: Path) -> tuple[KnowledgePack | None, list[str]]:
         _check_date(entry.effectiveTo, f"{prefix}.effectiveTo", errors)
         if entry.effectiveFrom and entry.effectiveTo and entry.effectiveFrom > entry.effectiveTo:
             errors.append(f"{prefix} effectiveFrom 晚于 effectiveTo")
+        if entry.channel:
+            channel = entry.channel
+            if not channel.id.strip():
+                errors.append(f"{prefix}.channel.id 不能为空")
+            if channel.id in channel_ids:
+                errors.append(f"{prefix}.channel.id 重复：{channel.id}")
+            channel_ids.add(channel.id)
+            if not channel.title.strip():
+                errors.append(f"{prefix}.channel.title 不能为空")
+            if not {"channel", "dispute"}.intersection(entry.topics):
+                errors.append(f"{prefix} 渠道条目 topics 必须包含 channel 或 dispute")
+            if channel.eligibility == "local_verified":
+                if entry.reviewStatus != "approved":
+                    errors.append(f"{prefix} local_verified 渠道必须为 approved")
+                if not entry.url:
+                    errors.append(f"{prefix} local_verified 渠道必须提供官方 url")
     return pack, errors
 
 

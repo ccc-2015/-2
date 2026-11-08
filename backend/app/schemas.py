@@ -99,7 +99,7 @@ class DiagnoseDisputeInput(_Base):
 class Recommendation(_Base):
     channelId: str | None = None
     title: str
-    eligibility: Literal["general_only"] = "general_only"
+    eligibility: Literal["general_only", "local_verified"] = "general_only"
     reason: str = ""
     preparations: list[str] = Field(default_factory=list)
     sourceRefs: list[str] = Field(default_factory=list)

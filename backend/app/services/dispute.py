@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from ..knowledge import knowledge_store
 from ..knowledge.citations import collect_cited_ids, map_source_refs
-from ..knowledge.models import KnowledgeEntry
+from ..knowledge.models import ChannelProfile, KnowledgeEntry
 from ..model import chat_json
 from ..prompts import DISPUTE_SYSTEM_PROMPT
 from ..schemas import (
@@ -21,8 +21,17 @@ GENERAL_CHANNELS = [
     {"id": "consult_authority", "title": "向主管部门或专业机构咨询当地渠道（待核实）"},
     {"id": "prepare_evidence", "title": "整理证据材料，准备后续处理"},
 ]
-_CHANNEL_IDS = {c["id"] for c in GENERAL_CHANNELS}
-_CHANNEL_TITLES = {c["id"]: c["title"] for c in GENERAL_CHANNELS}
+
+
+def _channel_catalog(sources: list[KnowledgeEntry]) -> dict[str, ChannelProfile]:
+    catalog = {
+        channel["id"]: ChannelProfile(id=channel["id"], title=channel["title"], eligibility="general_only")
+        for channel in GENERAL_CHANNELS
+    }
+    for entry in sources:
+        if entry.channel and entry.reviewStatus == "approved":
+            catalog[entry.channel.id] = entry.channel
+    return catalog
 
 
 @dataclass
@@ -78,10 +87,11 @@ async def diagnose_dispute(inp: DiagnoseDisputeInput) -> DisputeAnalysis:
     )
     sources = knowledge_store.retrieve(city, inp.eventDate, query, top_k=4, scenario="dispute")
     source_map = {f"S{index + 1}": entry for index, entry in enumerate(sources)}
+    channel_catalog = _channel_catalog(sources)
     raw = await chat_json(
         [
             {"role": "system", "content": DISPUTE_SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_prompt(inp, sources)},
+            {"role": "user", "content": _build_user_prompt(inp, sources, channel_catalog)},
         ],
         temperature=0.2,
         max_tokens=2048,
@@ -92,7 +102,7 @@ async def diagnose_dispute(inp: DiagnoseDisputeInput) -> DisputeAnalysis:
     result = DisputeResult(
         factsSummary=_str_array(raw.get("factsSummary")),
         missingFacts=_str_array(raw.get("missingFacts")),
-        recommendations=_normalize_recommendations(raw.get("recommendations"), source_map),
+        recommendations=_normalize_recommendations(raw.get("recommendations"), source_map, channel_catalog),
         script=_normalize_script(raw.get("script")) if inp.selectedChannelId else None,
         references=references,
     )
@@ -105,7 +115,11 @@ async def diagnose_dispute(inp: DiagnoseDisputeInput) -> DisputeAnalysis:
     )
 
 
-def _build_user_prompt(inp: DiagnoseDisputeInput, sources: list[KnowledgeEntry]) -> str:
+def _build_user_prompt(
+    inp: DiagnoseDisputeInput,
+    sources: list[KnowledgeEntry],
+    channel_catalog: dict[str, ChannelProfile],
+) -> str:
     amount = "未知（待补，不等于零）" if inp.amountCents is None else f"{inp.amountCents} 分"
     parts = [
         f"【争议事项】{inp.issue}",
@@ -137,10 +151,29 @@ def _build_user_prompt(inp: DiagnoseDisputeInput, sources: list[KnowledgeEntry])
                 f"适用限制：{entry.limitations or '仅原文核对，不构成个案法律意见。'}"
             )
         parts.append("\n\n".join(lines))
+    if channel_catalog:
+        lines = ["【可用渠道（channelId 只能从以下选取，不得新增）】"]
+        for channel in channel_catalog.values():
+            line = f"- {channel.id}｜{channel.title}｜{channel.eligibility}"
+            details: list[str] = []
+            if channel.responsibilities:
+                details.append("职责：" + "；".join(channel.responsibilities))
+            if channel.conditions:
+                details.append("条件：" + "；".join(channel.conditions))
+            if channel.materials:
+                details.append("材料：" + "；".join(channel.materials))
+            if details:
+                line += "｜" + "｜".join(details)
+            lines.append(line)
+        parts.append("\n".join(lines))
     return "\n\n".join(parts)
 
 
-def _normalize_recommendations(raw, source_map: dict[str, KnowledgeEntry]) -> list[Recommendation]:
+def _normalize_recommendations(
+    raw,
+    source_map: dict[str, KnowledgeEntry],
+    channel_catalog: dict[str, ChannelProfile],
+) -> list[Recommendation]:
     if not isinstance(raw, list):
         return []
     seen: set[str] = set()
@@ -149,14 +182,15 @@ def _normalize_recommendations(raw, source_map: dict[str, KnowledgeEntry]) -> li
         if not isinstance(item, dict):
             continue
         channel_id = _str(item.get("channelId"))
-        if channel_id not in _CHANNEL_IDS or channel_id in seen:
+        profile = channel_catalog.get(channel_id)
+        if not profile or channel_id in seen:
             continue
         seen.add(channel_id)
         result.append(
             Recommendation(
                 channelId=channel_id,
-                title=_str(item.get("title"), _CHANNEL_TITLES[channel_id]),
-                eligibility="general_only",
+                title=profile.title,
+                eligibility=profile.eligibility,
                 reason=_str(item.get("reason")),
                 preparations=_str_array(item.get("preparations")),
                 sourceRefs=map_source_refs(item.get("sourceRefs"), source_map),

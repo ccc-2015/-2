@@ -12,6 +12,17 @@ Scope = Literal["national", "city"]
 Coverage = Literal["supported", "limited", "unsupported"]
 
 
+class ChannelProfile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    title: str
+    eligibility: Literal["general_only", "local_verified"] = "general_only"
+    responsibilities: list[str] = Field(default_factory=list)
+    conditions: list[str] = Field(default_factory=list)
+    materials: list[str] = Field(default_factory=list)
+
+
 class KnowledgeEntry(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -31,6 +42,7 @@ class KnowledgeEntry(BaseModel):
     text: str
     summary: str = ""
     limitations: str = ""
+    channel: ChannelProfile | None = None
 
     def to_source_ref(self) -> SourceRef:
         return SourceRef(

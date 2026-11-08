@@ -87,3 +87,4 @@ npm run build            # 类型检查 + 静态构建到 dist/
 8. ✅ 合同审查改为单页聊天 agent：上传/粘贴即审查、地区合同/争议共用、修订状态按消息持久化；390px 窄屏回归通过。
 9. ✅ 二期知识库骨架：郑州试点资料包、关键词检索、按场景 coverage、资料校验脚本、合同回答「依据」折叠区与 knowledgeVersion；非郑州返回空来源并降级。
 10. ✅ 二期争议渠道来源骨架：争议方向 sourceRefs → references，争议页依据折叠区与覆盖提示；渠道资料待上传。
+11. ✅ 二期渠道资格骨架：channel 资料对象、general_only/local_verified、服务端 eligibility 与「本地已核验」展示；渠道数据待上传。
