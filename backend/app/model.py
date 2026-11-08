@@ -85,3 +85,63 @@ def parse_json(content: str) -> dict:
 
 async def chat_json(messages: list[dict], temperature: float = 0.2, max_tokens: int = 4096) -> dict:
     return parse_json(await chat(messages, temperature, max_tokens))
+
+
+async def chat_stream(
+    messages: list[dict],
+    temperature: float = 0.2,
+    max_tokens: int = 3072,
+):
+    """流式返回模型文本增量（OpenAI 兼容 SSE），失败抛 ApiError。"""
+    settings = get_settings()
+    if not settings.model_configured:
+        raise ApiError("service_not_configured", "模型服务尚未配置，无法完成分析。")
+
+    payload: dict = {
+        "model": settings.model_name,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }
+    if settings.reasoning_effort:
+        payload["reasoning_effort"] = settings.reasoning_effort
+
+    try:
+        async with httpx.AsyncClient(timeout=settings.timeout_seconds, trust_env=False) as client:
+            async with client.stream(
+                "POST",
+                f"{settings.base_url}/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {settings.model_api_key}",
+                },
+                json=payload,
+            ) as response:
+                if response.status_code == 429:
+                    raise ApiError("rate_limited", "模型服务限流，请稍后手动重试。")
+                if response.status_code in (401, 403):
+                    raise ApiError("service_not_configured", "模型服务凭据无效，请检查服务端配置。")
+                if response.status_code >= 400:
+                    raise ApiError("service_unavailable", "模型服务暂时不可用，请稍后手动重试。")
+                async for line in response.aiter_lines():
+                    if not line or not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                    except ValueError:
+                        continue
+                    choices = chunk.get("choices") if isinstance(chunk, dict) else None
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta") or {}
+                    content = delta.get("content")
+                    if isinstance(content, str) and content:
+                        yield content
+    except httpx.TimeoutException:
+        raise ApiError("upstream_timeout", "模型服务响应超时，请保留输入稍后手动重试。")
+    except httpx.HTTPError:
+        raise ApiError("service_unavailable", "模型服务暂时不可用，请稍后手动重试。")

@@ -39,6 +39,10 @@ export interface Exchange {
   meta: ResponseMeta | null; // 二期知识库版本与警告从这里取
   error: ApiError | null;
   loading: boolean;
+  /** 流式阶段：reading/retrieving/generating，用于展示真实进度。 */
+  stage?: "reading" | "retrieving" | "generating" | null;
+  /** 已流式返回的回答正文，结束后由 result.answer 覆盖。 */
+  partialAnswer?: string;
 }
 
 /** 修订副本状态按消息 id 保存在页面级，关闭抽屉不丢。 */
@@ -54,6 +58,10 @@ export interface RevisionDraft {
   result: ContractResult | null;
   error: ApiError | null;
   loading: boolean;
+  /** 流式阶段：reading/retrieving/generating，用于展示真实进度。 */
+  stage?: "reading" | "retrieving" | "generating" | null;
+  /** 已流式返回的回答正文，结束后由 result.answer 覆盖。 */
+  partialAnswer?: string;
 }
 
 export interface RevisionSuggestion {

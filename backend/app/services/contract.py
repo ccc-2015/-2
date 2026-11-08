@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from ..knowledge import knowledge_store
 from ..knowledge.citations import collect_cited_ids, map_source_refs
 from ..knowledge.models import KnowledgeEntry
-from ..model import chat_json
+from ..model import chat_json, chat_stream
 from ..prompts import CONTRACT_SYSTEM_PROMPT
 from ..schemas import (
     AnalyzeContractInput,
@@ -19,7 +19,8 @@ from ..validation import close_excerpt
 
 _PRIORITIES = ("confirm_first", "needs_attention", "insufficient_info")
 _PRIORITY_ORDER = {"confirm_first": 0, "needs_attention": 1, "insufficient_info": 2}
-_MAX_TOKENS = {"ask": 2048, "review": 3072, "suggest_revision": 3072, "draft_revision": 3072}
+_MAX_TOKENS = {"ask": 1600, "review": 2400, "suggest_revision": 2400, "draft_revision": 2400}
+DATA_MARKER = "===DATA==="
 
 
 @dataclass
@@ -53,19 +54,22 @@ def _warnings(sources: list[KnowledgeEntry], cited_ids: list[str], coverage: str
     return warnings
 
 
-async def analyze_contract(inp: AnalyzeContractInput) -> ContractAnalysis:
+def _messages(inp: AnalyzeContractInput, sources: list[KnowledgeEntry]) -> list[dict]:
+    return [
+        {"role": "system", "content": CONTRACT_SYSTEM_PROMPT},
+        {"role": "user", "content": _build_user_prompt(inp, sources)},
+    ]
+
+
+def prepare_sources(inp: AnalyzeContractInput) -> list[KnowledgeEntry]:
     city = inp.cityCode or "CN"
     query = "\n".join(part for part in (inp.text, inp.question, inp.intent) if part)
-    sources = knowledge_store.retrieve(city, inp.eventDate, query, top_k=4, scenario="contract_review")
+    return knowledge_store.retrieve(city, inp.eventDate, query, top_k=4, scenario="contract_review")
+
+
+def materialize(inp: AnalyzeContractInput, sources: list[KnowledgeEntry], raw: dict) -> ContractAnalysis:
+    city = inp.cityCode or "CN"
     source_map = {f"S{index + 1}": entry for index, entry in enumerate(sources)}
-    raw = await chat_json(
-        [
-            {"role": "system", "content": CONTRACT_SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_prompt(inp, sources)},
-        ],
-        temperature=0.2,
-        max_tokens=_MAX_TOKENS.get(inp.intent, 3072),
-    )
     cited_ids = collect_cited_ids(raw, source_map)
     references = [entry.to_source_ref() for entry in sources if entry.id in cited_ids]
     coverage = knowledge_store.coverage_for(city, "contract_review")
@@ -83,6 +87,20 @@ async def analyze_contract(inp: AnalyzeContractInput) -> ContractAnalysis:
         knowledge_version=knowledge_store.version_for(city) if knowledge_store.available else None,
         warnings=_warnings(sources, cited_ids, coverage, city),
     )
+
+
+def model_messages(inp: AnalyzeContractInput, sources: list[KnowledgeEntry]) -> list[dict]:
+    return _messages(inp, sources)
+
+
+async def analyze_contract(inp: AnalyzeContractInput) -> ContractAnalysis:
+    sources = prepare_sources(inp)
+    raw = await chat_json(
+        _messages(inp, sources),
+        temperature=0.2,
+        max_tokens=_MAX_TOKENS.get(inp.intent, 2400),
+    )
+    return materialize(inp, sources, raw)
 
 
 def _build_user_prompt(inp: AnalyzeContractInput, sources: list[KnowledgeEntry]) -> str:

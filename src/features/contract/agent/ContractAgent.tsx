@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { RegionSelect } from "../../../components/RegionSelect";
-import { api, ApiError, errorMessage } from "../../../lib/api";
+import { analyzeContractStream, api, ApiError, errorMessage } from "../../../lib/api";
 import { useConfig } from "../../../lib/config-context";
 import { useRegionCode } from "../../../lib/region";
 import { newId, saveRecordChecked, type EvidenceRecord } from "../../evidence/store";
@@ -49,6 +49,7 @@ import {
   PASTE_META,
   defaultQuestion,
   type ContractDoc,
+  type Exchange,
   type RevisionDraft,
   type RevisionSuggestion,
 } from "./types";
@@ -200,11 +201,21 @@ export function ContractAgent({
   ) {
     patch((current) => ({
       exchanges: current.exchanges.map((exchange) =>
-        exchange.id === id ? { ...exchange, loading: true, error: null } : exchange,
+        exchange.id === id
+          ? { ...exchange, loading: true, error: null, stage: "reading", partialAnswer: "" }
+          : exchange,
       ),
     }));
-    try {
-      const { data, meta } = await api.analyzeContract({
+
+    const update = (next: Partial<Exchange>) =>
+      patch((current) => ({
+        exchanges: current.exchanges.map((exchange) =>
+          exchange.id === id ? { ...exchange, ...next } : exchange,
+        ),
+      }));
+
+    await analyzeContractStream(
+      {
         text,
         textScope: "full",
         question: displayQuestion,
@@ -213,20 +224,22 @@ export function ContractAgent({
         intent,
         cityCode,
         eventDate: eventDate || null,
-      });
-      patch((current) => ({
-        exchanges: current.exchanges.map((exchange) =>
-          exchange.id === id ? { ...exchange, loading: false, result: data, meta, docText: text } : exchange,
-        ),
-      }));
-    } catch (err) {
-      const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
-      patch((current) => ({
-        exchanges: current.exchanges.map((exchange) =>
-          exchange.id === id ? { ...exchange, loading: false, error } : exchange,
-        ),
-      }));
-    }
+      },
+      {
+        onStage: ({ stage }) => update({ stage }),
+        onDelta: (chunk) =>
+          patch((current) => ({
+            exchanges: current.exchanges.map((exchange) =>
+              exchange.id === id
+                ? { ...exchange, stage: "generating", partialAnswer: (exchange.partialAnswer ?? "") + chunk }
+                : exchange,
+            ),
+          })),
+        onResult: (data, meta) =>
+          update({ loading: false, result: data, meta, docText: text, stage: null, partialAnswer: "" }),
+        onError: (error) => update({ loading: false, error, stage: null, partialAnswer: "" }),
+      },
+    );
   }
 
   function startReview(nextDoc: ContractDoc) {

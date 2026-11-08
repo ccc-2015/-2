@@ -7,6 +7,12 @@ import { cn } from "@/lib/utils";
 import { FindingCard } from "./ResultCards";
 import type { ContractDoc, Exchange } from "./types";
 
+const STAGE_LABELS: Record<string, string> = {
+  reading: "正在读取合同…",
+  retrieving: "正在检索郑州审核资料…",
+  generating: "正在核对原文并生成意见…",
+};
+
 export function Thread({
   exchanges,
   doc,
@@ -80,9 +86,16 @@ export function Thread({
             {exchange.loading && (
               <div className="flex items-center gap-2 py-1 text-[13px] text-muted-foreground">
                 <Loader2 className="size-3.5 animate-spin" />
-                {exchange.auto ? "正在读取并审查合同…" : "正在分析并核验引文…"}
+                {STAGE_LABELS[exchange.stage ?? ""] ?? (exchange.auto ? "正在读取并审查合同…" : "正在分析并核验引文…")}
               </div>
             )}
+
+            {exchange.partialAnswer ? (
+              <p className="whitespace-pre-wrap text-[15px] leading-7">
+                {exchange.partialAnswer}
+                {exchange.loading && <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-foreground/60 align-middle" />}
+              </p>
+            ) : null}
 
             {exchange.error && (
               <Alert variant="destructive">
