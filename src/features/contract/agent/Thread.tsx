@@ -1,5 +1,5 @@
 import { FileText, Loader2, MapPin, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
-import type { ContractIntent, ContractResult, Excerpt } from "@/shared/api";
+import type { ContractIntent, ContractResult, Excerpt, Finding } from "@/shared/api";
 import { SourceList } from "@/components/SourceList";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export function Thread({
   onOpenDoc,
   onOpenRevision,
   onQuickAction,
+  onStartDispute,
 }: {
   exchanges: Exchange[];
   doc: ContractDoc | null;
@@ -31,6 +32,7 @@ export function Thread({
   onOpenDoc: () => void;
   onOpenRevision: (exchangeId: string) => void;
   onQuickAction: (intent: ContractIntent) => void;
+  onStartDispute: (finding: Finding) => void;
 }) {
   return (
     <div className="space-y-7">
@@ -117,6 +119,7 @@ export function Thread({
                 onFollowUp={onFollowUp}
                 onOpenRevision={onOpenRevision}
                 onQuickAction={onQuickAction}
+                onStartDispute={onStartDispute}
               />
             )}
           </div>
@@ -137,6 +140,7 @@ function ResultBlock({
   onFollowUp,
   onOpenRevision,
   onQuickAction,
+  onStartDispute,
 }: {
   exchangeId: string;
   result: ContractResult;
@@ -148,6 +152,7 @@ function ResultBlock({
   onFollowUp: (question: string) => void;
   onOpenRevision: (exchangeId: string) => void;
   onQuickAction: (intent: ContractIntent) => void;
+  onStartDispute: (finding: Finding) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -178,7 +183,13 @@ function ResultBlock({
         <div className="space-y-2">
           <h3 className="text-[12px] font-medium text-muted-foreground">风险提示</h3>
           {result.findings.map((finding, index) => (
-            <FindingCard key={index} finding={finding} signingDate={signingDate} onLocate={onLocate} />
+            <FindingCard
+              key={index}
+              finding={finding}
+              signingDate={signingDate}
+              onLocate={onLocate}
+              onStartDispute={() => onStartDispute(finding)}
+            />
           ))}
         </div>
       )}

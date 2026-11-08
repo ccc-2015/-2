@@ -4,6 +4,7 @@ import { AppShell, type ViewId } from "./components/AppShell";
 import { ContractAgent } from "./features/contract/agent/ContractAgent";
 import { EvidenceCanvas } from "./features/evidence/EvidenceCanvas";
 import { DisputePanel } from "./features/dispute/DisputePanel";
+import type { DisputeSeed } from "./features/dispute/seed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -34,17 +35,27 @@ function ConfigGate({ children }: { children: ReactNode }) {
 
 function Views() {
   const [view, setView] = useState<ViewId>("contract");
+  const [disputeSeed, setDisputeSeed] = useState<DisputeSeed | null>(null);
   // 三个视图常驻挂载，只切换可见性：切模块不丢失合同文本、对话、修订副本与争议表单。
   return (
     <AppShell active={view} onNavigate={setView}>
       <div className={view === "contract" ? undefined : "hidden"}>
-        <ContractAgent />
+        <ContractAgent
+          onStartDispute={(seed) => {
+            setDisputeSeed({ ...seed, key: crypto.randomUUID() });
+            setView("dispute");
+          }}
+        />
       </div>
       <div className={view === "evidence" ? undefined : "hidden"}>
         <EvidenceCanvas onNavigate={setView} />
       </div>
       <div className={view === "dispute" ? undefined : "hidden"}>
-        <DisputePanel onNavigate={setView} />
+        <DisputePanel
+          onNavigate={setView}
+          seed={disputeSeed}
+          onSeedConsumed={() => setDisputeSeed(null)}
+        />
       </div>
     </AppShell>
   );

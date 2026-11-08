@@ -6,6 +6,7 @@ import {
   MapPin,
   RefreshCw,
   Save,
+  Scale,
   ShieldAlert,
   Undo2,
 } from "lucide-react";
@@ -24,10 +25,12 @@ export function FindingCard({
   finding,
   signingDate,
   onLocate,
+  onStartDispute,
 }: {
   finding: Finding;
   signingDate: string;
   onLocate: (excerpt: Excerpt) => void;
+  onStartDispute?: () => void;
 }) {
   const [saved, setSaved] = useState(false);
   const [notice, setNotice] = useState("");
@@ -102,6 +105,17 @@ export function FindingCard({
       )}
       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
         {notice && <p className="mr-auto text-[11px] text-primary">{notice}</p>}
+        {onStartDispute && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-[11px] text-muted-foreground"
+            onClick={onStartDispute}
+          >
+            <Scale className="size-3" />
+            就此发起争议
+          </Button>
+        )}
         <Button
           size="sm"
           variant="ghost"

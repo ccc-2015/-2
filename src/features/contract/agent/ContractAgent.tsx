@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, FileText, History, ShieldCheck } from "lucide-react";
-import type { ContractIntent, Excerpt } from "@/shared/api";
+import type { ContractIntent, Excerpt, Finding } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -19,6 +19,7 @@ import { api, ApiError, errorMessage } from "../../../lib/api";
 import { useConfig } from "../../../lib/config-context";
 import { useRegionCode } from "../../../lib/region";
 import { newId, saveRecordChecked, type EvidenceRecord } from "../../evidence/store";
+import type { DisputeSeed } from "../../dispute/seed";
 import { Composer } from "./Composer";
 import { ContractSheet } from "./ContractSheet";
 import { HistoryPanel } from "./HistoryPanel";
@@ -57,7 +58,11 @@ interface PendingConfirm {
   action: () => void;
 }
 
-export function ContractAgent() {
+export function ContractAgent({
+  onStartDispute,
+}: {
+  onStartDispute?: (seed: Omit<DisputeSeed, "key">) => void;
+} = {}) {
   const { config } = useConfig();
   const cityCode = useRegionCode();
   const aiAvailable = config?.aiAvailable ?? false;
@@ -476,6 +481,24 @@ export function ContractAgent() {
     });
   }
 
+  function startDispute(finding: Finding) {
+    if (!onStartDispute) return;
+    const facts = [
+      finding.impact,
+      finding.excerpt ? `合同原文：「${finding.excerpt.text}」` : "",
+      finding.suggestedQuestion ? `建议确认：${finding.suggestedQuestion}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    onStartDispute({
+      issue: finding.issue,
+      facts,
+      counterparty: "房东",
+      amountCents: null,
+      evidenceId: textRecordId,
+    });
+  }
+
   function flushCurrent() {
     if (consent !== "on" || !sessionHasContent(session)) return;
     void saveSession(session).then(refreshHistory).catch(() => undefined);
@@ -674,6 +697,7 @@ export function ContractAgent() {
               onOpenDoc={() => openDoc()}
               onOpenRevision={openRevision}
               onQuickAction={(intent) => submit(intent)}
+              onStartDispute={startDispute}
             />
             <div ref={endRef} className="scroll-mb-40" />
           </div>
