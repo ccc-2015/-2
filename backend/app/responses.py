@@ -44,22 +44,37 @@ def new_request_id() -> str:
     return str(uuid.uuid4())
 
 
-def _meta(coverage: str = "limited", warnings: list[str] | None = None) -> dict:
+def _meta(
+    coverage: str = "limited",
+    warnings: list[str] | None = None,
+    processing_mode: str = "ai",
+    knowledge_version: str | None = None,
+) -> dict:
     return {
         "apiVersion": "1",
         "requestId": new_request_id(),
         "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "processingMode": "ai",
+        "processingMode": processing_mode,
         "coverage": coverage,
-        "knowledgeVersion": None,
+        "knowledgeVersion": knowledge_version,
         "warnings": warnings or [],
     }
 
 
-def success(data, coverage: str = "limited", warnings: list[str] | None = None) -> JSONResponse:
+def success(
+    data,
+    coverage: str = "limited",
+    warnings: list[str] | None = None,
+    processing_mode: str = "ai",
+    knowledge_version: str | None = None,
+) -> JSONResponse:
     payload = data.model_dump() if hasattr(data, "model_dump") else data
     return JSONResponse(
-        {"ok": True, "data": payload, "meta": _meta(coverage, warnings)},
+        {
+            "ok": True,
+            "data": payload,
+            "meta": _meta(coverage, warnings, processing_mode, knowledge_version),
+        },
         headers=_HEADERS,
     )
 

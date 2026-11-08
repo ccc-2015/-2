@@ -53,13 +53,26 @@ class Revision(_Base):
     targetExcerpt: Excerpt | None = None
 
 
+class SourceRef(_Base):
+    id: str
+    title: str
+    publisher: str
+    url: str | None = None
+    cityCode: str | None = None
+    effectiveFrom: str | None = None
+    effectiveTo: str | None = None
+    version: str
+    checkedAt: str
+    excerpt: str
+
+
 class ContractResult(_Base):
     answer: str
     coverage: Coverage = "limited"
     findings: list[Finding] = Field(default_factory=list)
     revision: Revision | None = None
     followUpQuestions: list[str] = Field(default_factory=list)
-    references: list[str] = Field(default_factory=list)
+    references: list[SourceRef] = Field(default_factory=list)
 
 
 class SelectedEvidence(_Base):

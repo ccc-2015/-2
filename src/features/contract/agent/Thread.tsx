@@ -2,6 +2,7 @@ import { FileText, Loader2, MapPin, RotateCw, ShieldAlert, ShieldCheck } from "l
 import type { ContractIntent, ContractResult, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { FindingCard } from "./ResultCards";
 import type { ContractDoc, Exchange } from "./types";
 
@@ -108,6 +109,8 @@ export function Thread({
                 exchangeId={exchange.id}
                 result={exchange.result}
                 signingDate={signingDate}
+                knowledgeVersion={exchange.meta?.knowledgeVersion ?? null}
+                warnings={exchange.meta?.warnings ?? []}
                 isLast={index === exchanges.length - 1}
                 onLocate={onLocate}
                 onFollowUp={onFollowUp}
@@ -126,6 +129,8 @@ function ResultBlock({
   exchangeId,
   result,
   signingDate,
+  knowledgeVersion,
+  warnings,
   isLast,
   onLocate,
   onFollowUp,
@@ -135,6 +140,8 @@ function ResultBlock({
   exchangeId: string;
   result: ContractResult;
   signingDate: string;
+  knowledgeVersion: string | null;
+  warnings: string[];
   isLast: boolean;
   onLocate: (excerpt: Excerpt) => void;
   onFollowUp: (question: string) => void;
@@ -143,7 +150,28 @@ function ResultBlock({
 }) {
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[10px]",
+            result.coverage === "unsupported"
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+              : "border-border/70 text-muted-foreground",
+          )}
+        >
+          {result.coverage === "supported"
+            ? "知识库已覆盖"
+            : result.coverage === "limited"
+              ? "知识库覆盖有限"
+              : "暂无本地知识库"}
+        </span>
+      </div>
+
       {result.answer && <p className="whitespace-pre-wrap text-[15px] leading-7">{result.answer}</p>}
+
+      {result.references.length === 0 && warnings.length > 0 && (
+        <p className="text-[11px] leading-relaxed text-muted-foreground">{warnings.join(" ")}</p>
+      )}
 
       {result.findings.length > 0 && (
         <div className="space-y-2">
@@ -187,14 +215,45 @@ function ResultBlock({
       )}
 
       {result.references.length > 0 && (
-        <div className="border-t border-border/60 pt-2">
-          <h3 className="mb-1 text-[11px] font-semibold text-muted-foreground">依据</h3>
-          <ul className="list-inside list-disc space-y-0.5 text-[11px] text-muted-foreground">
-            {result.references.map((reference, index) => (
-              <li key={index}>{reference}</li>
+        <details className="border-t border-border/60 pt-2">
+          <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">
+            依据（{result.references.length}）
+            {knowledgeVersion ? ` · 知识库 ${knowledgeVersion}` : ""}
+          </summary>
+          <ul className="mt-2 space-y-2.5">
+            {result.references.map((source) => (
+              <li key={source.id} className="text-[11px] leading-relaxed text-muted-foreground">
+                <div className="font-medium text-foreground">{source.title}</div>
+                <div>
+                  {source.publisher}
+                  {source.effectiveFrom ? ` · 生效 ${source.effectiveFrom}` : ""}
+                  {source.version ? ` · 版本 ${source.version}` : ""}
+                  {source.checkedAt ? ` · 核验 ${source.checkedAt}` : ""}
+                </div>
+                {source.excerpt && (
+                  <blockquote className="mt-1 border-l-2 border-border pl-2 font-mono text-[11px]">
+                    {source.excerpt}
+                  </blockquote>
+                )}
+                {source.url && (
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-block text-primary underline-offset-2 hover:underline"
+                  >
+                    官方来源
+                  </a>
+                )}
+              </li>
             ))}
           </ul>
-        </div>
+          {warnings.length > 0 && (
+            <p className="mt-2 border-t border-border/60 pt-1.5 text-[10px] leading-relaxed">
+              {warnings.join(" ")}
+            </p>
+          )}
+        </details>
       )}
 
       {result.followUpQuestions.length > 0 && (

@@ -124,13 +124,26 @@ export interface Revision {
   targetExcerpt: Excerpt | null;
 }
 
+export interface SourceRef {
+  id: string;
+  title: string;
+  publisher: string;
+  url: string | null;
+  cityCode: string | null;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  version: string;
+  checkedAt: string;
+  excerpt: string;
+}
+
 export interface ContractResult {
   answer: string;
   coverage: Coverage;
   findings: Finding[];
   revision: Revision | null;
   followUpQuestions: string[];
-  references: string[];
+  references: SourceRef[];
 }
 
 // ---- dispute ----

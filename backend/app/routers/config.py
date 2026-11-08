@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from ..config import CITIES, LIMITS, PRIVACY_NOTICE, get_settings
+from ..knowledge import knowledge_store
 from ..responses import success
 from ..schemas import AppConfig, CityOption
 
@@ -16,7 +17,7 @@ async def get_config():
             "contractReview": True,
             "evidenceCanvas": True,
             "dispute": True,
-            "knowledgeBase": False,
+            "knowledgeBase": knowledge_store.available,
         },
         limits=LIMITS,
         aiAvailable=settings.model_configured,

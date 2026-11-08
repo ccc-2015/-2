@@ -11,9 +11,11 @@ router = APIRouter(prefix="/contract", tags=["contract"])
 @router.post("/analyze")
 async def analyze(inp: AnalyzeContractInput):
     validate_analyze_limits(inp)
-    result = await analyze_contract(inp)
+    analysis = await analyze_contract(inp)
     return success(
-        result,
-        coverage=result.coverage,
-        warnings=["AI 辅助意见，一期无自有审核知识库，不作确定性法律结论；引文已由服务端核验。"],
+        analysis.result,
+        coverage=analysis.result.coverage,
+        warnings=analysis.warnings,
+        processing_mode=analysis.processing_mode,
+        knowledge_version=analysis.knowledge_version,
     )
