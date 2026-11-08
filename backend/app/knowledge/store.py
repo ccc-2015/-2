@@ -28,6 +28,10 @@ SCENARIO_TOPICS = {
         "alteration",
         "restoration",
         "safety",
+        "sublease",
+        "rent_increase",
+        "brokerage",
+        "filing",
     },
     "dispute": {"dispute", "channel"},
 }

@@ -113,6 +113,19 @@ cd backend
 - 条目 `cityCode` 必须等于资料包城市，或为 `CN`（全国性资料）；一期只把资料放入郑州包，其他城市不会读到。
 - 同一资料包内 `id` 必须唯一；跨文件也不能重复。
 
-## 当前种子
+## 当前资料
 
-`zz.json` 目前是 10 条全国性条文种子（仅对郑州开放），用于验证骨架。郑州本地法规、政策和渠道资料尚未入库，因此 `contract_review` 仍是 `limited`，`dispute` 为 `unsupported`。替换为正式审核资料时，请同步更新 `version`、`checkedAt`、`coverage` 和每条资料的 `limitations`。
+`zz.json` 现有 80 条：10 条民法典条文 + 70 条来自郑州/全国官方语料（`法律条例/documents.jsonl`），其中 41 条为郑州本地资料、4 条本地渠道（`local_verified`）。`contract_review` 为 `supported`，`dispute` 为 `limited`。
+
+资料包由脚本生成，不要手改：
+
+```sh
+# 仓库根目录
+backend/.venv/Scripts/python.exe scripts/build_knowledge_pack.py [documents.jsonl]
+cd backend && ./.venv/Scripts/python.exe -m app.knowledge.validate app/knowledge/data/zz.json
+./.venv/Scripts/python.exe -m app.knowledge.ingest app/knowledge/data/zz.json
+```
+
+`scripts/build_knowledge_pack.py` 只挑与合同、押金、维修、退租、经纪相关的条文；公告、配租名单、处罚程序等不入库。`scripts/eval_retrieval.py` 用 16 条标注 query 比较向量/关键词权重（当前 0.5/0.5，top1 10/16，Recall@4 16/16）。
+
+更新资料时请同步 `version`、`checkedAt`、`coverage`、`topicCoverage` 和每条资料的 `limitations`。

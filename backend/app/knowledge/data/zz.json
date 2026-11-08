@@ -1,11 +1,11 @@
 {
   "cityCode": "ZZ",
   "cityName": "郑州",
-  "version": "zz-2026.11.08.1",
-  "coverage": "limited",
+  "version": "zz-2026.11.08.2",
+  "coverage": "supported",
   "topicCoverage": {
-    "contract_review": "limited",
-    "dispute": "unsupported"
+    "contract_review": "supported",
+    "dispute": "limited"
   },
   "checkedAt": "2026-11-08",
   "entries": [
@@ -297,6 +297,2022 @@
       "text": "租赁期限届满，承租人继续使用租赁物，出租人没有提出异议的，原租赁合同继续有效，但是租赁期限为不定期。租赁期限届满，房屋承租人享有以同等条件优先承租的权利。",
       "summary": "到期后继续使用且出租人未异议的，转为不定期租赁；房屋承租人享有同等条件优先承租权。",
       "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-9",
+      "title": "郑州市住房租赁管理条例 第九条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "safety"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "隔断房",
+        "群租",
+        "消防安全",
+        "人均面积",
+        "非居住空间"
+      ],
+      "text": "第九条 建立健全住房租赁矛盾纠纷多元化解机制。因住房租赁发生纠纷的，由租赁当事人协商解决；不愿协商或者协商不成的，可以向人民调解组织或者有关部门申请调解，也可以依法申请仲裁或者提起诉讼。 有关部门应当依法对住房租赁矛盾纠纷的调解提供支持和指导。 住房租赁企业、房地产经纪机构、互联网信息平台应当建立投诉处理机制，及时妥善化解租赁矛盾纠纷。 第二章 出租与承租第十条 出租住房应当遵守下列规定： （一）房屋符合建筑、消防、治安、防灾、卫生、环保、房屋安全等方面的标准和要求； （二）具备供水、供电等基本居住条件； （三）以原始设计的房间为最小出租单位，不得以分割、搭建形式改变住房内部结构； （四）单间租住人数和人均租住面积符合市人民政府有关规定； （五）起居室（厅）不得单独出租，厨房、卫生间、阳台、储藏室等非居住空间不得出租用于居住； （六）法律、法规的其他规定。 禁止将违法建筑以及其他依法不得出租的房屋用于出租。",
+      "summary": "郑州市住房租赁管理条例：建立健全住房租赁矛盾纠纷多元化解机制。因住房租赁发生纠纷的，由租赁当事人协商解决；不愿协商或者协商不成的，可以向人民调解组织或者有关部门申请调解，也可以依法",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-11",
+      "title": "郑州市住房租赁管理条例 第十一条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "deposit",
+        "rent",
+        "repair",
+        "termination"
+      ],
+      "keywords": [
+        "押金",
+        "租金",
+        "维修责任",
+        "解除合同",
+        "违约",
+        "押金退还",
+        "扣押金",
+        "扣减押金",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第十一条 出租人和承租人应当依法订立住房租赁合同。住房租赁合同一般包括以下内容： （一）出租人、承租人以及其他实际居住人员的身份信息和联系方式； （二）住房的坐落、面积、附属设施和设备状况； （三）租赁用途、租赁期限、使用要求、维修责任和房屋安全责任； （四）租金和押金数额、支付期限和方式； （五）物业服务、水、电、热、燃气等相关费用的承担方式； （六）解除合同的合理告知期限； （七）违约责任和争议的解决方式； （八）租赁当事人约定的其他内容。 市住房保障和房地产管理部门应当会同市市场监督管理部门，制定和完善住房租赁合同示范文本。 鼓励订立长期住房租赁合同，建立稳定的租赁关系。",
+      "summary": "郑州市住房租赁管理条例：出租人和承租人应当依法订立住房租赁合同。住房租赁合同一般包括以下内容： （一）出租人、承租人以及其他实际居住人员的身份信息和联系方式； （二）住房的坐落、面",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-12",
+      "title": "郑州市住房租赁管理条例 第十二条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "filing"
+      ],
+      "keywords": [
+        "经纪机构",
+        "合同备案",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "租赁备案"
+      ],
+      "text": "第十二条 出租人应当自住房租赁合同订立之日起三十日内，通过房屋租赁监管服务平台或者到房屋所在地的县（市）、区住房租赁主管部门办理住房租赁合同备案；备案重要内容发生变更的，出租人应当自变更之日起三十日内办理变更手续。 出租人未办理住房租赁合同备案的，承租人可以办理备案。 住房租赁企业租赁住房或者房地产经纪机构促成住房租赁合同的，由住房租赁企业或者房地产经纪机构按照规定办理住房租赁合同备案。 办理住房租赁合同备案应当提交房屋权属证明、住房租赁合同、租赁当事人身份证明等材料。租赁当事人不得隐瞒真实情况，或者提供虚假材料。 鼓励租赁当事人通过房屋租赁监管服务平台完成住房租赁合同网上签约，自动提交合同备案。",
+      "summary": "郑州市住房租赁管理条例：出租人应当自住房租赁合同订立之日起三十日内，通过房屋租赁监管服务平台或者到房屋所在地的县（市）、区住房租赁主管部门办理住房租赁合同备案；备案重要内容发生变更",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-13",
+      "title": "郑州市住房租赁管理条例 第十三条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "termination"
+      ],
+      "keywords": [
+        "住房租赁",
+        "解除合同",
+        "提前退租",
+        "终止租赁"
+      ],
+      "text": "第十三条 出租人应当遵守下列规定： （一）向承租人出示房屋权属证明、身份证明材料；出租共有住房的，需经其他共有人同意； （二）不得向未提供身份证明材料的自然人、法人或者非法人组织出租住房； （三）提供符合出租条件的住房和符合安全标准的设施、设备，告知承租人安全使用事项，与承租人约定进行安全检查； （四）发现承租人在住房内有违法违规行为的，及时报告有关部门，并配合相关工作； （五）不得采取停止供水、供电、供热、供燃气以及其他故意降低服务标准等方式，或者采取暴力、威胁等非法方式，强迫承租人变更、解除住房租赁合同，提前收回租赁住房； （六）法律、法规的其他规定。",
+      "summary": "郑州市住房租赁管理条例：出租人应当遵守下列规定： （一）向承租人出示房屋权属证明、身份证明材料；出租共有住房的，需经其他共有人同意； （二）不得向未提供身份证明材料的自然人、法人或",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-14",
+      "title": "郑州市住房租赁管理条例 第十四条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "alteration"
+      ],
+      "keywords": [
+        "装修",
+        "拆改",
+        "改动结构",
+        "增设设施"
+      ],
+      "text": "第十四条 承租人应当遵守下列规定： （一）向出租人提供承租人、共同居住人员的身份证明材料； （二）合理、安全使用住房及设施、设备，不得擅自改变住房用途、结构、设施或者实施违法搭建行为； （三）装修住房或者增设设施、设备的，应当征得出租人同意； （四）遵守管理规约，不得损害相关权利人的合法权益； （五）法律、法规的其他规定。",
+      "summary": "郑州市住房租赁管理条例：承租人应当遵守下列规定： （一）向出租人提供承租人、共同居住人员的身份证明材料； （二）合理、安全使用住房及设施、设备，不得擅自改变住房用途、结构、设施或者",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-15",
+      "title": "郑州市住房租赁管理条例 第十五条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "sublease"
+      ],
+      "keywords": [
+        "转租",
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "二房东"
+      ],
+      "text": "第十五条 鼓励租赁当事人投保租赁住房财产保险和人身意外保险。 第三章 住房租赁经营第十六条 住房租赁企业、房地产经纪机构应当依法办理市场主体登记。从事住房租赁经营的，其名称和经营范围应当注明“住房租赁”；从事住房租赁经纪服务的，经营范围应当注明“房地产经纪”。 个人转租住房达到规定数量的，应当依法办理市场主体登记，其名称和经营范围应当注明“住房租赁”。",
+      "summary": "郑州市住房租赁管理条例：鼓励租赁当事人投保租赁住房财产保险和人身意外保险。 第三章 住房租赁经营第十六条 住房租赁企业、房地产经纪机构应当依法办理市场主体登记。从事住房租赁经营的，",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-18",
+      "title": "郑州市住房租赁管理条例 第十八条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第十八条 住房租赁企业、房地产经纪机构应当具备与经营规模相适应的自有资金、从业人员、管理能力；建立健全信息查验、安全保障、定期检查等管理制度并组织落实，依法开展住房租赁业务。",
+      "summary": "郑州市住房租赁管理条例：住房租赁企业、房地产经纪机构应当具备与经营规模相适应的自有资金、从业人员、管理能力；建立健全信息查验、安全保障、定期检查等管理制度并组织落实，依法开展住房租",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-19",
+      "title": "郑州市住房租赁管理条例 第十九条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第十九条 住房租赁企业、房地产经纪机构应当在经营场所、网络服务端依法公示以下信息： （一）营业执照； （二）开业信息； （三）服务内容和标准； （四）收费事项和标准； （五）从业人员信息； （六）办公地址、投诉受理电话； （七）法律、法规规定的其他事项。",
+      "summary": "郑州市住房租赁管理条例：住房租赁企业、房地产经纪机构应当在经营场所、网络服务端依法公示以下信息： （一）营业执照； （二）开业信息； （三）服务内容和标准； （四）收费事项和标准；",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-20",
+      "title": "郑州市住房租赁管理条例 第二十条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第二十条 实行住房租赁企业、房地产经纪机构从业人员实名从业制度，每名从业人员从业信息编号具有唯一性。 住房租赁企业、房地产经纪机构应当为从业人员办理从业信息卡。从业人员应当持从业信息卡实名从业，并在其提供服务的住房租赁合同、房地产经纪合同上注明从业信息卡编号。从业信息卡的内容和样式由市住房保障和房地产管理部门统一制定。 住房租赁企业、房地产经纪机构应当加强对从业人员的管理，督促其诚信、规范从业。",
+      "summary": "郑州市住房租赁管理条例：实行住房租赁企业、房地产经纪机构从业人员实名从业制度，每名从业人员从业信息编号具有唯一性。 住房租赁企业、房地产经纪机构应当为从业人员办理从业信息卡。从业人",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-21",
+      "title": "郑州市住房租赁管理条例 第二十一条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第二十一条 住房租赁企业、房地产经纪机构等对外发布房源信息的，应当对房屋权属证明和基本状况进行核验，确保房源信息真实有效。对已成交或者取消委托的房源信息应当即时撤销。 住房租赁企业、房地产经纪机构通过互联网信息平台发布房源信息的，应当同时注明企业开业信息和从业人员信息。",
+      "summary": "郑州市住房租赁管理条例：住房租赁企业、房地产经纪机构等对外发布房源信息的，应当对房屋权属证明和基本状况进行核验，确保房源信息真实有效。对已成交或者取消委托的房源信息应当即时撤销。 ",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-22",
+      "title": "郑州市住房租赁管理条例 第二十二条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第二十二条 通过互联网信息平台发布房源信息的，互联网信息平台经营者应当要求信息发布者提交身份、地址、联系方式以及房源核验情况等信息；信息发布者为住房租赁企业、房地产经纪机构的，还应当要求其提交企业开业信息及从业人员信息。 互联网信息平台不得为未报送开业信息、开业信息异常或者被依法列入严重失信名单的住房租赁企业、房地产经纪机构及其从业人员提供服务。 互联网信息平台经营者应当对信息发布者提交的材料进行核实，并建立档案，留存不少于三年。",
+      "summary": "郑州市住房租赁管理条例：通过互联网信息平台发布房源信息的，互联网信息平台经营者应当要求信息发布者提交身份、地址、联系方式以及房源核验情况等信息；信息发布者为住房租赁企业、房地产经纪",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-23",
+      "title": "郑州市住房租赁管理条例 第二十三条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第二十三条 互联网信息平台经营者知道或者应当知道信息发布者提供虚假材料、发布虚假信息的，应当及时采取删除、屏蔽相关信息等必要措施，保存相关记录，并向有关部门报告；未采取必要措施的，依法承担责任。 住房租赁企业、房地产经纪机构两年内因违法发布房源信息受到三次以上行政处罚，或者在停业整顿期间的，互联网信息平台经营者应当在一定期限内限制其发布相关信息。",
+      "summary": "郑州市住房租赁管理条例：互联网信息平台经营者知道或者应当知道信息发布者提供虚假材料、发布虚假信息的，应当及时采取删除、屏蔽相关信息等必要措施，保存相关记录，并向有关部门报告；未采取",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-24",
+      "title": "郑州市住房租赁管理条例 第二十四条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "sublease"
+      ],
+      "keywords": [
+        "转租",
+        "资金监管",
+        "二房东"
+      ],
+      "text": "第二十四条 住房租赁企业从事转租业务的，应当按照规定设立住房租赁交易资金监管专用账户并向社会公示,通过该监管账户办理住房租赁交易资金收付业务。",
+      "summary": "郑州市住房租赁管理条例：住房租赁企业从事转租业务的，应当按照规定设立住房租赁交易资金监管专用账户并向社会公示,通过该监管账户办理住房租赁交易资金收付业务。",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-25",
+      "title": "郑州市住房租赁管理条例 第二十五条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "deposit",
+        "rent"
+      ],
+      "keywords": [
+        "押金",
+        "租金",
+        "虚假房源",
+        "中介",
+        "经纪机构",
+        "佣金",
+        "中介费",
+        "押金退还",
+        "扣押金",
+        "扣减押金"
+      ],
+      "text": "第二十五条 住房租赁企业及其从业人员不得有下列行为： （一）发布虚假房源信息； （二）隐瞒影响住房租赁的重要信息； （三）利用承租人或者房屋权利人名义套取信贷资金； （四）以诱导、隐瞒、欺骗、强迫等方式要求承租人使用住房租赁消费贷款； （五）侵占或者挪用租金、押金； （六）泄露或者非法使用住房租赁当事人信息； （七）法律、法规禁止的其他行为。",
+      "summary": "郑州市住房租赁管理条例：住房租赁企业及其从业人员不得有下列行为： （一）发布虚假房源信息； （二）隐瞒影响住房租赁的重要信息； （三）利用承租人或者房屋权利人名义套取信贷资金； （",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-26",
+      "title": "郑州市住房租赁管理条例 第二十六条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "deposit",
+        "rent"
+      ],
+      "keywords": [
+        "押金",
+        "租金",
+        "经纪机构",
+        "虚假房源",
+        "中介",
+        "佣金",
+        "中介费",
+        "押金退还",
+        "扣押金",
+        "扣减押金"
+      ],
+      "text": "第二十六条 房地产经纪机构及其从业人员不得有下列行为： （一）发布虚假房源信息； （二）隐瞒影响住房租赁的重要信息； （三）为依法不得出租的住房提供经纪服务； （四）未经当事人同意，以当事人名义签订住房租赁合同； （五）代收代付住房租金、押金； （六）强制代办住房公积金提取等服务并收取费用； （七）赚取租金差价； （八）泄露或者非法使用住房租赁当事人信息； （九）法律、法规禁止的其他行为。 第四章 服务与监督第二十七条 市人民政府应当将租赁住房纳入住房发展规划，合理确定租赁住房供给规模、优化空间布局。 市人民政府及其有关部门应当通过支持新增或者利用已有建设用地建设租赁住房，鼓励在新建商品住房项目中配建租赁住房、将非居住存量房屋按照规定改建为租赁住房以及将闲置住房出租等方式，有序增加租赁住房供给。",
+      "summary": "郑州市住房租赁管理条例：房地产经纪机构及其从业人员不得有下列行为： （一）发布虚假房源信息； （二）隐瞒影响住房租赁的重要信息； （三）为依法不得出租的住房提供经纪服务； （四）未",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-28",
+      "title": "郑州市住房租赁管理条例 第二十八条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "filing",
+        "rent"
+      ],
+      "keywords": [
+        "租金",
+        "经纪机构",
+        "资金监管",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "合同备案",
+        "租赁备案",
+        "房租"
+      ],
+      "text": "第二十八条 市住房保障和房地产管理部门应当通过房屋租赁监管服务平台，开展房源核验、从业主体开业信息报送、从业人员实名登记、住房租赁合同网签备案、资金监管、租金监测、信息查询等管理与服务，并向住房租赁企业、房地产经纪机构和互联网信息平台开放数据接口，为其批量办理相关业务提供便利。 公安、市场监督管理、农业农村、城市管理、教育、民政、人力资源和社会保障、卫生健康、公积金管理等部门和单位依托市数据共享交换平台，按照各自职责建立与房屋租赁监管服务平台的数据共享和业务协同机制。 有关部门和单位应当采取必要措施保护数据信息安全，并对其中的个人信息、隐私和商业秘密严格保密，不得泄露、出售或者非法向他人提供。",
+      "summary": "郑州市住房租赁管理条例：市住房保障和房地产管理部门应当通过房屋租赁监管服务平台，开展房源核验、从业主体开业信息报送、从业人员实名登记、住房租赁合同网签备案、资金监管、租金监测、信息",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-29",
+      "title": "郑州市住房租赁管理条例 第二十九条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第二十九条 县（市）、区住房租赁主管部门应当会同公安、市场监督管理、城乡建设、城市管理、应急管理、消防救援等相关部门和单位建立健全住房租赁管理联动机制，加强对街道办事处、乡镇人民政府住房租赁管理工作的指导，并提供支持和服务。 街道办事处、乡镇人民政府应当发挥网格化管理作用，配合有关部门开展租赁住房安全巡查，协助做好住房租赁信息采集、合同备案办理、矛盾纠纷化解、住房租赁中的违法行为查处等工作。",
+      "summary": "郑州市住房租赁管理条例：县（市）、区住房租赁主管部门应当会同公安、市场监督管理、城乡建设、城市管理、应急管理、消防救援等相关部门和单位建立健全住房租赁管理联动机制，加强对街道办事处",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-30",
+      "title": "郑州市住房租赁管理条例 第三十条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第三十条 承租人按照有关规定享受基本公共服务和便利。 承租人办理居住登记、落户、子女入学、公积金提取、住房保障、社会保险、医疗保障等公共服务事项时，已经完成住房租赁合同备案的，可免于提交住房租赁合同。",
+      "summary": "郑州市住房租赁管理条例：承租人按照有关规定享受基本公共服务和便利。 承租人办理居住登记、落户、子女入学、公积金提取、住房保障、社会保险、医疗保障等公共服务事项时，已经完成住房租赁合",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-32",
+      "title": "郑州市住房租赁管理条例 第三十二条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "rent"
+      ],
+      "keywords": [
+        "租金",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第三十二条 市人民政府应当建立住房租赁价格监测机制，定期向社会公布住房市场租金信息。",
+      "summary": "郑州市住房租赁管理条例：市人民政府应当建立住房租赁价格监测机制，定期向社会公布住房市场租金信息。",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-33",
+      "title": "郑州市住房租赁管理条例 第三十三条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "rent"
+      ],
+      "keywords": [
+        "租金",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第三十三条 住房租赁企业存在支付房屋权利人租金高于收取承租人租金、收取承租人租金周期长于给付房屋权利人租金周期等高风险经营行为的，市住房保障和房地产管理部门应当加强监测，对高风险行为进行警示，市场监督管理、公安等部门按照职责做好相关监管工作。 第五章 法律责任第三十四条 违反本条例规定的行为，法律、法规已有法律责任规定的，从其规定。",
+      "summary": "郑州市住房租赁管理条例：住房租赁企业存在支付房屋权利人租金高于收取承租人租金、收取承租人租金周期长于给付房屋权利人租金周期等高风险经营行为的，市住房保障和房地产管理部门应当加强监测",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-reg-35",
+      "title": "郑州市住房租赁管理条例 第三十五条",
+      "publisher": "郑州市人民代表大会常务委员会",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-01-01",
+      "effectiveTo": null,
+      "version": "2026-08-01",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "filing"
+      ],
+      "keywords": [
+        "经纪机构",
+        "合同备案",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "租赁备案"
+      ],
+      "text": "第三十五条 违反本条例第十二条第三款规定，住房租赁企业、房地产经纪机构未按照要求办理住房租赁合同备案的，由县（市）、区住房租赁主管部门责令改正，由县（市）、区城市管理综合执法部门给予警告；拒不改正的，处二万元以上十万元以下罚款。",
+      "summary": "郑州市住房租赁管理条例：违反本条例第十二条第三款规定，住房租赁企业、房地产经纪机构未按照要求办理住房租赁合同备案的，由县（市）、区住房租赁主管部门责令改正，由县（市）、区城市管理综",
+      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-6",
+      "title": "住房租赁条例 第六条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "alteration",
+        "safety"
+      ],
+      "keywords": [
+        "装修",
+        "拆改",
+        "改动结构",
+        "增设设施",
+        "隔断房",
+        "群租",
+        "消防安全",
+        "人均面积",
+        "非居住空间"
+      ],
+      "text": "第六条 从事住房租赁活动，应当遵守法律、法规，遵循平等、自愿、公平、诚信原则，不得危害国家安全、损害公共利益和他人合法权益，不得违背公序良俗。 第二章 出租与承租第七条 用于出租的住房应当符合建筑、消防、燃气、室内装饰装修等方面的法律、法规、规章和强制性标准，不得危及人身安全和健康。 厨房、卫生间、阳台、过道、地下储藏室、车库等非居住空间，不得单独出租用于居住。 租赁住房单间租住人数上限和人均最低租住面积，应当符合设区的市级以上地方人民政府规定的标准。",
+      "summary": "住房租赁条例：从事住房租赁活动，应当遵守法律、法规，遵循平等、自愿、公平、诚信原则，不得危害国家安全、损害公共利益和他人合法权益，不得违背公序良俗。 第二章 出租与承租第七条 用于",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-8",
+      "title": "住房租赁条例 第八条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第八条 出租人和承租人应当使用实名签订住房租赁合同。 出租人应当按照规定，通过住房租赁管理服务平台等方式将住房租赁合同向租赁住房所在地房产管理部门备案。房产管理部门应当提高住房租赁合同备案服务水平，不得就住房租赁合同备案收取任何费用。 出租人未办理住房租赁合同备案的，承租人可以办理备案。",
+      "summary": "住房租赁条例：出租人和承租人应当使用实名签订住房租赁合同。 出租人应当按照规定，通过住房租赁管理服务平台等方式将住房租赁合同向租赁住房所在地房产管理部门备案。房产管理部门应当提高住",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-10",
+      "title": "住房租赁条例 第十条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "deposit",
+        "return"
+      ],
+      "keywords": [
+        "押金",
+        "扣减押金",
+        "押金退还",
+        "扣押金",
+        "返还房屋",
+        "退租",
+        "交还房屋",
+        "腾退"
+      ],
+      "text": "第十条 出租人收取押金的，应当在住房租赁合同中约定押金的数额、返还时间以及扣减押金的情形等事项。除住房租赁合同约定的情形以外，出租人无正当理由不得扣减押金。",
+      "summary": "住房租赁条例：出租人收取押金的，应当在住房租赁合同中约定押金的数额、返还时间以及扣减押金的情形等事项。除住房租赁合同约定的情形以外，出租人无正当理由不得扣减押金。",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-11",
+      "title": "住房租赁条例 第十一条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "alteration",
+        "repair"
+      ],
+      "keywords": [
+        "住房租赁",
+        "装修",
+        "拆改",
+        "改动结构",
+        "增设设施",
+        "维修",
+        "维修责任",
+        "维修义务",
+        "修复"
+      ],
+      "text": "第十一条 承租人应当遵守下列规定： （一）向出租人出示身份证明材料； （二）安全、合理使用租赁住房，不得损坏、擅自拆除、停用消防设施或者改动租赁住房承重结构，不得私拉乱接水、电、燃气管线； （三）未经出租人同意，不得擅自改变租赁住房用途、拆改室内设施或者改动租赁住房其他结构； （四）遵守物业管理规约，不得任意弃置垃圾、超标准排放污染物或者产生噪声、违反规定饲养动物、违章搭建、侵占公共通道、高空抛物或者实施其他损害他人合法权益的行为； （五）对出租人依法确需进入租赁住房的，予以配合。",
+      "summary": "住房租赁条例：承租人应当遵守下列规定： （一）向出租人出示身份证明材料； （二）安全、合理使用租赁住房，不得损坏、擅自拆除、停用消防设施或者改动租赁住房承重结构，不得私拉乱接水、电",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-12",
+      "title": "住房租赁条例 第十二条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "return",
+        "termination"
+      ],
+      "keywords": [
+        "腾退",
+        "返还房屋",
+        "退租",
+        "交还房屋",
+        "解除合同",
+        "提前退租",
+        "终止租赁"
+      ],
+      "text": "第十二条 出租人依法解除住房租赁合同的，应当通知承租人，并为承租人腾退租赁住房留出合理时间。 出租人不得采取暴力、威胁或者其他非法方式迫使承租人解除住房租赁合同或者腾退租赁住房。",
+      "summary": "住房租赁条例：出租人依法解除住房租赁合同的，应当通知承租人，并为承租人腾退租赁住房留出合理时间。 出租人不得采取暴力、威胁或者其他非法方式迫使承租人解除住房租赁合同或者腾退租赁住房",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-16",
+      "title": "住房租赁条例 第十六条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "rent"
+      ],
+      "keywords": [
+        "租金",
+        "中介",
+        "经纪机构",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第十六条 住房租赁企业发布的住房地址、面积、租金等房源信息应当真实、准确、完整，在其经营场所、互联网等不同渠道发布的房源信息应当一致，发布的房源图片应当与实物房源一致，不得发布虚假或者误导性房源信息，不得隐瞒或者拒绝提供拟出租住房的有关重要信息。",
+      "summary": "住房租赁条例：住房租赁企业发布的住房地址、面积、租金等房源信息应当真实、准确、完整，在其经营场所、互联网等不同渠道发布的房源信息应当一致，发布的房源图片应当与实物房源一致，不得发布",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-19",
+      "title": "住房租赁条例 第十九条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "sublease"
+      ],
+      "keywords": [
+        "转租",
+        "资金监管",
+        "二房东"
+      ],
+      "text": "第十九条 从事转租经营的住房租赁企业应当按照规定设立住房租赁资金监管账户并向社会公示，并通过该账户办理住房租赁资金收付业务，具体办法由国务院住房城乡建设主管部门会同国务院有关部门制定。",
+      "summary": "住房租赁条例：从事转租经营的住房租赁企业应当按照规定设立住房租赁资金监管账户并向社会公示，并通过该账户办理住房租赁资金收付业务，具体办法由国务院住房城乡建设主管部门会同国务院有关部",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-20",
+      "title": "住房租赁条例 第二十条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "sublease"
+      ],
+      "keywords": [
+        "转租",
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "二房东"
+      ],
+      "text": "第二十条 自然人转租他人住房开展住房租赁经营业务，经营规模达到国务院住房城乡建设主管部门会同国务院市场监督管理部门等有关部门规定标准的，适用本条例有关住房租赁企业的规定。 第四章 经纪机构第二十一条 从事住房租赁业务的房地产经纪机构（以下简称住房租赁经纪机构）应当具备与其经营规模相适应的自有资金、从业人员和管理能力。",
+      "summary": "住房租赁条例：自然人转租他人住房开展住房租赁经营业务，经营规模达到国务院住房城乡建设主管部门会同国务院市场监督管理部门等有关部门规定标准的，适用本条例有关住房租赁企业的规定。 第四",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-22",
+      "title": "住房租赁条例 第二十二条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "filing"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第二十二条 住房租赁经纪机构应当将其从业人员名单向所在地县级以上地方人民政府房产管理部门备案。住房租赁经纪机构的从业人员不得同时在两个或者两个以上住房租赁经纪机构从事业务。 住房租赁经纪机构的从业人员不得以个人名义承接住房租赁经纪业务。",
+      "summary": "住房租赁条例：住房租赁经纪机构应当将其从业人员名单向所在地县级以上地方人民政府房产管理部门备案。住房租赁经纪机构的从业人员不得同时在两个或者两个以上住房租赁经纪机构从事业务。 住房",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-23",
+      "title": "住房租赁条例 第二十三条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第二十三条 住房租赁经纪机构发布房源信息前，应当核对并记录委托人的身份信息、住房权属信息，实地查看房源，与委托人签订住房租赁经纪服务合同，编制住房状况说明书。住房租赁经纪服务合同、住房状况说明书应当加盖住房租赁经纪机构印章，并按照有关规定保存。",
+      "summary": "住房租赁条例：住房租赁经纪机构发布房源信息前，应当核对并记录委托人的身份信息、住房权属信息，实地查看房源，与委托人签订住房租赁经纪服务合同，编制住房状况说明书。住房租赁经纪服务合同",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-24",
+      "title": "住房租赁条例 第二十四条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第二十四条 本条例第十五条第二款和第三款、第十六条、第十七条的规定，适用于住房租赁经纪机构。",
+      "summary": "住房租赁条例：本条例第十五条第二款和第三款、第十六条、第十七条的规定，适用于住房租赁经纪机构。",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-25",
+      "title": "住房租赁条例 第二十五条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "alteration",
+        "brokerage",
+        "deposit",
+        "rent",
+        "safety"
+      ],
+      "keywords": [
+        "押金",
+        "租金",
+        "装修",
+        "经纪机构",
+        "拆改",
+        "改动结构",
+        "增设设施",
+        "中介",
+        "佣金",
+        "中介费"
+      ],
+      "text": "第二十五条 住房租赁经纪机构不得有下列行为： （一）为出租不符合建筑、消防、燃气、室内装饰装修等方面的法律、法规、规章或者强制性标准的住房提供经纪服务； （二）为单独出租厨房、卫生间、阳台、过道、地下储藏室、车库等非居住空间用于居住提供经纪服务； （三）为单间租住人数上限或者人均最低租住面积不符合规定标准的住房出租提供经纪服务； （四）代收、代付住房租金、押金； （五）未经当事人同意，以当事人名义签订住房租赁合同； （六）法律、法规、规章禁止从事的其他行为。",
+      "summary": "住房租赁条例：住房租赁经纪机构不得有下列行为： （一）为出租不符合建筑、消防、燃气、室内装饰装修等方面的法律、法规、规章或者强制性标准的住房提供经纪服务； （二）为单独出租厨房、卫",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-26",
+      "title": "住房租赁条例 第二十六条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第二十六条 住房租赁经纪机构应当对收费服务项目明码标价，不得在标价之外加价或者收取未予标明的费用。",
+      "summary": "住房租赁条例：住房租赁经纪机构应当对收费服务项目明码标价，不得在标价之外加价或者收取未予标明的费用。",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-27",
+      "title": "住房租赁条例 第二十七条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "filing"
+      ],
+      "keywords": [
+        "经纪机构",
+        "合同备案",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "租赁备案"
+      ],
+      "text": "第二十七条 出租人和承租人通过住房租赁经纪机构签订住房租赁合同的，由住房租赁经纪机构办理住房租赁合同备案。 第五章 监督管理第二十八条 国务院住房城乡建设主管部门会同国务院市场监督管理部门制定并公布住房租赁合同、住房租赁经纪服务合同示范文本。",
+      "summary": "住房租赁条例：出租人和承租人通过住房租赁经纪机构签订住房租赁合同的，由住房租赁经纪机构办理住房租赁合同备案。 第五章 监督管理第二十八条 国务院住房城乡建设主管部门会同国务院市场监",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-29",
+      "title": "住房租赁条例 第二十九条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "rent"
+      ],
+      "keywords": [
+        "租金",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第二十九条 设区的市级以上地方人民政府应当建立住房租金监测机制，定期公布本行政区域内不同区域、不同类型住房的租金水平信息。",
+      "summary": "住房租赁条例：设区的市级以上地方人民政府应当建立住房租金监测机制，定期公布本行政区域内不同区域、不同类型住房的租金水平信息。",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-30",
+      "title": "住房租赁条例 第三十条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第三十条 县级以上地方人民政府房产管理部门应当通过住房租赁管理服务平台开展合同备案、租赁住房信息管理、统计监测等管理与服务，并与民政、自然资源、教育、市场监督管理、金融管理、公安、税务、统计等部门建立信息共享机制。",
+      "summary": "住房租赁条例：县级以上地方人民政府房产管理部门应当通过住房租赁管理服务平台开展合同备案、租赁住房信息管理、统计监测等管理与服务，并与民政、自然资源、教育、市场监督管理、金融管理、公",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-33",
+      "title": "住房租赁条例 第三十三条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第三十三条 县级以上地方人民政府房产管理部门应当会同有关部门、住房租赁相关行业组织加强住房租赁行业诚信建设，建立住房租赁企业、住房租赁经纪机构及其从业人员信用评价制度，将相关违法违规行为记入信用记录，纳入全国信用信息共享平台，并根据信用状况实施分级分类监管。",
+      "summary": "住房租赁条例：县级以上地方人民政府房产管理部门应当会同有关部门、住房租赁相关行业组织加强住房租赁行业诚信建设，建立住房租赁企业、住房租赁经纪机构及其从业人员信用评价制度，将相关违法",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-35",
+      "title": "住房租赁条例 第三十五条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "deposit",
+        "repair",
+        "return"
+      ],
+      "keywords": [
+        "押金",
+        "腾退",
+        "押金退还",
+        "扣押金",
+        "扣减押金",
+        "维修",
+        "维修责任",
+        "维修义务",
+        "修复",
+        "返还房屋"
+      ],
+      "text": "第三十五条 在住房租赁活动中，因押金返还、住房维修、住房腾退等产生纠纷的，由出租人和承租人协商解决；协商不成的，可以依法申请调解、仲裁或者提起诉讼。",
+      "summary": "住房租赁条例：在住房租赁活动中，因押金返还、住房维修、住房腾退等产生纠纷的，由出租人和承租人协商解决；协商不成的，可以依法申请调解、仲裁或者提起诉讼。",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-36",
+      "title": "住房租赁条例 第三十六条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "deposit",
+        "rent"
+      ],
+      "keywords": [
+        "押金",
+        "租金",
+        "押金退还",
+        "扣押金",
+        "扣减押金",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第三十六条 提供住房租赁信息发布服务的网络平台经营者（以下简称网络平台经营者）应当核验住房租赁信息发布者的真实身份信息。 网络平台经营者知道或者应当知道信息发布者有提供虚假信息等违法情形的，应当依法采取删除相关信息等必要措施，保存相关记录，并向有关部门报告。 网络平台经营者不得代收、代付住房租金、押金。",
+      "summary": "住房租赁条例：提供住房租赁信息发布服务的网络平台经营者（以下简称网络平台经营者）应当核验住房租赁信息发布者的真实身份信息。 网络平台经营者知道或者应当知道信息发布者有提供虚假信息等",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-37",
+      "title": "住房租赁条例 第三十七条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "alteration",
+        "repair"
+      ],
+      "keywords": [
+        "装修",
+        "拆改",
+        "改动结构",
+        "增设设施",
+        "维修",
+        "维修责任",
+        "维修义务",
+        "修复"
+      ],
+      "text": "第三十七条 出租人应当按规定如实登记并报送承租人及实际居住人信息，发现违法犯罪活动应当及时向公安机关报告。具体办法由国务院公安部门制定。 承租人不得利用租赁住房实施违法犯罪活动。 第六章 法律责任第三十八条 有下列情形之一的，依照有关法律、法规、规章的规定处罚： （一）出租不符合建筑、消防、燃气、室内装饰装修等方面的法律、法规、规章或者强制性标准的住房； （二）损坏、擅自拆除、停用消防设施； （三）改动租赁住房承重结构； （四）私拉乱接水、电、燃气管线。",
+      "summary": "住房租赁条例：出租人应当按规定如实登记并报送承租人及实际居住人信息，发现违法犯罪活动应当及时向公安机关报告。具体办法由国务院公安部门制定。 承租人不得利用租赁住房实施违法犯罪活动。",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-40",
+      "title": "住房租赁条例 第四十条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第四十条 住房租赁企业、住房租赁经纪机构不具备与其经营规模相适应的自有资金、从业人员、管理能力的，由县级以上地方人民政府房产管理部门责令改正，给予警告；拒不改正、造成严重后果的，责令停业整顿。",
+      "summary": "住房租赁条例：住房租赁企业、住房租赁经纪机构不具备与其经营规模相适应的自有资金、从业人员、管理能力的，由县级以上地方人民政府房产管理部门责令改正，给予警告；拒不改正、造成严重后果的",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-41",
+      "title": "住房租赁条例 第四十一条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage",
+        "filing"
+      ],
+      "keywords": [
+        "经纪机构",
+        "合同备案",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源",
+        "租赁备案"
+      ],
+      "text": "第四十一条 住房租赁企业、住房租赁经纪机构有下列情形之一的，由县级以上地方人民政府房产管理部门责令改正，给予警告；拒不改正的，处2万元以上10万元以下的罚款： （一）未按照规定报送开业信息； （二）未在其经营场所醒目位置公示本企业开业信息、服务规范和标准等； （三）未建立住房租赁档案并如实记载相关信息，或者未健全住房租赁信息查验等内部管理制度； （四）未按照规定办理住房租赁合同备案。 住房租赁企业未按照规定报送其经营的租赁住房信息及其变化情况，或者住房租赁经纪机构未按照规定与委托人签订住房租赁经纪服务合同或者未编制住房状况说明书的，依照前款规定处罚。",
+      "summary": "住房租赁条例：住房租赁企业、住房租赁经纪机构有下列情形之一的，由县级以上地方人民政府房产管理部门责令改正，给予警告；拒不改正的，处2万元以上10万元以下的罚款： （一）未按照规定报",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-42",
+      "title": "住房租赁条例 第四十二条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第四十二条 住房租赁企业、住房租赁经纪机构发布虚假或者误导性房源信息，隐瞒或者拒绝提供拟出租住房有关重要信息的，由县级以上地方人民政府房产管理部门责令改正，给予警告，处2万元以上10万元以下的罚款；有违法所得的，没收违法所得；拒不改正的，责令停业整顿；情节严重的，由县级以上地方人民政府房产管理部门提请同级市场监督管理部门依法吊销其营业执照。 住房租赁企业、住房租赁经纪机构非法收集、使用、加工、传输他人个人信息，或者非法买卖、提供或者公开他人个人信息的，依照有关个人信息保护的法律、法规的规定处罚。",
+      "summary": "住房租赁条例：住房租赁企业、住房租赁经纪机构发布虚假或者误导性房源信息，隐瞒或者拒绝提供拟出租住房有关重要信息的，由县级以上地方人民政府房产管理部门责令改正，给予警告，处2万元以上",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-43",
+      "title": "住房租赁条例 第四十三条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "sublease"
+      ],
+      "keywords": [
+        "转租",
+        "资金监管",
+        "二房东"
+      ],
+      "text": "第四十三条 从事转租经营的住房租赁企业未按照规定设立住房租赁资金监管账户并向社会公示，或者未按照规定通过该账户办理住房租赁资金收付业务的，由县级以上地方人民政府房产管理部门责令改正，给予警告，处2万元以上10万元以下的罚款；拒不改正的，处10万元以上50万元以下的罚款。",
+      "summary": "住房租赁条例：从事转租经营的住房租赁企业未按照规定设立住房租赁资金监管账户并向社会公示，或者未按照规定通过该账户办理住房租赁资金收付业务的，由县级以上地方人民政府房产管理部门责令改",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-44",
+      "title": "住房租赁条例 第四十四条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "alteration",
+        "brokerage",
+        "deposit",
+        "filing",
+        "rent",
+        "safety"
+      ],
+      "keywords": [
+        "押金",
+        "租金",
+        "装修",
+        "经纪机构",
+        "拆改",
+        "改动结构",
+        "增设设施",
+        "中介",
+        "佣金",
+        "中介费"
+      ],
+      "text": "第四十四条 住房租赁经纪机构有下列情形之一的，由县级以上地方人民政府房产管理部门责令改正，给予警告，处2万元以上10万元以下的罚款；有违法所得的，没收违法所得；拒不改正的，责令停业整顿： （一）发布房源信息前未核对并记录委托人的身份信息、住房权属信息，或者未实地查看房源； （二）为出租不符合建筑、消防、燃气、室内装饰装修等方面的法律、法规、规章或者强制性标准的住房提供经纪服务； （三）为单独出租厨房、卫生间、阳台、过道、地下储藏室、车库等非居住空间用于居住提供经纪服务； （四）为单间租住人数上限或者人均最低租住面积不符合规定标准的住房出租提供经纪服务； （五）代收、代付住房租金、押金； （六）未经当事人同意，以当事人名义签订住房租赁合同； （七）未按规定将其从业人员名单备案。 网络平台经营者代收、代付住房租金、押金的，依照前款规定处罚。",
+      "summary": "住房租赁条例：住房租赁经纪机构有下列情形之一的，由县级以上地方人民政府房产管理部门责令改正，给予警告，处2万元以上10万元以下的罚款；有违法所得的，没收违法所得；拒不改正的，责令停",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-housing-lease-reg-45",
+      "title": "住房租赁条例 第四十五条",
+      "publisher": "国务院",
+      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5ODMxOThkYTAxOTgzZjlmZjFiZTViMmM%3D",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2025-09-15",
+      "effectiveTo": null,
+      "version": "2025-07-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "经纪机构",
+        "中介",
+        "佣金",
+        "中介费",
+        "虚假房源"
+      ],
+      "text": "第四十五条 住房租赁经纪机构的从业人员同时在两个或者两个以上住房租赁经纪机构从事业务，或者以个人名义承接住房租赁经纪业务的，由县级以上地方人民政府房产管理部门责令改正，给予警告，可以处1万元以下的罚款；有违法所得的，没收违法所得；拒不改正的，1年内不得从事住房租赁经纪业务；情节严重的，5年内不得从事住房租赁经纪业务。",
+      "summary": "住房租赁条例：住房租赁经纪机构的从业人员同时在两个或者两个以上住房租赁经纪机构从事业务，或者以个人名义承接住房租赁经纪业务的，由县级以上地方人民政府房产管理部门责令改正，给予警告，",
+      "limitations": "仅摘录该条原文；地方执行口径以郑州规定为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-5",
+      "title": "商品房屋租赁管理办法 第五条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "rent"
+      ],
+      "keywords": [
+        "租金",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第五条 直辖市、市、县人民政府建设（房地产）主管部门应当加强房屋租赁管理规定和房屋使用安全知识的宣传，定期分区域公布不同类型房屋的市场租金水平等信息。",
+      "summary": "商品房屋租赁管理办法：直辖市、市、县人民政府建设（房地产）主管部门应当加强房屋租赁管理规定和房屋使用安全知识的宣传，定期分区域公布不同类型房屋的市场租金水平等信息。",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-7",
+      "title": "商品房屋租赁管理办法 第七条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "deposit",
+        "rent",
+        "repair"
+      ],
+      "keywords": [
+        "押金",
+        "租金",
+        "维修责任",
+        "违约",
+        "押金退还",
+        "扣押金",
+        "扣减押金",
+        "房租",
+        "租金支付",
+        "维修"
+      ],
+      "text": "第七条 房屋租赁当事人应当依法订立租赁合同。房屋租赁合同的内容由当事人双方约定，一般应当包括以下内容： （一）房屋租赁当事人的姓名（名称）和住所； （二）房屋的坐落、面积、结构、附属设施，家具和家电等室内设施状况； （三）租金和押金数额、支付方式； （四）租赁用途和房屋使用要求； （五）房屋和室内设施的安全性能； （六）租赁期限； （七）房屋维修责任； （八）物业服务、水、电、燃气等相关费用的缴纳； （九）争议解决办法和违约责任； （十）其他约定。 房屋租赁当事人应当在房屋租赁合同中约定房屋被征收或者拆迁时的处理办法。 建设（房地产）管理部门可以会同工商行政管理部门制定房屋租赁合同示范文本，供当事人选用。",
+      "summary": "商品房屋租赁管理办法：房屋租赁当事人应当依法订立租赁合同。房屋租赁合同的内容由当事人双方约定，一般应当包括以下内容： （一）房屋租赁当事人的姓名（名称）和住所； （二）房屋的坐落、",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-9",
+      "title": "商品房屋租赁管理办法 第九条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "rent",
+        "rent_increase",
+        "repair",
+        "wear"
+      ],
+      "keywords": [
+        "租金",
+        "维修义务",
+        "提高租金",
+        "房租",
+        "租金支付",
+        "涨租",
+        "单方涨租",
+        "调整租金",
+        "维修",
+        "维修责任"
+      ],
+      "text": "第九条 出租人应当按照合同约定履行房屋的维修义务并确保房屋和室内设施安全。未及时修复损坏的房屋，影响承租人正常使用的，应当按照约定承担赔偿责任或者减少租金。 房屋租赁合同期内，出租人不得单方面随意提高租金水平。",
+      "summary": "商品房屋租赁管理办法：出租人应当按照合同约定履行房屋的维修义务并确保房屋和室内设施安全。未及时修复损坏的房屋，影响承租人正常使用的，应当按照约定承担赔偿责任或者减少租金。 房屋租赁",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-10",
+      "title": "商品房屋租赁管理办法 第十条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "alteration",
+        "repair"
+      ],
+      "keywords": [
+        "住房租赁",
+        "装修",
+        "拆改",
+        "改动结构",
+        "增设设施",
+        "维修",
+        "维修责任",
+        "维修义务",
+        "修复"
+      ],
+      "text": "第十条 承租人应当按照合同约定的租赁用途和使用要求合理使用房屋，不得擅自改动房屋承重结构和拆改室内设施，不得损害其他业主和使用人的合法权益。 承租人因使用不当等原因造成承租房屋和设施损坏的，承租人应当负责修复或者承担赔偿责任。",
+      "summary": "商品房屋租赁管理办法：承租人应当按照合同约定的租赁用途和使用要求合理使用房屋，不得擅自改动房屋承重结构和拆改室内设施，不得损害其他业主和使用人的合法权益。 承租人因使用不当等原因造",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-11",
+      "title": "商品房屋租赁管理办法 第十一条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "restoration",
+        "sublease",
+        "termination"
+      ],
+      "keywords": [
+        "转租",
+        "恢复原状",
+        "复原",
+        "二房东",
+        "解除合同",
+        "提前退租",
+        "终止租赁"
+      ],
+      "text": "第十一条 承租人转租房屋的，应当经出租人书面同意。 承租人未经出租人书面同意转租的，出租人可以解除租赁合同，收回房屋并要求承租人赔偿损失。",
+      "summary": "商品房屋租赁管理办法：承租人转租房屋的，应当经出租人书面同意。 承租人未经出租人书面同意转租的，出租人可以解除租赁合同，收回房屋并要求承租人赔偿损失。",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-14",
+      "title": "商品房屋租赁管理办法 第十四条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "住房租赁",
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第十四条 房屋租赁合同订立后30日内，房屋租赁当事人应当到租赁房屋所在地直辖市、市、县人民政府建设（房地产）主管部门办理房屋租赁登记备案。 房屋租赁当事人可以书面委托他人办理房屋租赁登记备案。",
+      "summary": "商品房屋租赁管理办法：房屋租赁合同订立后30日内，房屋租赁当事人应当到租赁房屋所在地直辖市、市、县人民政府建设（房地产）主管部门办理房屋租赁登记备案。 房屋租赁当事人可以书面委托他",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-15",
+      "title": "商品房屋租赁管理办法 第十五条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "住房租赁",
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第十五条 办理房屋租赁登记备案，房屋租赁当事人应当提交下列材料： （一）房屋租赁合同； （二）房屋租赁当事人身份证明； （三）房屋所有权证书或者其他合法权属证明； （四）直辖市、市、县人民政府建设（房地产）主管部门规定的其他材料。 房屋租赁当事人提交的材料应当真实、合法、有效，不得隐瞒真实情况或者提供虚假材料。",
+      "summary": "商品房屋租赁管理办法：办理房屋租赁登记备案，房屋租赁当事人应当提交下列材料： （一）房屋租赁合同； （二）房屋租赁当事人身份证明； （三）房屋所有权证书或者其他合法权属证明； （四",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-16",
+      "title": "商品房屋租赁管理办法 第十六条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "住房租赁",
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第十六条 对符合下列要求的，直辖市、市、县人民政府建设（房地产）主管部门应当在3个工作日内办理房屋租赁登记备案，向租赁当事人开具房屋租赁登记备案证明： （一）申请人提交的申请材料齐全并且符合法定形式； （二）出租人与房屋所有权证书或者其他合法权属证明记载的主体一致； （三）不属于本办法第六条规定不得出租的房屋。 申请人提交的申请材料不齐全或者不符合法定形式的，直辖市、市、县人民政府建设（房地产）主管部门应当告知房屋租赁当事人需要补正的内容。",
+      "summary": "商品房屋租赁管理办法：对符合下列要求的，直辖市、市、县人民政府建设（房地产）主管部门应当在3个工作日内办理房屋租赁登记备案，向租赁当事人开具房屋租赁登记备案证明： （一）申请人提交",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-17",
+      "title": "商品房屋租赁管理办法 第十七条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing",
+        "rent"
+      ],
+      "keywords": [
+        "租金",
+        "合同备案",
+        "租赁备案",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第十七条 房屋租赁登记备案证明应当载明出租人的姓名或者名称，承租人的姓名或者名称、有效身份证件种类和号码，出租房屋的坐落、租赁用途、租金数额、租赁期限等。",
+      "summary": "商品房屋租赁管理办法：房屋租赁登记备案证明应当载明出租人的姓名或者名称，承租人的姓名或者名称、有效身份证件种类和号码，出租房屋的坐落、租赁用途、租金数额、租赁期限等。",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-18",
+      "title": "商品房屋租赁管理办法 第十八条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "住房租赁",
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第十八条 房屋租赁登记备案证明遗失的，应当向原登记备案的部门补领。",
+      "summary": "商品房屋租赁管理办法：房屋租赁登记备案证明遗失的，应当向原登记备案的部门补领。",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-19",
+      "title": "商品房屋租赁管理办法 第十九条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing",
+        "renewal",
+        "termination"
+      ],
+      "keywords": [
+        "续租",
+        "合同备案",
+        "租赁备案",
+        "优先承租",
+        "解除合同",
+        "提前退租",
+        "终止租赁"
+      ],
+      "text": "第十九条 房屋租赁登记备案内容发生变化、续租或者租赁终止的，当事人应当在30日内，到原租赁登记备案的部门办理房屋租赁登记备案的变更、延续或者注销手续。",
+      "summary": "商品房屋租赁管理办法：房屋租赁登记备案内容发生变化、续租或者租赁终止的，当事人应当在30日内，到原租赁登记备案的部门办理房屋租赁登记备案的变更、延续或者注销手续。",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-20",
+      "title": "商品房屋租赁管理办法 第二十条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing",
+        "rent"
+      ],
+      "keywords": [
+        "租金",
+        "合同备案",
+        "租赁备案",
+        "房租",
+        "租金支付"
+      ],
+      "text": "第二十条 直辖市、市、县建设（房地产）主管部门应当建立房屋租赁登记备案信息系统，逐步实行房屋租赁合同网上登记备案，并纳入房地产市场信息系统。 房屋租赁登记备案记载的信息应当包含以下内容： （一）出租人的姓名（名称）、住所； （二）承租人的姓名（名称）、身份证件种类和号码； （三）出租房屋的坐落、租赁用途、租金数额、租赁期限； （四）其他需要记载的内容。",
+      "summary": "商品房屋租赁管理办法：直辖市、市、县建设（房地产）主管部门应当建立房屋租赁登记备案信息系统，逐步实行房屋租赁合同网上登记备案，并纳入房地产市场信息系统。 房屋租赁登记备案记载的信息",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "cn-commodity-lease-24",
+      "title": "商品房屋租赁管理办法 第二十四条",
+      "publisher": "住房和城乡建设部令",
+      "url": "http://www.gov.cn/gongbao/content/2011/content_1845070.htm",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2011-02-01",
+      "effectiveTo": null,
+      "version": "2011-04-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "filing"
+      ],
+      "keywords": [
+        "住房租赁",
+        "合同备案",
+        "租赁备案"
+      ],
+      "text": "第二十四条 直辖市、市、县人民政府建设（房地产）主管部门对符合本办法规定的房屋租赁登记备案申请不予办理、对不符合本办法规定的房屋租赁登记备案申请予以办理，或者对房屋租赁登记备案信息管理不当，给租赁当事人造成损失的，对直接负责的主管人员和其他直接责任人员依法给予处分；构成犯罪的，依法追究刑事责任。",
+      "summary": "商品房屋租赁管理办法：直辖市、市、县人民政府建设（房地产）主管部门对符合本办法规定的房屋租赁登记备案申请不予办理、对不符合本办法规定的房屋租赁登记备案申请予以办理，或者对房屋租赁登",
+      "limitations": "部门规章原文；2011 年施行，具体适用以现行法规为准，不构成法律意见。"
+    },
+    {
+      "id": "zz-fund-supervision-2025",
+      "title": "关于进一步加强郑州市房屋租赁市场管理工作的通知",
+      "publisher": "郑州市人民政府办公室",
+      "url": "https://public.zhengzhou.gov.cn/D300501X/9201486.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-03-26",
+      "effectiveTo": null,
+      "version": "2025-03-26",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "deposit",
+        "rent",
+        "filing"
+      ],
+      "keywords": [
+        "押金上限",
+        "押金",
+        "租金监管",
+        "收取租金",
+        "资金监管",
+        "郑州"
+      ],
+      "text": "三、强化住房租赁交易资金监管。住房租赁企业从事转租业务的，应遵守《条例》相关规定，按要求开设住房租赁交易资金监管专用账户。企业向承租人单次收取的租金金额一般不得超过3个月，收取的押金金额一般不得超过1个月租金，并按照规定通过资金监管专用账户纳入监管。押金托管和租金监管的具体规定，由市住房保障部门会同相关部门制定。",
+      "summary": "郑州要求住房租赁企业单次收取租金一般不超过 3 个月、押金一般不超过 1 个月租金，并通过监管账户收付。",
+      "limitations": "约束对象为从事转租经营的住房租赁企业，个人房东直租不直接适用；属政策要求，不构成法律意见。"
+    },
+    {
+      "id": "zz-contract-template-2025",
+      "title": "郑州市住房租赁合同范本（推广使用通知）",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://public.zhengzhou.gov.cn/D300501X/9223938.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-04-09",
+      "effectiveTo": null,
+      "version": "2025-04-09",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "contract"
+      ],
+      "keywords": [
+        "合同范本",
+        "住房租赁合同",
+        "郑州",
+        "示范文本",
+        "签约"
+      ],
+      "text": "为规范住房租赁市场，明确住房租赁双方的权利义务，合理引导住房租赁行为，维护租赁当事人合法权益，依据《中华人民共和国民法典》《中华人民共和国城市房地产管理法》《商品房屋租赁管理办法》《河南省房屋租赁管理办法》《郑州市住房租赁管理条例》等法律法规及有关规定，市住房保障和房地产管理局联合市市场监管局制定了《郑州市住房租赁合同》范本，现予以推广使用。本范本可在郑州市房屋租赁监管服务平台或郑州市住房保障和房地产管理局官方网站查阅、下载。",
+      "summary": "郑州推广官方《住房租赁合同》范本，可在房屋租赁监管服务平台或房管局官网下载。",
+      "limitations": "仅说明范本来源与推广要求，范本条款内容未在此摘录；不构成法律意见。"
+    },
+    {
+      "id": "zz-broker-rules-2024",
+      "title": "房地产经纪机构服务规则（郑州）",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://public.zhengzhou.gov.cn/D300502X/8375297.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2024-01-15",
+      "effectiveTo": null,
+      "version": "2024-01-15",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "brokerage"
+      ],
+      "keywords": [
+        "中介费",
+        "佣金",
+        "经纪机构",
+        "收费公示",
+        "霸王条款",
+        "郑州"
+      ],
+      "text": "八、严格落实收费标准公示制度，倡导一站式服务和一次性收费；佣金、代理费（渠道费）收取比例应通过友好协商确定，不采用胁迫、垄断、捆绑等不正当手段高收费、乱收费，谋取不当利益。十四、不得利用格式合同对相对人作出不合理、不公正的约定。在执行居间业务时，保证公平、公正，不偏袒任何一方。投诉举报电话：67889725。",
+      "summary": "郑州要求经纪机构公示收费标准、佣金协商确定，不得用格式合同作出不合理约定。",
+      "limitations": "行业服务规则原文摘录，不直接产生民事权利义务；不构成法律意见。"
+    },
+    {
+      "id": "zz-rent-alert-2026-01",
+      "title": "郑州市住房租赁消费警示（涉及变相克扣押金等违规）",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://public.zhengzhou.gov.cn/D37Y/9859062.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2026-01-20",
+      "effectiveTo": null,
+      "version": "2026-01-20",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "deposit",
+        "brokerage",
+        "dispute"
+      ],
+      "keywords": [
+        "克扣押金",
+        "押金",
+        "隔断房",
+        "违规企业",
+        "12345",
+        "郑州",
+        "维权"
+      ],
+      "text": "近期，我局结合2025年下半年全市房屋租赁信访投诉情况，排查出16家住房租赁企业存在严重违规行为，涉及变相克扣租房押金、房屋隔断出租、企业不备案、租赁合同不备案、未按要求开展住房租赁资金监管、推诿投诉调解等问题。二、签好合同是关键。推荐使用郑州市官方租房合同范本，仔细阅读租金支付周期、押金退还条件、违约责任等条款，口头承诺需书面写入合同，警惕“霸王条款”；明确房屋是否为隔断房、水电燃气计费标准、维修责任划分。三、留存凭证是保障。支付租金、押金等费用时，务必通过正规转账渠道，索要发票或加盖企业公章的收据，妥善保管聊天记录、合同、缴费凭证等材料。若遭遇违规侵权，及时固定证据，拨打12345政务服务热线或向当地房屋租赁管理部门投诉维权。",
+      "summary": "郑州房管局提示：警惕变相克扣押金、隔断出租等问题；保留合同与付款凭证，可拨 12345 或向房管部门投诉。",
+      "limitations": "消费警示不是法规，仅作风险提示与投诉指引；不承诺受理结果。"
+    },
+    {
+      "id": "zz-rent-alert-2026-07",
+      "title": "郑州市毕业季住房租赁消费警示",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://public.zhengzhou.gov.cn/D37Y/10149464.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2026-07-10",
+      "effectiveTo": null,
+      "version": "2026-07-10",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "deposit",
+        "safety",
+        "dispute"
+      ],
+      "keywords": [
+        "克扣押金",
+        "虚假房源",
+        "隔断房",
+        "租金贷",
+        "12345",
+        "郑州",
+        "毕业生"
+      ],
+      "text": "部分违规经营主体借机设置消费陷阱，引发虚假引流、克扣押金、强制清退、群租等各类纠纷。一、选择正规渠道，警惕低价引流。远离“高收低租、长收短付”托管机构。二、核验房屋权属，防范资金风险。签订租房合同前核验出租方身份证明、不动产权证，转租需提供原房东书面许可。三、规范签订合同，慎用租金贷。推荐使用郑州市官方租赁合同范本，将费用、维修、违约事项书面约定。四、实地查验房屋，规避安全隐患。不租住隔断房、群租房。五、留存交易凭证，依法维权。房屋交接时核对水电底数、留存房屋影像；租金押金转账并索取票据；遇矛盾纠纷可拨打12345或向房管部门反映，遭遇诈骗、被强行驱赶、人身安全受到威胁时及时报警。",
+      "summary": "毕业季租房提示：警惕虚假引流与克扣押金，核验产权、书面约定费用维修违约，保留凭证，可拨 12345。",
+      "limitations": "消费警示不是法规，仅作风险提示与投诉指引；不承诺受理结果。"
+    },
+    {
+      "id": "zz-rent-platform",
+      "title": "郑州市房屋租赁信息服务与监管平台（官方租房与合同备案渠道）",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://public.zhengzhou.gov.cn/10BCZ/271806.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2018-08-31",
+      "effectiveTo": null,
+      "version": "2018-08-31",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "channel",
+        "dispute",
+        "filing"
+      ],
+      "keywords": [
+        "监管平台",
+        "房源核验",
+        "合同备案",
+        "投诉",
+        "郑州",
+        "正规平台"
+      ],
+      "text": "我市已按住建部要求建成并上线官方的房屋租赁信息服务与监管平台（http://www.zzfdc.gov.cn/），平台已实现住房租赁信息发布、房源信息核验、住房租赁网上签约、租赁合同网上登记备案、从业主体管理、信用评价、数据统计分析等功能。承租人在选取房源时应选取带有全市统一房源编号和二维码的房屋。如果发现房屋租赁企业存在行业违规行为，应及时向行业主管部门反映；如果发现房屋租赁企业存在欺诈等违法问题应及时向公安部门举报；如果租赁当事人在合同履行过程中发生争议，应由双方当事人协商解决，也可通过消费者协会等相关机构调解，或依法向房屋所在地的人民法院起诉，或提交仲裁委员会仲裁。",
+      "summary": "郑州官方租赁平台可核验房源、网签与合同备案；违规可向房管部门反映，涉嫌欺诈向公安举报，争议可调解/仲裁/起诉。",
+      "limitations": "平台功能以官方页面为准，具体受理条件与时效可能调整；不承诺处理结果。",
+      "channel": {
+        "id": "zz_regulation_platform",
+        "title": "郑州市房屋租赁信息服务与监管平台",
+        "eligibility": "local_verified",
+        "responsibilities": [
+          "房源核验",
+          "住房租赁网上签约",
+          "租赁合同网上登记备案",
+          "从业主体管理",
+          "信用评价"
+        ],
+        "conditions": [
+          "以官方平台公示的办理条件为准"
+        ],
+        "materials": [
+          "租赁合同",
+          "身份证明",
+          "房屋权属证明"
+        ]
+      }
+    },
+    {
+      "id": "zz-hotline-12345",
+      "title": "郑州市 12345 政务服务便民热线（租房纠纷投诉渠道）",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://public.zhengzhou.gov.cn/D37Y/10149464.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2026-07-10",
+      "effectiveTo": null,
+      "version": "2026-07-10",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "channel",
+        "dispute"
+      ],
+      "keywords": [
+        "12345",
+        "投诉",
+        "热线",
+        "押金",
+        "郑州",
+        "维权"
+      ],
+      "text": "郑州市住房保障和房地产管理局在住房租赁消费警示中提示：若遭遇违规侵权，及时固定证据，拨打12345政务服务热线或向当地房屋租赁管理部门投诉维权，切勿自认吃亏，依法维护自身合法权益。",
+      "summary": "郑州房管局公开提示：租房纠纷可拨 12345 政务服务热线或向房屋租赁管理部门投诉。",
+      "limitations": "热线受理范围与流程以当地公开口径为准；不承诺受理结果，不代为提交。",
+      "channel": {
+        "id": "zz_12345",
+        "title": "郑州市 12345 政务服务便民热线",
+        "eligibility": "local_verified",
+        "responsibilities": [
+          "受理住房租赁相关咨询、投诉与建议"
+        ],
+        "conditions": [
+          "按当地公开受理条件"
+        ],
+        "materials": [
+          "租赁合同",
+          "付款凭证",
+          "沟通记录",
+          "房屋现状照片"
+        ]
+      }
+    },
+    {
+      "id": "zz-housing-authority-complaint",
+      "title": "郑州市住房保障和房地产管理局投诉举报与报案指引",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://public.zhengzhou.gov.cn/D37Y/8375341.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2023-11-16",
+      "effectiveTo": null,
+      "version": "2023-11-16",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "channel",
+        "dispute",
+        "deposit"
+      ],
+      "keywords": [
+        "投诉",
+        "举报",
+        "房管部门",
+        "押金",
+        "跑路",
+        "报案",
+        "郑州"
+      ],
+      "text": "个别不良住房租赁企业出现了恶意克扣租金押金，高进低出、长收短付，甚至跑路的违法违规行为。提醒广大住房租赁消费者可通过官方渠道（郑州市住房租赁监管服务平台）选择信用良好的住房租赁企业租房，查找已通过核验的真实租赁房源，谨慎签订住房租赁合同；如发现住房租赁企业违法违规行为，应及时向行业主管部门反映，发现涉嫌诈骗、企业跑路或强行、暴力驱赶租客等违法行为，应及时向公安部门报案。",
+      "summary": "郑州房管局：企业违规向行业主管部门反映，涉嫌诈骗、跑路或暴力驱赶向公安报案。",
+      "limitations": "属投诉指引，不是受理承诺；不构成法律意见。",
+      "channel": {
+        "id": "zz_housing_authority",
+        "title": "郑州市住房保障和房地产管理局（行业投诉）",
+        "eligibility": "local_verified",
+        "responsibilities": [
+          "受理住房租赁企业与经纪机构违规投诉"
+        ],
+        "conditions": [
+          "以官方公开的投诉渠道与受理条件为准"
+        ],
+        "materials": [
+          "租赁合同",
+          "付款凭证",
+          "沟通记录",
+          "违规线索"
+        ]
+      }
+    },
+    {
+      "id": "zz-broker-filing-check",
+      "title": "郑州市房地产经纪机构备案与从业人员实名查询方式",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://zfbzj.zhengzhou.gov.cn/notice/9602694.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2025-09-09",
+      "effectiveTo": null,
+      "version": "2025-09-09",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "channel",
+        "brokerage",
+        "dispute"
+      ],
+      "keywords": [
+        "中介备案",
+        "经纪机构",
+        "实名登记",
+        "工作牌",
+        "查询",
+        "郑州"
+      ],
+      "text": "（一）房地产经纪机构备案查询方式：1.通过郑州市住房保障和房地产管理局官网-政务公开→主动公开基本目录→公共监管→房地产市场监管-郑州市房地产经纪机构备案信息公示表（每月10日前更新一次）；2.通过郑州市住宅与房地产业协会官网-企业信用栏目查询；3.通过手机微信扫描房地产经纪机构备案证书二维码查询，如扫描结果与备案信息不一致或无信息显示，则该证书为无效。（二）房地产经纪从业人员信息查询方式：通过手机微信扫描其佩戴的工作牌二维码查看，如扫描结果与工作牌信息不一致或无信息显示，则该工作牌为无效。",
+      "summary": "郑州可线上查询经纪机构备案与从业人员实名信息，扫码核对不一致即为无效。",
+      "limitations": "查询入口可能调整，以官方页面为准；仅用于核验身份，不评价服务质量。",
+      "channel": {
+        "id": "zz_broker_filing",
+        "title": "郑州市房地产经纪机构备案查询",
+        "eligibility": "local_verified",
+        "responsibilities": [
+          "公示已备案经纪机构与从业人员实名信息"
+        ],
+        "conditions": [
+          "以官网与协会公示信息为准"
+        ],
+        "materials": [
+          "机构名称",
+          "备案证书编号",
+          "从业人员工作牌"
+        ]
+      }
+    },
+    {
+      "id": "zz-affordable-rental-scope",
+      "title": "郑州市保障性租赁住房管理办法（适用范围提示）",
+      "publisher": "郑州市住房保障和房地产管理局",
+      "url": "https://public.zhengzhou.gov.cn/D0105Y/8615077.jhtml",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": "2024-08-14",
+      "effectiveTo": null,
+      "version": "2024-08-14",
+      "checkedAt": "2026-11-08",
+      "reviewStatus": "approved",
+      "topics": [
+        "contract",
+        "dispute"
+      ],
+      "keywords": [
+        "保障性租赁住房",
+        "公租房",
+        "适用范围",
+        "郑州"
+      ],
+      "text": "第一条 为加强和规范全市保障性租赁住房管理工作，缓解新市民、青年人住房困难，根据国家和省有关规定，结合本市实际，制定本办法。",
+      "summary": "郑州保障性租赁住房另有专门管理办法，市场租房合同纠纷不直接适用该办法。",
+      "limitations": "仅用于说明适用边界，不摘录具体条款；具体资格与配租以官方公告为准。"
     }
   ]
 }

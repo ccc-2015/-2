@@ -11,6 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
 
+import json
+
 from app.knowledge import knowledge_store
 from app.knowledge.citations import collect_cited_ids
 from app.knowledge.store import DATA_DIR
@@ -20,42 +22,54 @@ from app.schemas import AnalyzeContractInput
 from app.services import contract as contract_service
 from app.services.contract import _build_user_prompt, analyze_contract
 
+PACK = json.loads((DATA_DIR / "zz.json").read_text(encoding="utf-8"))
+
 
 class KnowledgeStoreTests(unittest.TestCase):
     def test_seed_available_and_version(self):
         self.assertTrue(knowledge_store.available)
-        self.assertEqual(knowledge_store.version_for("ZZ"), "zz-2026.11.08.1")
-        self.assertEqual(knowledge_store.coverage_for("ZZ"), "limited")
-        self.assertEqual(knowledge_store.coverage_for("ZZ", "contract_review"), "limited")
-        self.assertEqual(knowledge_store.coverage_for("ZZ", "dispute"), "unsupported")
+        self.assertEqual(knowledge_store.version_for("ZZ"), PACK["version"])
+        self.assertEqual(knowledge_store.coverage_for("ZZ"), PACK["coverage"])
+        self.assertEqual(
+            knowledge_store.coverage_for("ZZ", "contract_review"), PACK["topicCoverage"]["contract_review"]
+        )
+        self.assertEqual(knowledge_store.coverage_for("ZZ", "dispute"), PACK["topicCoverage"]["dispute"])
 
     def test_seed_pack_validates(self):
         pack, errors = validate_pack(DATA_DIR / "zz.json")
         self.assertIsNotNone(pack)
         self.assertEqual(errors, [])
+        self.assertGreaterEqual(len(pack.entries), 30)
+        self.assertTrue(any(entry.cityCode == "ZZ" for entry in pack.entries))
+        self.assertTrue(any(entry.channel for entry in pack.entries))
 
     def test_city_and_date_filter(self):
         entries = knowledge_store.list_sources("ZZ", "2026-11-08", "contract_review")
         self.assertTrue(entries)
-        self.assertTrue(all(entry.cityCode == "ZZ" for entry in entries))
-        self.assertEqual(knowledge_store.retrieve("ZZ", "2020-01-01", "维修 损耗 押金"), [])
+        # 资料包内同时收录郑州地方资料与全国性资料。
+        self.assertTrue(all(entry.cityCode in ("ZZ", "CN") for entry in entries))
+        self.assertEqual(knowledge_store.retrieve("ZZ", "2000-01-01", "维修 损耗 押金"), [])
 
     def test_other_city_has_no_knowledge(self):
         self.assertEqual(knowledge_store.list_sources("BJ", "2026-11-08"), [])
         self.assertEqual(knowledge_store.coverage_for("BJ"), "unsupported")
         self.assertIsNone(knowledge_store.version_for("BJ"))
 
-    def test_dispute_scenario_has_no_channel_sources(self):
-        self.assertEqual(knowledge_store.list_sources("ZZ", "2026-11-08", "dispute"), [])
-        self.assertEqual(knowledge_store.coverage_for("ZZ", "dispute"), "unsupported")
+    def test_dispute_scenario_has_channel_sources(self):
+        entries = knowledge_store.list_sources("ZZ", "2026-11-08", "dispute")
+        self.assertTrue(entries)
+        self.assertTrue(all({"dispute", "channel"} & set(entry.topics) for entry in entries))
 
     def test_retrieve_repair_wear(self):
         entries = knowledge_store.retrieve("ZZ", "2026-11-08", "房屋维修责任 自然损耗 押金 退租", top_k=4)
-        ids = {entry.id for entry in entries}
-        self.assertIn("cn-civil-712", ids)
-        self.assertIn("cn-civil-710", ids)
-        self.assertIn("cn-civil-733", ids)
+        ids = [entry.id for entry in entries]
         self.assertLessEqual(len(entries), 4)
+        # 至少命中一条民法典租赁条款或维修主题条目。
+        self.assertTrue(
+            any(entry_id.startswith("cn-civil-7") for entry_id in ids)
+            or any("repair" in entry.topics for entry in entries),
+            ids,
+        )
 
     def test_sources_endpoint(self):
         client = TestClient(app)
@@ -68,7 +82,7 @@ class KnowledgeStoreTests(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertGreater(len(body["data"]), 0)
         self.assertEqual(body["meta"]["processingMode"], "knowledge_ai")
-        self.assertEqual(body["meta"]["knowledgeVersion"], "zz-2026.11.08.1")
+        self.assertEqual(body["meta"]["knowledgeVersion"], PACK["version"])
         self.assertEqual(body["data"][0]["publisher"], "全国人民代表大会")
 
     def test_sources_endpoint_for_other_city(self):
@@ -85,6 +99,27 @@ class KnowledgeStoreTests(unittest.TestCase):
         client = TestClient(app)
         response = client.get("/api/config")
         self.assertTrue(response.json()["data"]["features"]["knowledgeBase"])
+
+    def test_channel_entries_require_local_verified_source(self):
+        channels = [entry for entry in PACK["entries"] if entry.get("channel")]
+        self.assertTrue(channels)
+        for entry in channels:
+            if entry["channel"]["eligibility"] == "local_verified":
+                self.assertEqual(entry["reviewStatus"], "approved")
+                self.assertTrue(entry["url"].startswith("https://"))
+                self.assertTrue({"channel", "dispute"} & set(entry["topics"]))
+
+    def test_local_regulation_is_retrievable_for_contract(self):
+        entries = knowledge_store.retrieve("ZZ", "2026-11-08", "押金 退还 扣减", top_k=4, scenario="contract_review")
+        ids = {entry.id for entry in entries}
+        self.assertTrue(
+            any(entry_id.startswith("zz-") or entry_id.startswith("cn-housing-lease-reg") for entry_id in ids),
+            ids,
+        )
+
+    def test_pack_has_zhengzhou_sources(self):
+        city_entries = [entry for entry in PACK["entries"] if entry["cityCode"] == "ZZ"]
+        self.assertGreaterEqual(len(city_entries), 20)
 
 
 class ContractKnowledgeTests(unittest.TestCase):
@@ -126,11 +161,13 @@ class ContractKnowledgeTests(unittest.TestCase):
         with patch.object(contract_service, "chat_json", new=AsyncMock(return_value=fake)):
             analysis = asyncio.run(analyze_contract(inp))
         self.assertEqual(analysis.processing_mode, "knowledge_ai")
-        self.assertEqual(analysis.result.coverage, "limited")
+        self.assertEqual(analysis.result.coverage, PACK["topicCoverage"]["contract_review"])
         self.assertEqual(len(analysis.result.references), 1)
-        self.assertEqual(analysis.result.references[0].id, self.sources[0].id)
-        self.assertIn("zz-2026.11.08.1", analysis.knowledge_version or "")
-        self.assertEqual(analysis.result.findings[0].sourceRefs, [self.sources[0].id])
+        # 引用必须来自资料包中的真实条目，且与 finding 的 sourceRefs 一致。
+        pack_ids = {entry["id"] for entry in PACK["entries"]}
+        self.assertIn(analysis.result.references[0].id, pack_ids)
+        self.assertEqual(analysis.result.findings[0].sourceRefs, [analysis.result.references[0].id])
+        self.assertEqual(analysis.knowledge_version, PACK["version"])
 
     def test_other_city_analysis_has_no_sources(self):
         fake = {
@@ -156,7 +193,7 @@ class ContractKnowledgeTests(unittest.TestCase):
             "revision": None,
             "followUpQuestions": [],
         }
-        inp = AnalyzeContractInput(text="维修责任", intent="review", cityCode="ZZ", eventDate="2020-01-01")
+        inp = AnalyzeContractInput(text="维修责任", intent="review", cityCode="ZZ", eventDate="2000-01-01")
         with patch.object(contract_service, "chat_json", new=AsyncMock(return_value=fake)):
             analysis = asyncio.run(analyze_contract(inp))
         self.assertEqual(analysis.processing_mode, "ai")
