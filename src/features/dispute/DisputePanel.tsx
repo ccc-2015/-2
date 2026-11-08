@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Scale,
   ArrowUp,
@@ -88,8 +88,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const [status, setStatus] = useState("not_contacted");
   const [progressNotice, setProgressNotice] = useState("");
   const [scriptNotice, setScriptNotice] = useState("");
-  const [analysisOpen, setAnalysisOpen] = useState(true);
-  const scriptRef = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<"script" | "analysis" | "progress">("analysis");
   const [archivedScripts, setArchivedScripts] = useState<Record<string, string>>({});
   const selectedChannelLabel = selectedChannelId
     ? result?.recommendations.find((rec) => rec.channelId === selectedChannelId)?.title ??
@@ -101,9 +100,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const canSubmit = aiAvailable && issue.trim().length > 0 && !overEvidenceLimit && !busy;
 
   useEffect(() => {
-    if (selectedChannelId && result?.script) {
-      scriptRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
+    if (selectedChannelId && result?.script) setTab("script");
   }, [selectedChannelId, result?.script]);
 
   async function diagnose(channelId: string | null) {
@@ -129,9 +126,9 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
       if (channelId && data.script) {
         setScriptDraft(data.script.text);
         setCopied(false);
-        setAnalysisOpen(false);
+        setTab("script");
       } else if (!channelId) {
-        setAnalysisOpen(true);
+        setTab("analysis");
         setScriptDraft("");
       }
     } catch (err) {
@@ -227,7 +224,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
         一期仅一般方向：本地渠道、资格与职责待核实，不提供经核验的本地渠道推荐。话术为辅助草稿，不得补造金额、日期、对方行为、法规、电话或网址；未知项保留待补，系统不代你提交。
       </p>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
         <div className="space-y-4">
           <div className="panel p-4">
             <h2 className="mb-3 text-sm font-semibold">争议与必要事实</h2>
@@ -283,7 +280,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
             {allRecords.length === 0 ? (
               <p className="text-xs text-muted-foreground">证据画布还没有记录，可先去添加。</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
                 {allRecords.map((r) => (
                   <li key={r.id} className="flex items-start gap-2 rounded-md border bg-secondary/30 p-2">
                     <Checkbox
@@ -338,77 +335,113 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
           )}
 
           {result && (
-            <>
-              {selectedChannelId && result.script ? (
-                <div ref={scriptRef} className="panel overflow-hidden">
-                  <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-4 py-3">
-                    <Copy className="size-4 text-primary" />
-                    <h3 className="text-sm font-semibold">话术草稿</h3>
-                    <Badge variant="outline">{selectedChannelLabel}</Badge>
-                    <span className="ml-auto text-[11px] text-muted-foreground">{scriptDraft.length} 字 · 可编辑</span>
-                  </div>
+            <div className="panel flex h-[calc(100dvh-15rem)] min-h-[520px] flex-col overflow-hidden">
+              <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border/60 px-2 pt-2">
+                {(
+                  [
+                    { id: "script", label: "话术草稿", ready: !!result.script },
+                    { id: "analysis", label: "分析依据", ready: true },
+                    { id: "progress", label: "处理进展", ready: true },
+                  ] as const
+                ).map((item) => {
+                  const active = tab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setTab(item.id)}
+                      className={
+                        active
+                          ? "rounded-t-lg border-b-2 border-foreground px-3 py-2 text-[12px] font-medium text-foreground"
+                          : "rounded-t-lg border-b-2 border-transparent px-3 py-2 text-[12px] text-muted-foreground hover:text-foreground"
+                      }
+                    >
+                      {item.label}
+                      {item.id === "script" && !item.ready && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">待生成</span>
+                      )}
+                      {item.id === "analysis" && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">{result.recommendations.length}</span>
+                      )}
+                    </button>
+                  );
+                })}
+                {resultMeta && (
+                  <Badge variant="outline" className="ml-auto mr-1 text-[10px]">
+                    {resultMeta.coverage === "supported"
+                      ? "知识库已覆盖"
+                      : resultMeta.coverage === "limited"
+                        ? "知识库覆盖有限"
+                        : "暂无渠道知识库"}
+                  </Badge>
+                )}
+              </div>
 
-                  <div className="space-y-3 px-4 py-3">
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      已按选定方向生成，并自动引用所选证据中的金额、日期与材料名称；剩余待补项是证据里也没有的信息，请补全后自行提交。
-                    </p>
-                    {result.script.placeholders.length > 0 && (
-                      <div className="rounded-lg bg-amber-500/10 px-3 py-2">
-                        <p className="mb-1.5 text-[11px] font-medium text-amber-700">待补项（提交前请替换）</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {result.script.placeholders.map((p, i) => (
-                            <span
-                              key={i}
-                              className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] text-amber-800 ring-1 ring-amber-500/25"
-                            >
-                              {p}
-                            </span>
-                          ))}
-                        </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                {tab === "script" && (
+                  result.script ? (
+                    <div className="flex h-full flex-col">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-semibold">话术草稿</h3>
+                        <Badge variant="outline">{selectedChannelLabel}</Badge>
+                        <span className="ml-auto text-[11px] text-muted-foreground">{scriptDraft.length} 字 · 可编辑</span>
                       </div>
-                    )}
-                    <Textarea
-                      value={scriptDraft}
-                      onChange={(e) => setScriptDraft(e.target.value)}
-                      className="min-h-[320px] resize-y bg-background text-[14px] leading-7"
-                      aria-label="话术草稿（可编辑）"
-                    />
-                  </div>
+                      <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">
+                        已按选定方向生成，并自动引用所选证据中的金额、日期与材料名称；剩余待补项是证据里也没有的信息，请补全后自行提交。
+                      </p>
+                      {result.script.placeholders.length > 0 && (
+                        <div className="mb-2 rounded-lg bg-amber-500/10 px-3 py-2">
+                          <p className="mb-1.5 text-[11px] font-medium text-amber-700">待补项（提交前请替换）</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {result.script.placeholders.map((p, i) => (
+                              <span
+                                key={i}
+                                className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] text-amber-800 ring-1 ring-amber-500/25"
+                              >
+                                {p}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <Textarea
+                        value={scriptDraft}
+                        onChange={(e) => setScriptDraft(e.target.value)}
+                        className="min-h-[260px] flex-1 resize-none bg-background text-[14px] leading-7"
+                        aria-label="话术草稿（可编辑）"
+                      />
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <Button size="sm" onClick={copyScript}>
+                          <ClipboardCopy className="size-4" />
+                          {copied ? "已复制" : "复制话术"}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={archiveScript} disabled={!scriptDraft.trim()}>
+                          <BookmarkPlus className="size-4" />
+                          {scriptArchiveId ? "更新存档" : "存档到证据"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={regenerate} disabled={busy} className="ml-auto">
+                          {busy ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
+                          重新生成
+                        </Button>
+                        {scriptNotice && <p className="w-full text-[11px] text-primary">{scriptNotice}</p>}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center text-center">
+                      <Scale className="size-7 text-muted-foreground/60" />
+                      <p className="mt-2 text-[13px] font-medium">还没有生成话术</p>
+                      <p className="mt-1 max-w-xs text-[11px] leading-relaxed text-muted-foreground">
+                        到「分析依据」里选一个处理方向，系统会按已有材料生成可编辑话术。
+                      </p>
+                      <Button size="sm" variant="outline" className="mt-3" onClick={() => setTab("analysis")}>
+                        去看处理方向
+                      </Button>
+                    </div>
+                  )
+                )}
 
-                  <div className="flex flex-wrap items-center gap-2 border-t border-border/60 bg-secondary/30 px-4 py-3">
-                    <Button size="sm" onClick={copyScript}>
-                      <ClipboardCopy className="size-4" />
-                      {copied ? "已复制" : "复制话术"}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={archiveScript} disabled={!scriptDraft.trim()}>
-                      <BookmarkPlus className="size-4" />
-                      {scriptArchiveId ? "更新存档" : "存档到证据"}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={regenerate} disabled={busy} className="ml-auto">
-                      {busy ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
-                      重新生成
-                    </Button>
-                    {scriptNotice && <p className="w-full text-[11px] text-primary">{scriptNotice}</p>}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="panel overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setAnalysisOpen((open) => !open)}
-                  aria-expanded={analysisOpen}
-                  className="flex w-full flex-wrap items-center gap-2 px-4 py-3 text-left"
-                >
-                  <h3 className="text-sm font-semibold">分析依据</h3>
-                  <span className="text-[11px] text-muted-foreground">
-                    事实 {result.factsSummary.length} · 缺项 {result.missingFacts.length} · 方向 {result.recommendations.length}
-                  </span>
-                  <span className="ml-auto text-[11px] text-muted-foreground">{analysisOpen ? "收起" : "展开"}</span>
-                </button>
-
-                {analysisOpen && (
-                  <div className="space-y-3 border-t border-border/60 p-4">
+                {tab === "analysis" && (
+                  <div className="space-y-3">
                     {result.factsSummary.length > 0 && (
                       <div>
                         <h4 className="mb-1.5 text-xs font-medium">已整理的事实</h4>
@@ -432,18 +465,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
                     {result.recommendations.length > 0 && (
                       <div>
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <h4 className="text-xs font-medium">一般处理方向</h4>
-                          {resultMeta && (
-                            <Badge variant="outline">
-                              {resultMeta.coverage === "supported"
-                                ? "知识库已覆盖"
-                                : resultMeta.coverage === "limited"
-                                  ? "知识库覆盖有限"
-                                  : "暂无渠道知识库"}
-                            </Badge>
-                          )}
-                        </div>
+                        <h4 className="mb-2 text-xs font-medium">一般处理方向</h4>
                         <p className="mb-2 text-[11px] text-muted-foreground">本地渠道与资格以审核资料为准；未核验方向仍为一般建议。</p>
                         <div className="space-y-2">
                           {result.recommendations.map((rec, i) => {
@@ -486,7 +508,11 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                     {result.references.length === 0 && (resultMeta?.warnings.length ?? 0) > 0 && (
                       <p className="text-[11px] leading-relaxed text-muted-foreground">{resultMeta!.warnings.join(" ")}</p>
                     )}
+                  </div>
+                )}
 
+                {tab === "progress" && (
+                  <div className="space-y-3">
                     <div className="rounded-lg border border-border/70 p-3">
                       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                         <h4 className="text-xs font-medium">处理进展</h4>
@@ -518,14 +544,13 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                       </div>
                       {progressNotice && <p className="mt-1 text-xs text-primary">{progressNotice}</p>}
                     </div>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      每次记录会在证据画布「争议处理」时间轴新增一条状态记录，刷新后仍保留。
+                    </p>
                   </div>
                 )}
               </div>
-
-              {selectedChannelId && !result.script && !loading && (
-                <p className="text-xs text-muted-foreground">该方向暂未生成话术，可补充事实后重新生成。</p>
-              )}
-            </>
+            </div>
           )}
         </div>
       </div>
