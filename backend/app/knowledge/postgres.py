@@ -34,7 +34,7 @@ class PostgresKnowledgeStore:
         settings = get_settings()
         self.embedding_dim = settings.embedding_dim
         self.embedding_min_score = settings.embedding_min_score
-        self.embedding_model = settings.model_embedding_name
+        self.embedding_model = settings.embedding_configured_name
         self.pool = ConnectionPool(database_url, min_size=1, max_size=4, open=True, timeout=8)
         self.ensure_schema()
 
@@ -446,7 +446,7 @@ class PostgresKnowledgeStore:
                                 entry.limitations,
                                 channel,
                                 vector_literal,
-                                settings.model_embedding_name or None,
+                                settings.embedding_configured_name or None,
                                 datetime.now(timezone.utc) if vector else None,
                             ),
                         )

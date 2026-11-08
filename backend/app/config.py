@@ -19,12 +19,20 @@ class Settings(BaseSettings):
     # 二期知识库：PostgreSQL + pgvector；未配置 DATABASE_URL 时回退文件型 JSON 知识库。
     knowledge_backend: str = "json"
     database_url: str = ""
-    model_embedding_name: str = ""
+
+    # 向量模型（与文字模型完全独立，不共用 URL/Key）。
+    # EMBEDDING_* 三项齐全时走远程 /embeddings；否则回退本地 fastembed（MODEL_EMBEDDING_NAME）。
+    embedding_model_name: str = ""
+    embedding_api_base_url: str = ""
+    embedding_api_key: str = ""
     embedding_dim: int = 512
     embedding_min_score: float = 0.2
+    embedding_timeout_ms: int = 15000
+    embedding_batch_size: int = 16
+    model_embedding_name: str = ""
     hf_endpoint: str = ""
 
-    # 精排序（rerank）：留空 RERANK_MODEL_NAME 则不启用，直接用向量+关键词融合顺序。
+    # 精排序（rerank）：三项独立配置，任一缺失即视为未启用，不回退文字模型。
     rerank_model_name: str = ""
     rerank_api_base_url: str = ""
     rerank_api_key: str = ""
@@ -40,8 +48,39 @@ class Settings(BaseSettings):
         return bool(self.model_api_key.strip() and self.model_name.strip())
 
     @property
-    def embedding_configured(self) -> bool:
+    def embedding_api_configured(self) -> bool:
+        """远程向量模型：模型名 + 地址 + Key 三者齐全才启用。"""
+        return bool(
+            self.embedding_model_name.strip()
+            and self.embedding_api_base_url.strip()
+            and self.embedding_api_key.strip()
+        )
+
+    @property
+    def embedding_local_configured(self) -> bool:
         return bool(self.model_embedding_name.strip())
+
+    @property
+    def embedding_configured(self) -> bool:
+        return self.embedding_api_configured or self.embedding_local_configured
+
+    @property
+    def local_embedding_model(self) -> str:
+        return (self.model_embedding_name or "BAAI/bge-small-zh-v1.5").strip()
+
+    @property
+    def embedding_base_url(self) -> str:
+        return (self.embedding_api_base_url or "").rstrip("/")
+
+    @property
+    def embedding_timeout_seconds(self) -> float:
+        value = self.embedding_timeout_ms if self.embedding_timeout_ms > 0 else 15000
+        return min(value, 60000) / 1000
+
+    @property
+    def embedding_configured_name(self) -> str:
+        """写入库里的模型标识，用于判断是否需要重建向量。"""
+        return self.embedding_model_name.strip() or self.local_embedding_model
 
     @property
     def base_url(self) -> str:
@@ -60,15 +99,20 @@ class Settings(BaseSettings):
 
     @property
     def rerank_configured(self) -> bool:
-        return bool(self.rerank_model_name.strip())
+        """精排三项独立配置，缺一即关闭；不继承文字模型的地址与密钥。"""
+        return bool(
+            self.rerank_model_name.strip()
+            and self.rerank_api_base_url.strip()
+            and self.rerank_api_key.strip()
+        )
 
     @property
     def rerank_base_url(self) -> str:
-        return (self.rerank_api_base_url or self.model_api_base_url or "https://api.openai.com/v1").rstrip("/")
+        return (self.rerank_api_base_url or "").rstrip("/")
 
     @property
     def rerank_key(self) -> str:
-        return (self.rerank_api_key or self.model_api_key).strip()
+        return self.rerank_api_key.strip()
 
     @property
     def rerank_timeout_seconds(self) -> float:

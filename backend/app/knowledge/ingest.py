@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"ingested packs={len(packs)} entries={count} "
         f"embedding={'on' if embed else 'off'} "
-        f"model={settings.model_embedding_name or '-'} dim={settings.embedding_dim}"
+        f"model={settings.embedding_configured_name or '-'} dim={settings.embedding_dim}"
     )
     return 0
 

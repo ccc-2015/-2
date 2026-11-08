@@ -128,21 +128,37 @@ cd backend && ./.venv/Scripts/python.exe -m app.knowledge.validate app/knowledge
 
 `scripts/build_knowledge_pack.py` 只挑与合同、押金、维修、退租、经纪相关的条文；公告、配租名单、处罚程序等不入库。`scripts/eval_retrieval.py` 用 16 条标注 query 比较向量/关键词权重（当前 0.5/0.5，top1 10/16，Recall@4 16/16）。
 
-## 检索链路与精排序（rerank）
+## 三套模型（完全独立）
 
-1. **粗排**：pgvector 余弦召回 `RERANK_CANDIDATES` 条（未启用精排时只取 `top_k`），再按「向量 0.5 + 关键词 0.5」加权融合。
-2. **精排**：若配置了 `RERANK_MODEL_NAME`，把粗排候选送 `POST {RERANK_API_BASE_URL}/rerank` 重排；未配置或调用失败则直接用粗排顺序，不阻断审查。
+| 用途 | 变量 | 接口 | 缺失时 |
+| --- | --- | --- | --- |
+| 文字模型 | `MODEL_NAME` / `MODEL_API_BASE_URL` / `MODEL_API_KEY` | `/chat/completions` | 审查不可用（`aiAvailable=false`） |
+| 向量模型 | `EMBEDDING_MODEL_NAME` / `EMBEDDING_API_BASE_URL` / `EMBEDDING_API_KEY` | `/embeddings` | 回退本地 fastembed `MODEL_EMBEDDING_NAME` |
+| 精排模型 | `RERANK_MODEL_NAME` / `RERANK_API_BASE_URL` / `RERANK_API_KEY` | `/rerank` | 跳过精排，直接用粗排顺序 |
+
+三者不共用 URL/Key。向量模型三项齐全才走远程，否则用本地；精排三项齐全才启用，任一缺失即关闭。
+
+## 检索链路
+
+1. **粗排**：pgvector 余弦召回（启用精排时取 `RERANK_CANDIDATES` 条，否则只取 `top_k`），再按「向量 0.5 + 关键词 0.5」融合。
+2. **精排**：把粗排候选送 `POST {RERANK_API_BASE_URL}/rerank` 重排；失败或超时静默回退，不阻断审查。
 3. `RERANK_MIN_SCORE` 过滤低分候选，全部被过滤时回退粗排。
 
 ```env
-RERANK_MODEL_NAME=BAAI/bge-reranker-v2-m3   # 留空即关闭精排
-RERANK_API_BASE_URL=                        # 留空复用 MODEL_API_BASE_URL
-RERANK_API_KEY=                             # 留空复用 MODEL_API_KEY
-RERANK_TIMEOUT_MS=8000
-RERANK_CANDIDATES=12
-RERANK_MIN_SCORE=0.0
+# 向量（远程）
+EMBEDDING_MODEL_NAME=bge-m3
+EMBEDDING_API_BASE_URL=https://your-embedding-host/v1
+EMBEDDING_API_KEY=sk-embed-xxx
+EMBEDDING_DIM=1024
+
+# 精排
+RERANK_MODEL_NAME=BAAI/bge-reranker-v2-m3
+RERANK_API_BASE_URL=https://your-rerank-host/v1
+RERANK_API_KEY=sk-rerank-xxx
 ```
 
-接口按 OpenAI 兼容格式返回 `{"results":[{"index":0,"relevance_score":0.87}]}`（也兼容 Cohere 的 `data` 字段）。改完 `.env` 需重启后端。
+接口返回格式兼容 `{"results":[{"index":0,"relevance_score":0.87}]}` 与 Cohere 的 `data` 字段。
 
-更新资料时请同步 `version`、`checkedAt`、`coverage`、`topicCoverage` 和每条资料的 `limitations`。
+**换向量模型必须重建向量**：`EMBEDDING_DIM` 要与新模型实际输出一致，然后重新 ingest（会覆盖同一城市的条目并重新生成 embedding）。维度不一致时启动/入库会直接报错，不会静默降级。
+
+改完 `.env` 需重启后端；只有改表结构或维度时才需要重建表。
