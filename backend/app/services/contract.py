@@ -109,7 +109,7 @@ async def analyze_contract(inp: AnalyzeContractInput) -> ContractAnalysis:
     )
     cited_ids = _collect_cited_ids(raw, source_map)
     references = [entry.to_source_ref() for entry in sources if entry.id in cited_ids]
-    coverage = knowledge_store.coverage_for(city)
+    coverage = knowledge_store.coverage_for(city, "contract_review")
     result = ContractResult(
         answer=_str(raw.get("answer"), "模型未返回有效回答，请重试或调整问题。"),
         coverage=coverage,

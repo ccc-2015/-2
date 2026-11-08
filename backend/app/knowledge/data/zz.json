@@ -3,6 +3,10 @@
   "cityName": "郑州",
   "version": "zz-2026.11.08.1",
   "coverage": "limited",
+  "topicCoverage": {
+    "contract_review": "limited",
+    "dispute": "unsupported"
+  },
   "checkedAt": "2026-11-08",
   "entries": [
     {

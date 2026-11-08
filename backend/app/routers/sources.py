@@ -15,7 +15,7 @@ async def get_sources(cityCode: str = "CN", eventDate: str | None = None, scenar
     validate_date(eventDate, "eventDate")
     entries = knowledge_store.list_sources(cityCode, eventDate, scenario)
     references = [entry.to_source_ref().model_dump() for entry in entries]
-    coverage = knowledge_store.coverage_for(cityCode)
+    coverage = knowledge_store.coverage_for(cityCode, scenario)
     warnings: list[str] = []
     if not references:
         warnings.append("当前地区暂无可用审核资料。")

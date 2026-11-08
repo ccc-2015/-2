@@ -12,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
 
 from app.knowledge import knowledge_store
+from app.knowledge.store import DATA_DIR
+from app.knowledge.validate import validate_pack
 from app.main import app
 from app.schemas import AnalyzeContractInput
 from app.services import contract as contract_service
@@ -23,6 +25,13 @@ class KnowledgeStoreTests(unittest.TestCase):
         self.assertTrue(knowledge_store.available)
         self.assertEqual(knowledge_store.version_for("ZZ"), "zz-2026.11.08.1")
         self.assertEqual(knowledge_store.coverage_for("ZZ"), "limited")
+        self.assertEqual(knowledge_store.coverage_for("ZZ", "contract_review"), "limited")
+        self.assertEqual(knowledge_store.coverage_for("ZZ", "dispute"), "unsupported")
+
+    def test_seed_pack_validates(self):
+        pack, errors = validate_pack(DATA_DIR / "zz.json")
+        self.assertIsNotNone(pack)
+        self.assertEqual(errors, [])
 
     def test_city_and_date_filter(self):
         entries = knowledge_store.list_sources("ZZ", "2026-11-08", "contract_review")
@@ -34,6 +43,10 @@ class KnowledgeStoreTests(unittest.TestCase):
         self.assertEqual(knowledge_store.list_sources("BJ", "2026-11-08"), [])
         self.assertEqual(knowledge_store.coverage_for("BJ"), "unsupported")
         self.assertIsNone(knowledge_store.version_for("BJ"))
+
+    def test_dispute_scenario_has_no_channel_sources(self):
+        self.assertEqual(knowledge_store.list_sources("ZZ", "2026-11-08", "dispute"), [])
+        self.assertEqual(knowledge_store.coverage_for("ZZ", "dispute"), "unsupported")
 
     def test_retrieve_repair_wear(self):
         entries = knowledge_store.retrieve("ZZ", "2026-11-08", "房屋维修责任 自然损耗 押金 退租", top_k=4)

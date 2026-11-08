@@ -54,5 +54,6 @@ class KnowledgePack(BaseModel):
     cityName: str
     version: str
     coverage: Coverage = "limited"
+    topicCoverage: dict[str, Coverage] = Field(default_factory=dict)
     checkedAt: str
     entries: list[KnowledgeEntry] = Field(default_factory=list)

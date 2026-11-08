@@ -48,9 +48,13 @@ class KnowledgeStore:
         pack = self.pack_for(city_code)
         return pack.version if pack else None
 
-    def coverage_for(self, city_code: str | None) -> str:
+    def coverage_for(self, city_code: str | None, scenario: str | None = None) -> str:
         pack = self.pack_for(city_code)
-        return pack.coverage if pack else "unsupported"
+        if not pack:
+            return "unsupported"
+        if scenario and scenario in pack.topicCoverage:
+            return pack.topicCoverage[scenario]
+        return pack.coverage
 
     def _applicable(self, city_code: str | None, event_date: str | None) -> list[KnowledgeEntry]:
         pack = self.pack_for(city_code)
@@ -90,7 +94,7 @@ class KnowledgeStore:
                 "restoration",
                 "safety",
             },
-            "dispute": {"deposit", "termination", "rent", "repair", "return", "safety"},
+            "dispute": {"dispute", "channel"},
         }.get(scenario or "")
         if topics:
             entries = [entry for entry in entries if topics.intersection(entry.topics)]
