@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, FileText, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, FileText, History, ShieldCheck } from "lucide-react";
 import type { ContractIntent, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -21,14 +21,32 @@ import { useRegionCode } from "../../../lib/region";
 import { newId, saveRecordChecked, type EvidenceRecord } from "../../evidence/store";
 import { Composer } from "./Composer";
 import { ContractSheet } from "./ContractSheet";
+import { HistoryPanel } from "./HistoryPanel";
 import { RevisionCopyPanel } from "./ResultCards";
 import { Thread } from "./Thread";
 import {
+  clearSessions,
+  deleteSession,
+  formatSessionTime,
+  getConsent,
+  historySupported,
+  listSessions,
+  loadSession,
+  saveSession,
+  setConsent as persistConsent,
+  type HistoryConsent,
+} from "./history";
+import { buildContext } from "./memory";
+import {
+  emptySession,
+  sessionHasContent,
+  type ContractSession,
+  type SessionSummary,
+} from "./session";
+import {
   PASTE_META,
-  buildConversation,
   defaultQuestion,
   type ContractDoc,
-  type Exchange,
   type RevisionDraft,
   type RevisionSuggestion,
 } from "./types";
@@ -45,20 +63,24 @@ export function ContractAgent() {
   const aiAvailable = config?.aiAvailable ?? false;
   const maxText = config?.limits.maxTextLength ?? 50000;
 
-  const [doc, setDoc] = useState<ContractDoc | null>(null);
-  const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [session, setSession] = useState<ContractSession>(() => emptySession());
+  const { doc, exchanges, revisionDrafts, signingDate, textRecordId, saveNotice } = session;
+
   const [question, setQuestion] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<ApiError | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [activeExcerpt, setActiveExcerpt] = useState<Excerpt | null>(null);
-  const [revisionDrafts, setRevisionDrafts] = useState<Record<string, RevisionDraft>>({});
   const [revisionTargetId, setRevisionTargetId] = useState<string | null>(null);
-  const [signingDate, setSigningDate] = useState("");
-  const [textRecordId, setTextRecordId] = useState<string | null>(null);
-  const [saveNotice, setSaveNotice] = useState("");
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<SessionSummary[]>([]);
+  const [historyNotice, setHistoryNotice] = useState("");
+  const [consent, setConsentState] = useState<HistoryConsent>(() => getConsent());
+  const [supported] = useState(() => historySupported());
+  const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -83,26 +105,76 @@ export function ContractAgent() {
       ]
     : [];
 
+  const patch = useCallback(
+    (next: Partial<ContractSession> | ((current: ContractSession) => Partial<ContractSession>)) => {
+      setSession((current) => ({
+        ...current,
+        ...(typeof next === "function" ? next(current) : next),
+        updatedAt: new Date().toISOString(),
+      }));
+    },
+    [],
+  );
+
+  const refreshHistory = useCallback(async () => {
+    if (!supported) return;
+    try {
+      setHistoryItems(await listSessions());
+    } catch {
+      setHistoryNotice("读取本机历史失败，请稍后重试。");
+    }
+  }, [supported]);
+
+  const bootstrapped = useRef(false);
+  useEffect(() => {
+    if (bootstrapped.current) return;
+    bootstrapped.current = true;
+    if (getConsent() !== "on" || !historySupported()) return;
+    void listSessions()
+      .then(async (items) => {
+        if (items.length === 0) return;
+        const loaded = await loadSession(items[0].id);
+        if (!loaded) return;
+        setSession((current) => (sessionHasContent(current) ? current : loaded));
+        setSavedAt(loaded.updatedAt);
+      })
+      .catch(() => undefined);
+  }, []);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [exchanges.length, busy]);
 
-  function resetConversation() {
-    setExchanges([]);
+  useEffect(() => {
+    if (!historyOpen) return;
+    void refreshHistory();
+  }, [historyOpen, refreshHistory]);
+
+  useEffect(() => {
+    if (consent !== "on" || !supported || !sessionHasContent(session)) return;
+    const timer = window.setTimeout(() => {
+      void saveSession(session)
+        .then(() => {
+          setSavedAt(session.updatedAt);
+          void refreshHistory();
+        })
+        .catch(() => setHistoryNotice("本机历史保存失败，可能是浏览器存储受限或被禁用。"));
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [session, consent, supported, refreshHistory]);
+
+  function resetUi() {
     setQuestion("");
     setActiveExcerpt(null);
-    setRevisionDrafts({});
     setRevisionTargetId(null);
-    setTextRecordId(null);
-    setSaveNotice("");
-    setSigningDate("");
     setUploadError(null);
   }
 
-  function resetAll() {
-    setDoc(null);
+  function startNewSession(nextDoc: ContractDoc | null) {
+    setSession({ ...emptySession(), doc: nextDoc });
+    resetUi();
     setDocOpen(false);
-    resetConversation();
+    setSavedAt(null);
   }
 
   function askConfirm(title: string, description: string, action: () => void) {
@@ -113,33 +185,38 @@ export function ContractAgent() {
     id: string,
     displayQuestion: string,
     intent: ContractIntent,
-    conversation: ReturnType<typeof buildConversation>,
+    context: ReturnType<typeof buildContext>,
     text: string,
     eventDate: string = signingDate,
   ) {
-    setExchanges((prev) =>
-      prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: true, error: null } : exchange)),
-    );
+    patch((current) => ({
+      exchanges: current.exchanges.map((exchange) =>
+        exchange.id === id ? { ...exchange, loading: true, error: null } : exchange,
+      ),
+    }));
     try {
       const { data, meta } = await api.analyzeContract({
         text,
         textScope: "full",
         question: displayQuestion,
-        conversation,
+        conversation: context.conversation,
+        memory: context.memory,
         intent,
         cityCode,
         eventDate: eventDate || null,
       });
-      setExchanges((prev) =>
-        prev.map((exchange) =>
+      patch((current) => ({
+        exchanges: current.exchanges.map((exchange) =>
           exchange.id === id ? { ...exchange, loading: false, result: data, meta, docText: text } : exchange,
         ),
-      );
+      }));
     } catch (err) {
       const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
-      setExchanges((prev) =>
-        prev.map((exchange) => (exchange.id === id ? { ...exchange, loading: false, error } : exchange)),
-      );
+      patch((current) => ({
+        exchanges: current.exchanges.map((exchange) =>
+          exchange.id === id ? { ...exchange, loading: false, error } : exchange,
+        ),
+      }));
     }
   }
 
@@ -147,20 +224,25 @@ export function ContractAgent() {
     const id = newId();
     const reviewQuestion = "请审查这份合同。";
     setQuestion("");
-    setExchanges([
-      {
-        id,
-        question: reviewQuestion,
-        intent: "review",
-        auto: true,
-        docText: nextDoc.text,
-        result: null,
-        meta: null,
-        error: null,
-        loading: true,
-      },
-    ]);
-    void run(id, reviewQuestion, "review", [], nextDoc.text, "");
+    patch({
+      exchanges: [
+        {
+          id,
+          question: reviewQuestion,
+          intent: "review",
+          auto: true,
+          docText: nextDoc.text,
+          result: null,
+          meta: null,
+          error: null,
+          loading: true,
+        },
+      ],
+      revisionDrafts: {},
+      textRecordId: null,
+      saveNotice: "",
+    });
+    void run(id, reviewQuestion, "review", { conversation: [], memory: null }, nextDoc.text, "");
   }
 
   async function extractFile(file: File) {
@@ -191,8 +273,7 @@ export function ContractAgent() {
           pages: data.pages,
         },
       };
-      resetConversation();
-      setDoc(nextDoc);
+      startNewSession(nextDoc);
       if (!nextDoc.text.trim()) {
         setUploadError(
           new ApiError("invalid_input", "未识别到合同文本，请换一张更清晰的文件，或在合同文本中手动补充。", false),
@@ -209,8 +290,10 @@ export function ContractAgent() {
 
   function handleFile(file: File) {
     if (uploading || busy) return;
-    if (doc || exchanges.length > 0) {
-      askConfirm("开始审查新合同？", "当前合同与对话将被清空，已存为证据的内容不受影响。", () => void extractFile(file));
+    if (sessionHasContent(session)) {
+      askConfirm("开始审查新合同？", "当前合同与对话将被替换；已开启本机保存时会先存入历史，已存为证据的内容不受影响。", () =>
+        void extractFile(file),
+      );
     } else {
       void extractFile(file);
     }
@@ -229,8 +312,7 @@ export function ContractAgent() {
         return;
       }
       const nextDoc: ContractDoc = { text: trimmed, sourceName: "粘贴文本", meta: PASTE_META };
-      resetConversation();
-      setDoc(nextDoc);
+      startNewSession(nextDoc);
       startReview(nextDoc);
       return;
     }
@@ -241,27 +323,29 @@ export function ContractAgent() {
     if (!displayQuestion) return;
 
     const id = newId();
-    const conversation = buildConversation(exchanges);
+    const context = buildContext(exchanges);
     setQuestion("");
-    setExchanges((prev) => [
-      ...prev,
-      { id, question: displayQuestion, intent, docText: doc.text, result: null, meta: null, error: null, loading: true },
-    ]);
-    void run(id, displayQuestion, intent, conversation, doc.text);
+    patch((current) => ({
+      exchanges: [
+        ...current.exchanges,
+        { id, question: displayQuestion, intent, docText: doc.text, result: null, meta: null, error: null, loading: true },
+      ],
+    }));
+    void run(id, displayQuestion, intent, context, doc.text);
   }
 
   function retry(id: string) {
     const index = exchanges.findIndex((exchange) => exchange.id === id);
     if (index === -1 || busy || !doc) return;
     const exchange = exchanges[index];
-    setRevisionDrafts((prev) => {
-      if (!prev[id]) return prev;
-      const next = { ...prev };
+    patch((current) => {
+      if (!current.revisionDrafts[id]) return {};
+      const next = { ...current.revisionDrafts };
       delete next[id];
-      return next;
+      return { revisionDrafts: next };
     });
     if (revisionTargetId === id) setRevisionTargetId(null);
-    void run(id, exchange.question, exchange.intent, buildConversation(exchanges.slice(0, index)), doc.text);
+    void run(id, exchange.question, exchange.intent, buildContext(exchanges.slice(0, index)), doc.text);
   }
 
   function reReview() {
@@ -270,54 +354,58 @@ export function ContractAgent() {
     setActiveExcerpt(null);
     const id = newId();
     const reviewQuestion = "请重新审查这份合同。";
-    const conversation = buildConversation(exchanges);
-    setExchanges((prev) => [
-      ...prev,
-      {
-        id,
-        question: reviewQuestion,
-        intent: "review",
-        docText: doc.text,
-        result: null,
-        meta: null,
-        error: null,
-        loading: true,
-      },
-    ]);
-    void run(id, reviewQuestion, "review", conversation, doc.text);
+    const context = buildContext(exchanges);
+    patch((current) => ({
+      exchanges: [
+        ...current.exchanges,
+        {
+          id,
+          question: reviewQuestion,
+          intent: "review",
+          docText: doc.text,
+          result: null,
+          meta: null,
+          error: null,
+          loading: true,
+        },
+      ],
+    }));
+    void run(id, reviewQuestion, "review", context, doc.text);
   }
 
   function openRevision(exchangeId: string) {
     const exchange = exchanges.find((item) => item.id === exchangeId);
     if (!exchange?.result?.revision) return;
     const originalText = exchange.docText ?? doc?.text ?? "";
-    setRevisionDrafts((prev) => {
-      if (prev[exchangeId]) return prev;
+    patch((current) => {
+      if (current.revisionDrafts[exchangeId]) return {};
       return {
-        ...prev,
-        [exchangeId]: {
-          exchangeId,
-          originalText,
-          copy: originalText,
-          applied: [],
-          selected: [],
-          notice: "",
-          archiveNotice: "",
-          archivedId: null,
-          result: null,
-          error: null,
-          loading: false,
+        revisionDrafts: {
+          ...current.revisionDrafts,
+          [exchangeId]: {
+            exchangeId,
+            originalText,
+            copy: originalText,
+            applied: [],
+            selected: [],
+            notice: "",
+            archiveNotice: "",
+            archivedId: null,
+            result: null,
+            error: null,
+            loading: false,
+          },
         },
       };
     });
     setRevisionTargetId(exchangeId);
   }
 
-  function updateRevisionDraft(exchangeId: string, patch: Partial<RevisionDraft>) {
-    setRevisionDrafts((prev) => {
-      const current = prev[exchangeId];
-      if (!current) return prev;
-      return { ...prev, [exchangeId]: { ...current, ...patch } };
+  function updateRevisionDraft(exchangeId: string, next: Partial<RevisionDraft>) {
+    patch((current) => {
+      const draft = current.revisionDrafts[exchangeId];
+      if (!draft) return {};
+      return { revisionDrafts: { ...current.revisionDrafts, [exchangeId]: { ...draft, ...next } } };
     });
   }
 
@@ -355,8 +443,10 @@ export function ContractAgent() {
   }
 
   function updateDocText(text: string) {
-    setDoc((prev) => (prev ? { ...prev, text } : prev));
-    setSaveNotice("");
+    patch((current) => ({
+      doc: current.doc ? { ...current.doc, text } : current.doc,
+      saveNotice: "",
+    }));
   }
 
   function saveDocEvidence() {
@@ -377,16 +467,135 @@ export function ContractAgent() {
       content: doc.text,
     };
     if (!saveRecordChecked(record, existing)) {
-      setSaveNotice("本地存储空间不足，未能保存。");
+      patch({ saveNotice: "本地存储空间不足，未能保存。" });
       return;
     }
-    setTextRecordId(record.id);
-    setSaveNotice(existing ? "已更新证据画布中的合同原文。" : "已存为签约证据，可在证据画布查看。");
+    patch({
+      textRecordId: record.id,
+      saveNotice: existing ? "已更新证据画布中的合同原文。" : "已存为签约证据，可在证据画布查看。",
+    });
+  }
+
+  function flushCurrent() {
+    if (consent !== "on" || !sessionHasContent(session)) return;
+    void saveSession(session).then(refreshHistory).catch(() => undefined);
+  }
+
+  function resetAll() {
+    flushCurrent();
+    setSession(emptySession());
+    setDocOpen(false);
+    resetUi();
+    setSavedAt(null);
   }
 
   function newChat() {
-    if (!doc && exchanges.length === 0) return;
-    askConfirm("开始新对话？", "当前合同与对话将被清空，已存为证据的内容不受影响。", resetAll);
+    if (!sessionHasContent(session)) return;
+    askConfirm(
+      "开始新对话？",
+      consent === "on"
+        ? "当前会话已保存在本机历史，可随时重新打开；已存为证据的内容不受影响。"
+        : "当前合同与对话将被清空，不会保存；已存为证据的内容不受影响。",
+      resetAll,
+    );
+  }
+
+  function acceptHistory() {
+    setConsentState("on");
+    persistConsent("on");
+    setHistoryNotice("");
+    if (sessionHasContent(session)) {
+      void saveSession(session)
+        .then(() => {
+          setSavedAt(session.updatedAt);
+          void refreshHistory();
+        })
+        .catch(() => setHistoryNotice("本机历史保存失败，可能是浏览器存储受限或被禁用。"));
+    }
+  }
+
+  function declineHistory() {
+    setConsentState("off");
+    persistConsent("off");
+  }
+
+  function changeConsent(value: "on" | "off") {
+    setConsentState(value);
+    persistConsent(value);
+    if (value === "on") {
+      setHistoryNotice("");
+      if (sessionHasContent(session)) {
+        void saveSession(session)
+          .then(() => {
+            setSavedAt(session.updatedAt);
+            void refreshHistory();
+          })
+          .catch(() => setHistoryNotice("本机历史保存失败，可能是浏览器存储受限或被禁用。"));
+      }
+    } else {
+      setHistoryNotice("已关闭自动保存；已存历史不会被删除，可手动清空。");
+    }
+  }
+
+  function openHistorySession(id: string) {
+    if (busy) return;
+    if (id === session.id) {
+      setHistoryOpen(false);
+      return;
+    }
+    const proceed = async () => {
+      flushCurrent();
+      try {
+        const loaded = await loadSession(id);
+        if (!loaded) {
+          setHistoryNotice("这条历史已不存在，可能已被删除。");
+          void refreshHistory();
+          return;
+        }
+        setSession(loaded);
+        resetUi();
+        setDocOpen(false);
+        setSavedAt(loaded.updatedAt);
+        setHistoryOpen(false);
+      } catch {
+        setHistoryNotice("读取本机历史失败，请稍后重试。");
+      }
+    };
+    if (sessionHasContent(session)) {
+      askConfirm(
+        "打开这条历史？",
+        consent === "on" ? "当前会话会先存入本机历史，然后打开所选记录。" : "当前未保存的合同与对话将被替换。",
+        () => void proceed(),
+      );
+    } else {
+      void proceed();
+    }
+  }
+
+  function removeHistory(id: string) {
+    askConfirm("删除这条历史？", "只删除本机记录，已存为证据的内容不受影响。", () => {
+      void deleteSession(id)
+        .then(() => {
+          if (id === session.id) {
+            setHistoryNotice("已删除当前会话记录；继续对话会重新保存。");
+            setSavedAt(null);
+          }
+          return refreshHistory();
+        })
+        .catch(() => setHistoryNotice("删除失败，请重试。"));
+    });
+  }
+
+  function clearHistory() {
+    askConfirm("清空全部历史？", "将删除本机保存的所有合同会话，无法恢复；已存为证据的内容不受影响。", () => {
+      void clearSessions()
+        .then(() => {
+          setHistoryItems([]);
+          setSavedAt(null);
+          setHistoryNotice("已清空本机历史。当前对话仍保留在页面，继续对话会重新保存。");
+        })
+        .catch(() => setHistoryNotice("清空失败，请重试。"));
+    });
   }
 
   function onDrop(event: React.DragEvent) {
@@ -412,6 +621,10 @@ export function ContractAgent() {
           <h1 className="text-[12px] font-medium text-muted-foreground">合同审查</h1>
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
+            <History className="size-3.5" />
+            历史
+          </Button>
           {doc && (
             <Button variant="ghost" size="sm" onClick={() => openDoc()}>
               <FileText className="size-3.5" />
@@ -424,7 +637,7 @@ export function ContractAgent() {
               <span className="text-[11px] text-muted-foreground">{revisionExchangeIds.length}</span>
             </Button>
           )}
-          {(doc || exchanges.length > 0) && (
+          {sessionHasContent(session) && (
             <Button variant="ghost" size="sm" onClick={newChat}>
               新对话
             </Button>
@@ -483,6 +696,20 @@ export function ContractAgent() {
                 </AlertDescription>
               </Alert>
             )}
+            {consent === "unset" && supported && sessionHasContent(session) && (
+              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-secondary/50 px-3 py-2">
+                <ShieldCheck className="size-3.5 shrink-0 text-muted-foreground" />
+                <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-muted-foreground">
+                  把合同与对话保存在本浏览器？不上传服务器，可随时删除。
+                </p>
+                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={acceptHistory}>
+                  保存到本机
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={declineHistory}>
+                  不用了
+                </Button>
+              </div>
+            )}
             <Composer
               hasDoc={!!doc}
               uploading={uploading}
@@ -498,7 +725,11 @@ export function ContractAgent() {
             <p className="mt-1.5 text-center text-[10px] leading-relaxed text-muted-foreground">
               {!aiAvailable
                 ? "服务端未配置模型密钥，审查暂不可用。"
-                : "AI 辅助意见，不构成法律结论；请核对原文。合同全文不自动保存。"}
+                : consent === "on"
+                  ? `AI 辅助意见，不构成法律结论；请核对原文。合同与对话仅保存在本浏览器，可随时删除。${
+                      savedAt ? ` 已保存 ${formatSessionTime(savedAt)}` : ""
+                    }`
+                  : "AI 辅助意见，不构成法律结论；请核对原文。合同全文不自动保存。"}
             </p>
           </div>
         </div>
@@ -509,7 +740,7 @@ export function ContractAgent() {
         onOpenChange={handleDocOpenChange}
         doc={doc}
         signingDate={signingDate}
-        onSigningDateChange={setSigningDate}
+        onSigningDateChange={(value) => patch({ signingDate: value })}
         onTextChange={updateDocText}
         onReReview={reReview}
         onSaveEvidence={saveDocEvidence}
@@ -536,8 +767,8 @@ export function ContractAgent() {
                 suggestions={revisionSuggestions}
                 aiAvailable={aiAvailable}
                 originalFindingCount={revisionTarget.result?.findings.length ?? null}
-                onDraftChange={(patch) => {
-                  if (revisionTargetId) updateRevisionDraft(revisionTargetId, patch);
+                onDraftChange={(next) => {
+                  if (revisionTargetId) updateRevisionDraft(revisionTargetId, next);
                 }}
                 onReReview={() => {
                   if (revisionTargetId) reReviewRevision(revisionTargetId);
@@ -547,6 +778,20 @@ export function ContractAgent() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <HistoryPanel
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        items={historyItems}
+        consent={consent}
+        notice={historyNotice}
+        supported={supported}
+        currentId={session.id}
+        onOpen={openHistorySession}
+        onDelete={removeHistory}
+        onClear={clearHistory}
+        onConsentChange={changeConsent}
+      />
 
       <AlertDialog
         open={pendingConfirm != null}

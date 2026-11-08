@@ -97,6 +97,14 @@ export interface ConversationTurn {
   content: string;
 }
 
+/** 前端压缩的会话记忆：服务端只用于本轮提示词，不落库。 */
+export interface ContractMemory {
+  summary: string;
+  facts: string[];
+  decisions: string[];
+  openQuestions: string[];
+}
+
 export interface AnalyzeContractInput {
   apiVersion?: ApiVersion;
   cityCode?: string;
@@ -105,6 +113,7 @@ export interface AnalyzeContractInput {
   textScope: "full" | "excerpt";
   question: string;
   conversation: ConversationTurn[];
+  memory?: ContractMemory | null;
   intent: ContractIntent;
   targetExcerpt?: Excerpt | null;
 }

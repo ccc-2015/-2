@@ -26,6 +26,15 @@ class ConversationTurn(_Base):
     content: str
 
 
+class ContractMemory(_Base):
+    """前端压缩的会话记忆，仅用于本轮提示词，服务端不落库。"""
+
+    summary: str = ""
+    facts: list[str] = Field(default_factory=list)
+    decisions: list[str] = Field(default_factory=list)
+    openQuestions: list[str] = Field(default_factory=list)
+
+
 class AnalyzeContractInput(_Base):
     apiVersion: str | None = None
     cityCode: str | None = None
@@ -34,6 +43,7 @@ class AnalyzeContractInput(_Base):
     textScope: Literal["full", "excerpt"] = "full"
     question: str = ""
     conversation: list[ConversationTurn] = Field(default_factory=list)
+    memory: ContractMemory | None = None
     intent: ContractIntent
     targetExcerpt: Excerpt | None = None
 

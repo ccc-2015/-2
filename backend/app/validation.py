@@ -55,6 +55,10 @@ def validate_analyze_limits(inp: AnalyzeContractInput) -> None:
     for i, turn in enumerate(inp.conversation):
         if utf16_length(turn.content) > LIMITS["maxQuestionLength"] * 4:
             raise ApiError("payload_too_large", "会话内容过长。", f"conversation[{i}]")
+    if inp.memory is not None:
+        items = [inp.memory.summary, *inp.memory.facts, *inp.memory.decisions, *inp.memory.openQuestions]
+        if sum(utf16_length(item) for item in items) > 4000:
+            raise ApiError("payload_too_large", "会话记忆过长。", "memory")
 
 
 def validate_dispute_limits(inp: DiagnoseDisputeInput) -> None:
