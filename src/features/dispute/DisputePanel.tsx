@@ -41,7 +41,7 @@ import {
 const CHANNEL_LABELS: Record<string, string> = {
   negotiate: "与对方直接协商沟通",
   written_notice: "发送书面通知 / 催告并留存记录",
-  consult_authority: "向主管部门或专业机构咨询当地渠道（待核实）",
+  consult_authority: "向主管部门或专业机构咨询当地渠道",
   prepare_evidence: "整理证据材料，准备后续处理",
 };
 
@@ -216,13 +216,9 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
       <header className="border-b border-border/60 pb-5">
         <h1 className="text-[26px] font-semibold leading-tight tracking-tight">争议处理</h1>
         <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-          选择争议与证据，补充必要事实，匹配少量一般处理方向；选定方向后生成可编辑话术，由你核对后自行提交。
+          选择争议与证据，补充必要事实，匹配处理方向；选定方向后生成可编辑话术。话术为辅助草稿，未知项保留待补，系统不代你提交。
         </p>
       </header>
-
-      <p className="mt-3 rounded-xl bg-secondary/60 px-3.5 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-        一期仅一般方向：本地渠道、资格与职责待核实，不提供经核验的本地渠道推荐。话术为辅助草稿，不得补造金额、日期、对方行为、法规、电话或网址；未知项保留待补，系统不代你提交。
-      </p>
 
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
         <div className="space-y-4">
@@ -466,7 +462,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                     {result.recommendations.length > 0 && (
                       <div>
                         <h4 className="mb-2 text-xs font-medium">一般处理方向</h4>
-                        <p className="mb-2 text-[11px] text-muted-foreground">本地渠道与资格以审核资料为准；未核验方向仍为一般建议。</p>
+                        <p className="mb-2 text-[11px] text-muted-foreground">带「本地已核验」的方向来自官方资料；其余为一般建议。</p>
                         <div className="space-y-2">
                           {result.recommendations.map((rec, i) => {
                             const id = rec.channelId ?? "";
@@ -479,7 +475,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                                   {rec.eligibility === "local_verified" ? (
                                     <Badge variant="secondary">本地已核验</Badge>
                                   ) : (
-                                    <Badge variant="outline">一般 · 待核实</Badge>
+                                    <Badge variant="outline">一般建议</Badge>
                                   )}
                                   {rec.sourceRefs.length > 0 && <Badge variant="outline">有依据</Badge>}
                                 </div>
