@@ -34,11 +34,12 @@ function ConfigGate({ children }: { children: ReactNode }) {
 
 function Views() {
   const [view, setView] = useState<ViewId>("contract");
+  const [currentSessionId, setCurrentSessionId] = useState("");
   // 三个视图常驻挂载，只切换可见性：切模块不丢失合同文本、对话、修订副本与争议表单。
   return (
-    <AppShell active={view} onNavigate={setView}>
+    <AppShell active={view} onNavigate={setView} currentSessionId={currentSessionId}>
       <div className={view === "contract" ? undefined : "hidden"}>
-        <ContractAgent onNavigate={setView} />
+        <ContractAgent onNavigate={setView} onSessionChange={setCurrentSessionId} />
       </div>
       <div className={view === "evidence" ? undefined : "hidden"}>
         <EvidenceCanvas onNavigate={setView} />

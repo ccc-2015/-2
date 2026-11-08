@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, FileText, History, ShieldCheck } from "lucide-react";
+import { AlertTriangle, FileText, ShieldCheck } from "lucide-react";
 import type { ContractIntent, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -22,20 +22,16 @@ import { newId, saveRecordChecked, type EvidenceRecord } from "../../evidence/st
 import { useRentalProfile } from "../../rental/profile";
 import { Composer } from "./Composer";
 import { ContractSheet } from "./ContractSheet";
-import { HistoryPanel } from "./HistoryPanel";
+import { historyBus, useHistoryRequest } from "./historyBus";
 import { RevisionCopyPanel } from "./ResultCards";
 import { Thread } from "./Thread";
 import {
-  clearSessions,
-  deleteSession,
   formatSessionTime,
   getConsent,
   historySupported,
   listSessions,
   loadSession,
   saveSession,
-  setConsent as persistConsent,
-  type HistoryConsent,
 } from "./history";
 import { buildContext } from "./memory";
 import {
@@ -59,7 +55,13 @@ interface PendingConfirm {
   action: () => void;
 }
 
-export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" | "dispute") => void } = {}) {
+export function ContractAgent({
+  onNavigate,
+  onSessionChange,
+}: {
+  onNavigate?: (view: "evidence" | "dispute") => void;
+  onSessionChange?: (id: string) => void;
+} = {}) {
   const { config } = useConfig();
   const cityCode = useRegionCode();
   const profile = useRentalProfile();
@@ -78,12 +80,11 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
   const [revisionTargetId, setRevisionTargetId] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyItems, setHistoryItems] = useState<SessionSummary[]>([]);
   const [historyNotice, setHistoryNotice] = useState("");
-  const [consent, setConsentState] = useState<HistoryConsent>(() => getConsent());
+  const [consent, setConsentState] = useState(() => getConsent());
   const [supported] = useState(() => historySupported());
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const historyRequest = useHistoryRequest();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -120,38 +121,52 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
   );
 
   const refreshHistory = useCallback(async () => {
-    if (!supported) return;
-    try {
-      setHistoryItems(await listSessions());
-    } catch {
-      setHistoryNotice("读取本机历史失败，请稍后重试。");
-    }
-  }, [supported]);
+    await historyBus.refresh();
+  }, []);
 
   const bootstrapped = useRef(false);
   useEffect(() => {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
     if (getConsent() !== "on" || !historySupported()) return;
-    void listSessions()
-      .then(async (items) => {
+    void historyBus
+      .refresh()
+      .then(async () => {
+        const items = await listSessions();
         if (items.length === 0) return;
         const loaded = await loadSession(items[0].id);
         if (!loaded) return;
         setSession((current) => (sessionHasContent(current) ? current : loaded));
         setSavedAt(loaded.updatedAt);
+        void historyBus.refresh();
       })
       .catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [exchanges.length, busy]);
+    if (!historyRequest) return;
+    const action = historyBus.take();
+    if (!action) return;
+    if (action.kind === "new") {
+      if (sessionHasContent(session)) {
+        newChat();
+      } else {
+        resetAll();
+      }
+      return;
+    }
+    openHistorySession(action.id);
+    // 仅在左栏发出新请求时消费一次。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyRequest]);
 
   useEffect(() => {
-    if (!historyOpen) return;
-    void refreshHistory();
-  }, [historyOpen, refreshHistory]);
+    onSessionChange?.(session.id);
+  }, [session.id, onSessionChange]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [exchanges.length, busy]);
 
   useEffect(() => {
     if (consent !== "on" || !supported || !sessionHasContent(session)) return;
@@ -517,7 +532,7 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
 
   function acceptHistory() {
     setConsentState("on");
-    persistConsent("on");
+    historyBus.setConsent("on");
     setHistoryNotice("");
     if (sessionHasContent(session)) {
       void saveSession(session)
@@ -531,12 +546,12 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
 
   function declineHistory() {
     setConsentState("off");
-    persistConsent("off");
+    historyBus.setConsent("off");
   }
 
   function changeConsent(value: "on" | "off") {
     setConsentState(value);
-    persistConsent(value);
+    historyBus.setConsent(value);
     if (value === "on") {
       setHistoryNotice("");
       if (sessionHasContent(session)) {
@@ -554,10 +569,7 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
 
   function openHistorySession(id: string) {
     if (busy) return;
-    if (id === session.id) {
-      setHistoryOpen(false);
-      return;
-    }
+    if (id === session.id) return;
     const proceed = async () => {
       flushCurrent();
       try {
@@ -571,7 +583,7 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
         resetUi();
         setDocOpen(false);
         setSavedAt(loaded.updatedAt);
-        setHistoryOpen(false);
+        void historyBus.refresh();
       } catch {
         setHistoryNotice("读取本机历史失败，请稍后重试。");
       }
@@ -585,32 +597,6 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
     } else {
       void proceed();
     }
-  }
-
-  function removeHistory(id: string) {
-    askConfirm("删除这条历史？", "只删除本机记录，已存为证据的内容不受影响。", () => {
-      void deleteSession(id)
-        .then(() => {
-          if (id === session.id) {
-            setHistoryNotice("已删除当前会话记录；继续对话会重新保存。");
-            setSavedAt(null);
-          }
-          return refreshHistory();
-        })
-        .catch(() => setHistoryNotice("删除失败，请重试。"));
-    });
-  }
-
-  function clearHistory() {
-    askConfirm("清空全部历史？", "将删除本机保存的所有合同会话，无法恢复；已存为证据的内容不受影响。", () => {
-      void clearSessions()
-        .then(() => {
-          setHistoryItems([]);
-          setSavedAt(null);
-          setHistoryNotice("已清空本机历史。当前对话仍保留在页面，继续对话会重新保存。");
-        })
-        .catch(() => setHistoryNotice("清空失败，请重试。"));
-    });
   }
 
   function onDrop(event: React.DragEvent) {
@@ -636,10 +622,6 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
           <h1 className="text-[12px] font-medium text-muted-foreground">合同审查</h1>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
-            <History className="size-3.5" />
-            历史
-          </Button>
           {onNavigate && (
             <Button variant="ghost" size="sm" onClick={() => onNavigate("evidence")}>
               证据画布
@@ -799,19 +781,6 @@ export function ContractAgent({ onNavigate }: { onNavigate?: (view: "evidence" |
         </SheetContent>
       </Sheet>
 
-      <HistoryPanel
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
-        items={historyItems}
-        consent={consent}
-        notice={historyNotice}
-        supported={supported}
-        currentId={session.id}
-        onOpen={openHistorySession}
-        onDelete={removeHistory}
-        onClear={clearHistory}
-        onConsentChange={changeConsent}
-      />
 
       <AlertDialog
         open={pendingConfirm != null}
