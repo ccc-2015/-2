@@ -33,9 +33,10 @@ class EmbeddingConfigTests(unittest.TestCase):
     def test_remote_requires_all_three(self):
         from app.config import Settings
 
-        only_name = Settings(embedding_model_name="m", embedding_api_base_url="https://x/v1")
+        only_name = Settings(_env_file=None, embedding_model_name="m", embedding_api_base_url="https://x/v1")
         self.assertFalse(only_name.embedding_api_configured)
         full = Settings(
+            _env_file=None,
             embedding_model_name="m",
             embedding_api_base_url="https://x/v1",
             embedding_api_key="k",
@@ -46,7 +47,7 @@ class EmbeddingConfigTests(unittest.TestCase):
     def test_local_used_when_remote_missing(self):
         from app.config import Settings
 
-        local = Settings(model_embedding_name="BAAI/bge-small-zh-v1.5")
+        local = Settings(_env_file=None, model_embedding_name="BAAI/bge-small-zh-v1.5")
         self.assertTrue(local.embedding_local_configured)
         self.assertFalse(local.embedding_api_configured)
         self.assertEqual(local.embedding_configured_name, "BAAI/bge-small-zh-v1.5")
@@ -55,6 +56,7 @@ class EmbeddingConfigTests(unittest.TestCase):
         from app.config import Settings
 
         both = Settings(
+            _env_file=None,
             embedding_model_name="remote-embed",
             embedding_api_base_url="https://x/v1",
             embedding_api_key="k",

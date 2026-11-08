@@ -96,11 +96,13 @@ class PostgresKnowledgeStore:
                     "CREATE INDEX IF NOT EXISTS knowledge_entries_keywords "
                     "ON knowledge_entries USING GIN (keywords)"
                 )
-                cur.execute(
-                    "CREATE INDEX IF NOT EXISTS knowledge_entries_embedding_hnsw "
-                    "ON knowledge_entries USING hnsw (embedding vector_cosine_ops) "
-                    "WHERE embedding IS NOT NULL"
-                )
+                # pgvector 的 HNSW/IVFFlat 都限制 2000 维；超高维模型只能精确顺序扫描。
+                if dim <= 2000:
+                    cur.execute(
+                        "CREATE INDEX IF NOT EXISTS knowledge_entries_embedding_hnsw "
+                        "ON knowledge_entries USING hnsw (embedding vector_cosine_ops) "
+                        "WHERE embedding IS NOT NULL"
+                    )
             conn.commit()
 
     def _fetchall(self, sql: str, params=()) -> list[dict]:
@@ -293,20 +295,60 @@ class PostgresKnowledgeStore:
         scenario: str | None,
         top_k: int,
     ) -> tuple[list[tuple[float, KnowledgeEntry]], bool]:
-        """粗排：向量 + 关键词融合，取 rerank 候选窗口。"""
+        """粗排：向量候选 ∪ 关键词候选，再按融合分排序。
+
+        只取向量的前 N 条会漏掉「关键词精确命中但向量分一般」的条文
+        （如单方涨租、中介收费），因此两路都取，按 id 去重后再融合。
+        """
         settings = get_settings()
         window = max(top_k, settings.rerank_candidates) if settings.rerank_configured else top_k
+        vector_pairs: list[tuple[dict, float]] = []
         if query.strip() and settings.embedding_configured:
             try:
                 vector = embed_query(query)
                 if vector:
-                    pairs = self._vector_rows(city_code, event_date, scenario, vector, window)
-                    if pairs:
-                        return self._fuse_scored(pairs, query), True
+                    vector_pairs = self._vector_rows(city_code, event_date, scenario, vector, window)
             except Exception as exc:  # 语义检索失败不应阻断关键词回退
                 logger.warning("semantic retrieval fallback: %s", type(exc).__name__)
+
+        candidates: dict[str, tuple[float, KnowledgeEntry]] = {}
+        for row, similarity in vector_pairs:
+            entry = self._entry_from_row(row)
+            candidates[entry.id] = (similarity, entry)
+
         rows = self._applicable_rows(city_code, event_date, scenario)
-        return self._keyword_scored(rows, query)[:window], False
+        for _, entry in self._keyword_scored(rows, query)[:window]:
+            if entry.id not in candidates:
+                candidates[entry.id] = (0.0, entry)
+
+        if not candidates:
+            return [], False
+        return self._fuse_entries(list(candidates.values()), query), bool(vector_pairs)
+
+    def _fuse_entries(
+        self,
+        candidates: list[tuple[float, KnowledgeEntry]],
+        query: str,
+    ) -> list[tuple[float, KnowledgeEntry]]:
+        q = (query or "").lower()
+        scored: list[tuple[float, str, KnowledgeEntry]] = []
+        for similarity, entry in candidates:
+            keyword = self._entry_keyword_score(entry, q)
+            total = similarity * 0.5 + (min(keyword, 24) / 24) * 0.5
+            scored.append((total, entry.id, entry))
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return [(total, entry) for total, _, entry in scored]
+
+    @staticmethod
+    def _entry_keyword_score(entry: KnowledgeEntry, q: str) -> int:
+        score = 0
+        for keyword in entry.keywords:
+            if keyword and keyword.lower() in q:
+                score += max(2, len(keyword))
+        for topic in entry.topics:
+            if topic.lower() in q:
+                score += 1
+        return score
 
     def _rerank(
         self,
@@ -335,26 +377,6 @@ class PostgresKnowledgeStore:
         return "\n".join(
             part for part in (entry.title, entry.summary, entry.text[:400]) if part
         )
-
-    def _fuse_scored(self, pairs: list[tuple[dict, float]], query: str) -> list[tuple[float, KnowledgeEntry]]:
-        q = (query or "").lower()
-        scored: list[tuple[float, str, KnowledgeEntry]] = []
-        for row, similarity in pairs:
-            keyword = self._keyword_score(row, q)
-            keyword_boost = min(keyword, 24) / 24
-            total = similarity * 0.5 + keyword_boost * 0.5
-            scored.append((total, row["id"], self._entry_from_row(row)))
-        scored.sort(key=lambda item: (-item[0], item[1]))
-        return [(total, entry) for total, _, entry in scored]
-
-    def _fused(self, pairs: list[tuple[dict, float]], query: str, top_k: int) -> list[KnowledgeEntry]:
-        """向量相似度与关键词命中加权融合。
-
-        纯向量常把「消费警示」这类泛化文本排到法规条款前；关键词命中能给押金、
-        维修、涨租等具体诉求更准的位置。16 条标注 query 实测：纯向量 top1 6/16，
-        0.5/0.5 融合 top1 10/16；Recall@4 两者都是 16/16，因此取 0.5/0.5。
-        """
-        return [entry for _, entry in self._fuse_scored(pairs, query)[:top_k]]
 
     def source_by_id(self, source_id: str) -> KnowledgeEntry | None:
         row = self._fetchone(

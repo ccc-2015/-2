@@ -50,7 +50,7 @@ def rerank(query: str, documents: list[str]) -> list[float] | None:
         # trust_env=False：与模型客户端一致，避免本机 IPv6 形式 NO_PROXY 导致构造失败。
         with httpx.Client(timeout=settings.rerank_timeout_seconds, trust_env=False) as client:
             response = client.post(
-                f"{settings.rerank_base_url}/rerank",
+                settings.rerank_endpoint,
                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"},
                 json=_payload(settings.rerank_model_name, query, documents),
             )

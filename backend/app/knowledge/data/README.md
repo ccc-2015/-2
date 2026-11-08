@@ -161,4 +161,8 @@ RERANK_API_KEY=sk-rerank-xxx
 
 **换向量模型必须重建向量**：`EMBEDDING_DIM` 要与新模型实际输出一致，然后重新 ingest（会覆盖同一城市的条目并重新生成 embedding）。维度不一致时启动/入库会直接报错，不会静默降级。
 
+**维度 > 2000 时自动跳过 HNSW**：pgvector 的 HNSW/IVFFlat 索引最多支持 2000 维，`Qwen3-VL-Embedding-8B`（4096 维）这类模型只能走精确顺序扫描。当前 80 条资料下顺序扫描耗时 < 10ms，规模上千条后再考虑降维或换小维度模型。
+
+**地址可填 base 或完整接口**：`EMBEDDING_API_BASE_URL` / `RERANK_API_BASE_URL` 既可写 `https://host/v1`，也可写完整的 `https://host/v1/embeddings`、`https://host/v1/rerank`，代码会自动识别，不会拼接成重复路径。
+
 改完 `.env` 需重启后端；只有改表结构或维度时才需要重建表。

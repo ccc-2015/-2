@@ -68,7 +68,7 @@ def _embed_remote(texts: list[str]) -> list[list[float]]:
         headers["Authorization"] = f"Bearer {settings.embedding_api_key}"
     with httpx.Client(timeout=settings.embedding_timeout_seconds, trust_env=False) as client:
         response = client.post(
-            f"{settings.embedding_base_url}/embeddings",
+            settings.embedding_endpoint,
             headers=headers,
             json={"model": settings.embedding_model_name, "input": texts},
         )

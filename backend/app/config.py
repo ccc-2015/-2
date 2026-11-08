@@ -69,8 +69,20 @@ class Settings(BaseSettings):
         return (self.model_embedding_name or "BAAI/bge-small-zh-v1.5").strip()
 
     @property
-    def embedding_base_url(self) -> str:
-        return (self.embedding_api_base_url or "").rstrip("/")
+    def embedding_endpoint(self) -> str:
+        """允许填 base（.../v1）或完整接口地址（.../v1/embeddings）。"""
+        base = (self.embedding_api_base_url or "").rstrip("/")
+        if base.endswith("/embeddings"):
+            return base
+        return f"{base}/embeddings" if base else ""
+
+    @property
+    def rerank_endpoint(self) -> str:
+        """允许填 base（.../v1）或完整接口地址（.../v1/rerank）。"""
+        base = (self.rerank_api_base_url or "").rstrip("/")
+        if base.endswith("/rerank"):
+            return base
+        return f"{base}/rerank" if base else ""
 
     @property
     def embedding_timeout_seconds(self) -> float:
@@ -105,6 +117,10 @@ class Settings(BaseSettings):
             and self.rerank_api_base_url.strip()
             and self.rerank_api_key.strip()
         )
+
+    @property
+    def rerank_base_url(self) -> str:
+        return (self.rerank_api_base_url or "").rstrip("/")
 
     @property
     def rerank_base_url(self) -> str:
