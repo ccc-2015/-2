@@ -20,6 +20,7 @@ import { useConfig } from "../../../lib/config-context";
 import { useRegionCode } from "../../../lib/region";
 import { newId, saveRecordChecked, type EvidenceRecord } from "../../evidence/store";
 import type { DisputeSeed } from "../../dispute/seed";
+import { useRentalProfile } from "../../rental/profile";
 import { Composer } from "./Composer";
 import { ContractSheet } from "./ContractSheet";
 import { HistoryPanel } from "./HistoryPanel";
@@ -60,11 +61,14 @@ interface PendingConfirm {
 
 export function ContractAgent({
   onStartDispute,
+  onNavigate,
 }: {
   onStartDispute?: (seed: Omit<DisputeSeed, "key">) => void;
+  onNavigate?: (view: "evidence" | "dispute") => void;
 } = {}) {
   const { config } = useConfig();
   const cityCode = useRegionCode();
+  const profile = useRentalProfile();
   const aiAvailable = config?.aiAvailable ?? false;
   const maxText = config?.limits.maxTextLength ?? 50000;
 
@@ -176,7 +180,7 @@ export function ContractAgent({
   }
 
   function startNewSession(nextDoc: ContractDoc | null) {
-    setSession({ ...emptySession(), doc: nextDoc });
+    setSession({ ...emptySession(), doc: nextDoc, signingDate: profile.startDate });
     resetUi();
     setDocOpen(false);
     setSavedAt(null);
@@ -247,7 +251,7 @@ export function ContractAgent({
       textRecordId: null,
       saveNotice: "",
     });
-    void run(id, reviewQuestion, "review", { conversation: [], memory: null }, nextDoc.text, "");
+    void run(id, reviewQuestion, "review", { conversation: [], memory: null }, nextDoc.text, profile.startDate);
   }
 
   async function extractFile(file: File) {
@@ -494,7 +498,7 @@ export function ContractAgent({
       issue: finding.issue,
       facts,
       counterparty: "房东",
-      amountCents: null,
+      amountCents: profile.depositCents,
       evidenceId: textRecordId,
     });
   }
@@ -648,6 +652,11 @@ export function ContractAgent({
             <History className="size-3.5" />
             历史
           </Button>
+          {onNavigate && (
+            <Button variant="ghost" size="sm" onClick={() => onNavigate("evidence")}>
+              证据画布
+            </Button>
+          )}
           {doc && (
             <Button variant="ghost" size="sm" onClick={() => openDoc()}>
               <FileText className="size-3.5" />

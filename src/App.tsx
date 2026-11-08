@@ -41,6 +41,7 @@ function Views() {
     <AppShell active={view} onNavigate={setView}>
       <div className={view === "contract" ? undefined : "hidden"}>
         <ContractAgent
+          onNavigate={setView}
           onStartDispute={(seed) => {
             setDisputeSeed({ ...seed, key: crypto.randomUUID() });
             setView("dispute");

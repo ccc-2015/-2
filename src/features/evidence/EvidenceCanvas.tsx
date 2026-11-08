@@ -37,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EVIDENCE_STATUS_LABELS, type EvidenceStatus } from "@/shared/api";
 import { cn } from "@/lib/utils";
 import type { ViewId } from "../../components/AppShell";
+import { RentalProfileCard } from "../rental/RentalProfileCard";
 import {
   STAGES,
   UTILITY_KIND_LABELS,
@@ -195,6 +196,8 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
           </>
         )}
       </div>
+
+      <RentalProfileCard />
 
       {hints.length > 0 && (
         <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-amber-600">
