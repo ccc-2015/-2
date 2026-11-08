@@ -161,7 +161,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 pb-28 pt-6 md:px-8 md:pt-8">
+    <div className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-8 md:pt-8">
       <header className="border-b border-border/60 pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

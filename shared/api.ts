@@ -152,7 +152,10 @@ export interface ContractResult {
   findings: Finding[];
   revision: Revision | null;
   followUpQuestions: string[];
+  /** 本次回答实际引用的资料。 */
   references: SourceRef[];
+  /** 本次检索召回的全部资料（含未引用），用于展示知识库覆盖。 */
+  retrieved?: SourceRef[];
 }
 
 // ---- dispute ----

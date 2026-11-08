@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   Scale,
   ArrowUp,
@@ -19,16 +19,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SourceList } from "@/components/SourceList";
 import { RegionSelect } from "../../components/RegionSelect";
@@ -37,7 +27,6 @@ import { useConfig } from "../../lib/config-context";
 import { useRegionCode } from "../../lib/region";
 import { api, ApiError, errorMessage } from "../../lib/api";
 import type { ViewId } from "../../components/AppShell";
-import type { DisputeSeed } from "./seed";
 import {
   useEvidenceRecords,
   useSelectedIds,
@@ -70,15 +59,7 @@ function todayLocal(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-export function DisputePanel({
-  onNavigate,
-  seed,
-  onSeedConsumed,
-}: {
-  onNavigate: (view: ViewId) => void;
-  seed?: DisputeSeed | null;
-  onSeedConsumed?: () => void;
-}) {
+export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => void }) {
   const { config } = useConfig();
   const aiAvailable = config?.aiAvailable ?? false;
   const maxEvidence = config?.limits.maxEvidenceSelected ?? 20;
@@ -108,39 +89,6 @@ export function DisputePanel({
   const [progressNotice, setProgressNotice] = useState("");
   const [scriptNotice, setScriptNotice] = useState("");
   const [archivedScripts, setArchivedScripts] = useState<Record<string, string>>({});
-  const [pendingSeed, setPendingSeed] = useState<DisputeSeed | null>(null);
-  const [seedNotice, setSeedNotice] = useState("");
-  const appliedSeedKey = useRef<string | null>(null);
-
-  function applySeed(next: DisputeSeed) {
-    appliedSeedKey.current = next.key;
-    setIssue(next.issue);
-    if (next.facts) setFacts(next.facts);
-    if (next.counterparty) setCounterparty(next.counterparty);
-    if (next.amountCents != null) setAmountYuan((next.amountCents / 100).toFixed(2));
-    setResult(null);
-    setResultMeta(null);
-    setScriptDraft("");
-    setSelectedChannelId(null);
-    setError(null);
-    setSeedNotice("已带入合同风险，可修改后重新整理事实。");
-    if (next.evidenceId && !selection.getSnapshot().includes(next.evidenceId)) {
-      selection.set([...selection.getSnapshot(), next.evidenceId]);
-    }
-    onSeedConsumed?.();
-  }
-
-  useEffect(() => {
-    if (!seed || appliedSeedKey.current === seed.key) return;
-    if (!issue.trim() && !result) {
-      applySeed(seed);
-    } else {
-      setPendingSeed(seed);
-    }
-    // 仅在收到新的 seed 时处理；表单内容变化不重复带入。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed]);
-
   const selectedChannelLabel = selectedChannelId
     ? result?.recommendations.find((rec) => rec.channelId === selectedChannelId)?.title ??
       CHANNEL_LABELS[selectedChannelId] ??
@@ -273,11 +221,6 @@ export function DisputePanel({
         <div className="space-y-4">
           <div className="panel p-4">
             <h2 className="mb-3 text-sm font-semibold">争议与必要事实</h2>
-            {seedNotice && (
-              <p className="mb-3 rounded-lg bg-primary/5 px-2.5 py-1.5 text-[11px] leading-relaxed text-primary">
-                {seedNotice}
-              </p>
-            )}
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="dp-issue" className="text-xs">争议事项（必填）</Label>
@@ -543,35 +486,6 @@ export function DisputePanel({
         </div>
       </div>
 
-      <AlertDialog
-        open={pendingSeed != null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingSeed(null);
-            onSeedConsumed?.();
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>带入这条合同风险？</AlertDialogTitle>
-            <AlertDialogDescription>
-              当前争议事项与已生成结果会被替换；已存为证据的内容不受影响。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingSeed) applySeed(pendingSeed);
-                setPendingSeed(null);
-              }}
-            >
-              带入
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

@@ -83,6 +83,7 @@ class ContractResult(_Base):
     revision: Revision | None = None
     followUpQuestions: list[str] = Field(default_factory=list)
     references: list[SourceRef] = Field(default_factory=list)
+    retrieved: list[SourceRef] = Field(default_factory=list)
 
 
 class SelectedEvidence(_Base):

@@ -80,6 +80,7 @@ def materialize(inp: AnalyzeContractInput, sources: list[KnowledgeEntry], raw: d
         revision=_normalize_revision(raw.get("revision"), inp),
         followUpQuestions=_str_array(raw.get("followUpQuestions"), 5),
         references=references,
+        retrieved=[entry.to_source_ref() for entry in sources],
     )
     return ContractAnalysis(
         result=result,

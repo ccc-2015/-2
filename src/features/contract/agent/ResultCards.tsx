@@ -23,55 +23,17 @@ import type { RevisionDraft, RevisionSuggestion } from "./types";
 
 export function FindingCard({
   finding,
-  signingDate,
   onLocate,
-  onStartDispute,
 }: {
   finding: Finding;
-  signingDate: string;
   onLocate: (excerpt: Excerpt) => void;
-  onStartDispute?: () => void;
 }) {
-  const [saved, setSaved] = useState(false);
-  const [notice, setNotice] = useState("");
   const tone =
     finding.priority === "confirm_first"
       ? "text-amber-600"
       : finding.priority === "needs_attention"
         ? "text-primary"
         : "text-muted-foreground";
-
-  function saveFinding() {
-    if (saved) return;
-    const excerpt = finding.excerpt?.text.trim() ?? "";
-    const description = [
-      `风险提示（${PRIORITY_LABELS[finding.priority]}）：${finding.issue}`,
-      finding.impact,
-      excerpt ? `原文：「${excerpt}」` : "",
-      finding.suggestedQuestion ? `建议确认：${finding.suggestedQuestion}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-    const record: EvidenceRecord = {
-      id: newId(),
-      stage: "signing",
-      occurredAt: signingDate || null,
-      recordedAt: new Date().toISOString(),
-      description,
-      contractClause: excerpt,
-      materialName: finding.issue.slice(0, 40),
-      materialType: "合同审查风险",
-      materialStatus: "to_confirm",
-      amountCents: null,
-      reading: null,
-    };
-    if (!saveRecordChecked(record)) {
-      setNotice("本地存储空间不足，未能保存。");
-      return;
-    }
-    setSaved(true);
-    setNotice("已存为签约证据。");
-  }
 
   return (
     <div className="rounded-xl border border-border/70 bg-background p-3">
@@ -103,30 +65,6 @@ export function FindingCard({
           ))}
         </ul>
       )}
-      <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
-        {notice && <p className="mr-auto text-[11px] text-primary">{notice}</p>}
-        {onStartDispute && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-[11px] text-muted-foreground"
-            onClick={onStartDispute}
-          >
-            <Scale className="size-3" />
-            就此发起争议
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 px-2 text-[11px] text-muted-foreground"
-          onClick={saveFinding}
-          disabled={saved}
-        >
-          <Save className="size-3" />
-          {saved ? "已存为证据" : "存为证据"}
-        </Button>
-      </div>
     </div>
   );
 }
