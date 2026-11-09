@@ -17,3 +17,12 @@ dist/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# 本地评测与语料转换脚本（含标注用例，不入库）
+scripts/build_knowledge_pack.py
+scripts/eval_retrieval.py
+scripts/eval_retrieval_50.py
+_eval*.txt
+_corpus*.txt
+_clause*.txt
+_short_docs.txt

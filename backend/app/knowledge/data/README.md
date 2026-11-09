@@ -117,16 +117,7 @@ cd backend
 
 `zz.json` 现有 80 条：10 条民法典条文 + 70 条来自郑州/全国官方语料（`法律条例/documents.jsonl`），其中 41 条为郑州本地资料、4 条本地渠道（`local_verified`）。`contract_review` 为 `supported`，`dispute` 为 `limited`。
 
-资料包由脚本生成，不要手改：
-
-```sh
-# 仓库根目录
-backend/.venv/Scripts/python.exe scripts/build_knowledge_pack.py [documents.jsonl]
-cd backend && ./.venv/Scripts/python.exe -m app.knowledge.validate app/knowledge/data/zz.json
-./.venv/Scripts/python.exe -m app.knowledge.ingest app/knowledge/data/zz.json
-```
-
-`scripts/build_knowledge_pack.py` 只挑与合同、押金、维修、退租、经纪相关的条文；公告、配租名单、处罚程序等不入库。`scripts/eval_retrieval.py` 用 16 条标注 query 比较向量/关键词权重（当前 0.5/0.5，top1 10/16，Recall@4 16/16）。
+资料包来自官方语料整理，转换脚本与标注评测脚本仅本地保留（含抓取数据与用例，不随仓库分发）。
 
 ## 三套模型（完全独立）
 
