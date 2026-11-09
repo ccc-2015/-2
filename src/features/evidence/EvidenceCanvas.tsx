@@ -42,7 +42,7 @@ import type { ViewId } from "../../components/AppShell";
 import { RentalProfileCard } from "../rental/RentalProfileCard";
 import { MoveInChecklist } from "./MoveInChecklist";
 import { MoveOutCompare } from "./MoveOutCompare";
-import { buildEvidencePackage, downloadText } from "./exportPackage";
+import { buildEvidencePackage, downloadBlob } from "./exportPackage";
 import { useRentalProfile } from "../rental/profile";
 import { disputePrefill } from "./disputePrefill";
 import {
@@ -196,13 +196,12 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     if (exporting || allRecords.length === 0) return;
     setExporting(true);
     try {
-      const { html, json, fileName } = await buildEvidencePackage({
+      const { zip, fileName } = await buildEvidencePackage({
         profile: rentalProfile,
         records: allRecords,
         utilities: allUtilities,
       });
-      downloadText(html, `${fileName}.html`, "text/html");
-      setTimeout(() => downloadText(json, `${fileName}.json`, "application/json"), 400);
+      downloadBlob(zip, `${fileName}.zip`);
     } finally {
       setExporting(false);
     }

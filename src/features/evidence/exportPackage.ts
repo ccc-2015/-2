@@ -8,6 +8,7 @@ import {
   type UtilityAccount,
 } from "./store";
 import type { RentalProfile } from "../rental/profile";
+import { createZip, dataUrlEntry, textEntry, type ZipEntry } from "./zip";
 
 const STAGE_LABELS: Record<string, string> = {
   signing: "签约",
@@ -23,7 +24,7 @@ const STATUS_LABELS: Record<string, string> = {
   to_confirm: "待确认",
 };
 
-async function sha256(text: string): Promise<string> {
+export async function sha256(text: string): Promise<string> {
   const data = new TextEncoder().encode(text);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest))
@@ -68,8 +69,7 @@ export interface EvidencePackageInput {
 }
 
 export async function buildEvidencePackage({ profile, records, utilities }: EvidencePackageInput): Promise<{
-  html: string;
-  json: string;
+  zip: Blob;
   fileName: string;
 }> {
   const exportedRecords: ExportedRecord[] = [];
@@ -200,14 +200,19 @@ export async function buildEvidencePackage({ profile, records, utilities }: Evid
     )
     .join("");
 
+  const fileNames = new Map<string, string>();
+  let fileIndex = 0;
   const images = records
     .flatMap((record) => (record.attachments ?? []).map((attachment) => ({ record, attachment })))
-    .map(
-      ({ record, attachment }) =>
-        `<figure><img src="${attachment.dataUrl}" alt="${escapeHtml(attachment.name)}" /><figcaption>${escapeHtml(
-          record.description.slice(0, 40),
-        )}<br />${escapeHtml(attachment.name)}</figcaption></figure>`,
-    )
+    .map(({ record, attachment }) => {
+      fileIndex += 1;
+      const ext = (attachment.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const fileName = `attachments/${String(fileIndex).padStart(3, "0")}-${record.stage}-${attachment.id.slice(-6)}.${ext}`;
+      fileNames.set(attachment.id, fileName);
+      return `<figure><img src="${fileName}" alt="${escapeHtml(attachment.name)}" /><figcaption>${escapeHtml(
+        record.description.slice(0, 40),
+      )}<br />${escapeHtml(attachment.name)}</figcaption></figure>`;
+    })
     .join("");
 
   const title = profile.addressLabel ? `租住证据包 · ${profile.addressLabel}` : "租住证据包";
@@ -289,19 +294,54 @@ export async function buildEvidencePackage({ profile, records, utilities }: Evid
     2,
   );
 
+  const readme = `租住证据包使用说明
+
+生成时间：${exportedAt.toLocaleString("zh-CN")}
+材料条数：${records.length}
+覆盖时间：${measure}
+
+目录结构
+- 证据包.html   双击打开，可打印或另存为 PDF
+- manifest.json 材料清单、租住信息、水电费用与每个附件的 SHA-256
+- attachments/  图片原件（压缩后副本）
+
+这份文件是什么
+本机整理件，用于材料留存、与对方沟通或提交时说明事实，不是法律文书，不构成法律意见。
+
+校验附件是否被修改
+1. 对 attachments/ 里的任一图片计算 SHA-256；
+2. 与 manifest.json 中 records[].attachments[].sha256 对比；
+3. 一致说明文件未被改动。
+
+请注意
+包内图片是压缩副本，EXIF 等原始信息可能丢失；签字合同、原始照片、转账凭证等原件请自行保存。
+`;
+
   const stamp = `${exportedAt.getFullYear()}${String(exportedAt.getMonth() + 1).padStart(2, "0")}${String(
     exportedAt.getDate(),
   ).padStart(2, "0")}-${String(exportedAt.getHours()).padStart(2, "0")}${String(exportedAt.getMinutes()).padStart(
     2,
     "0",
   )}`;
-  const safeAddress = (profile.addressLabel || "租住").replace(/[\\/:*?"<>|\s]+/g, "-").slice(0, 24);
+  const safeAddress = (profile.addressLabel || "租住").replace(/[\/:*?"<>|\s]+/g, "-").slice(0, 24);
+  const fileName = `证据包-${safeAddress}-${stamp}`;
 
-  return { html, json, fileName: `证据包-${safeAddress}-${stamp}` };
+  const entries: ZipEntry[] = [
+    textEntry("证据包.html", html),
+    textEntry("manifest.json", json),
+    textEntry("README.txt", readme),
+  ];
+  for (const record of records) {
+    for (const attachment of record.attachments ?? []) {
+      const name = fileNames.get(attachment.id);
+      if (name) entries.push(dataUrlEntry(name, attachment.dataUrl));
+    }
+  }
+
+  return { zip: createZip(entries), fileName };
 }
 
-export function downloadText(content: string, fileName: string, mime: string): void {
-  const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+export function downloadBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -311,5 +351,3 @@ export function downloadText(content: string, fileName: string, mime: string): v
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
-export { todayLocal };
