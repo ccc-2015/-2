@@ -6,10 +6,10 @@ import { HistoryList } from "../features/contract/agent/HistoryList";
 
 export type ViewId = "contract" | "evidence" | "dispute";
 
-const NAV: { id: ViewId; label: string; icon: typeof FileSearch }[] = [
-  { id: "contract", label: "合同", icon: FileSearch },
-  { id: "evidence", label: "证据", icon: CalendarClock },
-  { id: "dispute", label: "争议", icon: Scale },
+const NAV: { id: ViewId; label: string; icon: typeof FileSearch; accentColor: string }[] = [
+  { id: "contract", label: "合同", icon: FileSearch, accentColor: "text-stage-living" },
+  { id: "evidence", label: "证据", icon: CalendarClock, accentColor: "text-stage-move-in" },
+  { id: "dispute", label: "争议", icon: Scale, accentColor: "text-stage-dispute" },
 ];
 
 function ModelStatus() {
@@ -78,7 +78,12 @@ function NavList({
                 : "text-muted-foreground hover:bg-black/[0.04] hover:text-foreground md:hover:bg-black/[0.03]",
             )}
           >
-            <Icon className={cn("size-4", isActive ? "text-foreground" : "text-muted-foreground")} />
+            <Icon
+              className={cn(
+                "size-4",
+                isActive ? cn(item.accentColor, "md:text-current") : "text-muted-foreground",
+              )}
+            />
             {item.label}
           </button>
         );

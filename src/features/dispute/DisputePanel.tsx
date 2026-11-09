@@ -451,8 +451,8 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                         aria-label="话术草稿（可编辑）"
                       />
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <Button size="sm" onClick={copyScript}>
-                          <ClipboardCopy className="size-4" />
+                        <Button size="sm" onClick={copyScript} className={copied ? "success-feedback" : ""}>
+                          {copied ? <Check className="size-4 check-appear" /> : <ClipboardCopy className="size-4" />}
                           {copied ? "已复制" : "复制话术"}
                         </Button>
                         <Button size="sm" variant="outline" onClick={archiveScript} disabled={!scriptDraft.trim()}>
@@ -463,7 +463,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                           {busy ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
                           重新生成
                         </Button>
-                        {scriptNotice && <p className="w-full text-[11px] text-primary">{scriptNotice}</p>}
+                        {scriptNotice && <p className="success-feedback w-full text-[11px] text-primary">{scriptNotice}</p>}
                       </div>
                     </div>
                   ) : (

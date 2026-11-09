@@ -87,9 +87,9 @@ function formatRecorded(iso: string): string {
 }
 
 function statusDot(status: EvidenceStatus): string {
-  if (status === "present") return "bg-emerald-500";
-  if (status === "missing") return "bg-destructive";
-  return "bg-amber-500";
+  if (status === "present") return "bg-status-present";
+  if (status === "missing") return "bg-status-missing";
+  return "bg-status-to-confirm";
 }
 
 function firstLine(text: string): string {
@@ -97,15 +97,26 @@ function firstLine(text: string): string {
   return line.length > 60 ? `${line.slice(0, 60)}…` : line;
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({ active, onClick, children, stageId }: { active: boolean; onClick: () => void; children: React.ReactNode; stageId?: string }) {
+  const stageColors: Record<string, string> = {
+    signing: "data-[active=true]:bg-stage-signing data-[active=true]:text-white",
+    move_in: "data-[active=true]:bg-stage-move-in data-[active=true]:text-white",
+    living: "data-[active=true]:bg-stage-living data-[active=true]:text-white",
+    move_out: "data-[active=true]:bg-stage-move-out data-[active=true]:text-white",
+    dispute: "data-[active=true]:bg-stage-dispute data-[active=true]:text-white",
+  };
+  const colorClass = stageId ? stageColors[stageId] : "data-[active=true]:bg-foreground data-[active=true]:text-background";
+  
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      data-active={active}
       className={cn(
         "rounded-full px-2.5 py-1 text-[11px] transition-colors",
-        active ? "bg-foreground text-background" : "text-muted-foreground hover:bg-black/[0.05] hover:text-foreground",
+        active ? "" : "text-muted-foreground hover:bg-black/[0.05] hover:text-foreground",
+        colorClass,
       )}
     >
       {children}
@@ -287,7 +298,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         {STAGES.map((s) => {
           const n = allRecords.filter((r) => r.stage === s.id).length;
           return (
-            <Chip key={s.id} active={stageFilter === s.id} onClick={() => setStageFilter(s.id)}>
+            <Chip key={s.id} active={stageFilter === s.id} onClick={() => setStageFilter(s.id)} stageId={s.id}>
               {s.label}{n > 0 ? ` ${n}` : ""}
             </Chip>
           );
