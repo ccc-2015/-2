@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import type { ViewId } from "../../components/AppShell";
 import { RentalProfileCard } from "../rental/RentalProfileCard";
 import { MoveInChecklist } from "./MoveInChecklist";
+import { MoveOutCompare } from "./MoveOutCompare";
 import { disputePrefill } from "./disputePrefill";
 import {
   STAGES,
@@ -158,12 +159,12 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
       preset: null,
     });
   }
-  function openChecklistRecord(label: string, materialType: string, detail: string) {
+  function openChecklistRecord(label: string, materialType: string, detail: string, stage: EvidenceStage = "move_in") {
     closeForms();
     setRecordForm({
       open: true,
       initial: null,
-      stage: "move_in",
+      stage,
       preset: { description: `${label}：${detail}`, materialType },
     });
   }
@@ -228,6 +229,12 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
       <RentalProfileCard />
 
       <MoveInChecklist records={allRecords} onAdd={openChecklistRecord} onEdit={editRecord} />
+
+      <MoveOutCompare
+        records={allRecords}
+        onAdd={(label, materialType, detail) => openChecklistRecord(label, materialType, detail, "move_out")}
+        onEdit={editRecord}
+      />
 
       {hints.length > 0 && (
         <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-amber-600">
@@ -681,7 +688,6 @@ function RecordForm({
     if (initial || !preset) return base;
     return {
       ...base,
-      stage: "move_in" as EvidenceStage,
       description: preset.description,
       materialType: preset.materialType,
       materialName: preset.materialType,
