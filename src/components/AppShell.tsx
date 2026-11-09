@@ -61,7 +61,7 @@ function NavList({
   onNavigate: (view: ViewId) => void;
 }) {
   return (
-    <nav className="flex flex-col gap-0.5 px-3" aria-label="主导航">
+    <nav className="flex gap-1 md:flex-col md:gap-0.5 md:px-3" aria-label="主导航">
       {NAV.map((item) => {
         const Icon = item.icon;
         const isActive = active === item.id;
@@ -72,10 +72,10 @@ function NavList({
             onClick={() => onNavigate(item.id)}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] transition-colors",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] transition-colors md:flex-none md:justify-start md:gap-2.5 md:rounded-xl md:px-3 md:py-2 md:text-left",
               isActive
-                ? "bg-white/80 font-medium text-foreground shadow-[0_1px_2px_rgba(16,24,40,0.06)] ring-1 ring-black/[0.04]"
-                : "text-muted-foreground hover:bg-black/[0.03] hover:text-foreground",
+                ? "bg-foreground font-medium text-background md:bg-white/80 md:text-foreground md:shadow-[0_1px_2px_rgba(16,24,40,0.06)] md:ring-1 md:ring-black/[0.04]"
+                : "text-muted-foreground hover:bg-black/[0.04] hover:text-foreground md:hover:bg-black/[0.03]",
             )}
           >
             <Icon className={cn("size-4", isActive ? "text-foreground" : "text-muted-foreground")} />
@@ -123,22 +123,22 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="glass sticky top-0 z-20 border-b border-black/[0.06] md:hidden">
-          <div className="flex items-start justify-between gap-2 px-5 py-3">
+          <div className="flex items-center justify-between gap-3 px-4 py-2">
             <Brand />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <ModelStatus />
               <button
                 type="button"
                 onClick={() => setMobileHistory((open) => !open)}
-                className="flex items-center gap-1 rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground"
+                className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-black/[0.04]"
                 aria-expanded={mobileHistory}
+                aria-label="历史对话"
               >
-                <History className="size-3" />
-                历史
+                <History className="size-4" />
               </button>
             </div>
           </div>
-          <div className="pb-2">
+          <div className="px-3 pb-2">
             <NavList active={active} onNavigate={onNavigate} />
           </div>
           {mobileHistory && (

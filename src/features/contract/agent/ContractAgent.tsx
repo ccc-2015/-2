@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Download, FileText, Printer, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Download, FileText, MoreHorizontal, Printer, ShieldCheck } from "lucide-react";
 import type { ContractIntent, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { RegionSelect } from "../../../components/RegionSelect";
 import { analyzeContractStream, api, ApiError, errorMessage } from "../../../lib/api";
 import { useConfig } from "../../../lib/config-context";
@@ -650,33 +657,10 @@ export function ContractAgent({
           <h1 className="text-[12px] font-medium text-muted-foreground">合同审查</h1>
         </div>
         <div className="flex items-center gap-1">
-          {onNavigate && (
-            <Button variant="ghost" size="sm" onClick={() => onNavigate("evidence")}>
-              证据画布
-            </Button>
-          )}
           {doc && (
-            <Button variant="ghost" size="sm" onClick={() => openDoc()}>
+            <Button variant="ghost" size="sm" onClick={() => openDoc()} className="hidden sm:inline-flex">
               <FileText className="size-3.5" />
               合同文本
-            </Button>
-          )}
-          {exchanges.some((exchange) => exchange.result) && (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => exportReport("html")}>
-                <Download className="size-3.5" />
-                导出报告
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => exportReport("print")}>
-                <Printer className="size-3.5" />
-                打印 / 存为 PDF
-              </Button>
-            </>
-          )}
-          {latestRevisionExchangeId && (
-            <Button variant="ghost" size="sm" onClick={() => openRevision(latestRevisionExchangeId)}>
-              修订副本
-              <span className="text-[11px] text-muted-foreground">{revisionExchangeIds.length}</span>
             </Button>
           )}
           {sessionHasContent(session) && (
@@ -684,6 +668,46 @@ export function ContractAgent({
               新对话
             </Button>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8" aria-label="更多操作">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {doc && (
+                <DropdownMenuItem onSelect={() => openDoc()} className="sm:hidden">
+                  <FileText className="size-3.5" />
+                  合同文本
+                </DropdownMenuItem>
+              )}
+              {latestRevisionExchangeId && (
+                <DropdownMenuItem onSelect={() => openRevision(latestRevisionExchangeId)}>
+                  修订副本
+                  <span className="ml-auto text-[11px] text-muted-foreground">{revisionExchangeIds.length}</span>
+                </DropdownMenuItem>
+              )}
+              {onNavigate && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => onNavigate("evidence")}>去证据画布</DropdownMenuItem>
+                </>
+              )}
+              {exchanges.some((exchange) => exchange.result) && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => exportReport("html")}>
+                    <Download className="size-3.5" />
+                    导出审查报告
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => exportReport("print")}>
+                    <Printer className="size-3.5" />
+                    打印 / 存为 PDF
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 

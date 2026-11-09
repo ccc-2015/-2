@@ -130,7 +130,7 @@ export function HistoryList({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="size-6 shrink-0 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
+                          className="size-6 shrink-0 text-muted-foreground/70 hover:text-destructive md:opacity-0 md:group-hover:opacity-100"
                           onClick={() => setPending({ kind: "delete", id: item.id, title: item.title })}
                           aria-label={`删除历史「${item.title}」`}
                         >

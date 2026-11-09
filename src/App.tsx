@@ -35,17 +35,24 @@ function ConfigGate({ children }: { children: ReactNode }) {
 function Views() {
   const [view, setView] = useState<ViewId>("contract");
   const [currentSessionId, setCurrentSessionId] = useState("");
+
+  // 切换模块时回到顶部，避免沿用上一个页面的滚动位置。
+  function navigate(next: ViewId) {
+    if (next === view) return;
+    setView(next);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }
   // 三个视图常驻挂载，只切换可见性：切模块不丢失合同文本、对话、修订副本与争议表单。
   return (
-    <AppShell active={view} onNavigate={setView} currentSessionId={currentSessionId}>
+    <AppShell active={view} onNavigate={navigate} currentSessionId={currentSessionId}>
       <div className={view === "contract" ? undefined : "hidden"}>
-        <ContractAgent onNavigate={setView} onSessionChange={setCurrentSessionId} />
+        <ContractAgent onNavigate={navigate} onSessionChange={setCurrentSessionId} />
       </div>
       <div className={view === "evidence" ? undefined : "hidden"}>
-        <EvidenceCanvas onNavigate={setView} />
+        <EvidenceCanvas onNavigate={navigate} />
       </div>
       <div className={view === "dispute" ? undefined : "hidden"}>
-        <DisputePanel onNavigate={setView} />
+        <DisputePanel onNavigate={navigate} />
       </div>
     </AppShell>
   );
