@@ -43,6 +43,20 @@ class PostgresKnowledgeStore:
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+                # 换了 embedding 模型后维度会变；已有列维度不一致时重建列和索引。
+                cur.execute(
+                    "SELECT format_type(atttypid, atttypmod) FROM pg_attribute "
+                    "WHERE attrelid = 'knowledge_entries'::regclass AND attname = 'embedding'"
+                )
+                row = cur.fetchone()
+                if row and row[0] != f"vector({dim})":
+                    logger.warning("embedding dim changed %s -> vector(%s); rebuilding column", row[0], dim)
+                    cur.execute("DROP INDEX IF EXISTS knowledge_entries_embedding_hnsw")
+                    cur.execute("ALTER TABLE knowledge_entries DROP COLUMN IF EXISTS embedding")
+                    cur.execute(f"ALTER TABLE knowledge_entries ADD COLUMN embedding vector({dim})")
+                    cur.execute(
+                        "UPDATE knowledge_entries SET embedding_model = NULL, embedding_updated_at = NULL"
+                    )
                 cur.execute(
                     """
                     CREATE TABLE IF NOT EXISTS knowledge_packs (
