@@ -147,6 +147,11 @@ export const api = {
     form.append("file", file);
     return request<ExtractResult>("/api/extract", { method: "POST", body: form });
   },
+  extractMany: (files: File[]) => {
+    const form = new FormData();
+    for (const file of files) form.append("files", file);
+    return request<ExtractResult>("/api/extract/multi", { method: "POST", body: form });
+  },
   analyzeContract: (input: AnalyzeContractInput) =>
     request<ContractResult>("/api/contract/analyze", { method: "POST", body: JSON.stringify(input) }),
   diagnoseDispute: (input: DiagnoseDisputeInput) =>

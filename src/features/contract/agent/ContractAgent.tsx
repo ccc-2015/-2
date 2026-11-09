@@ -275,15 +275,16 @@ export function ContractAgent({
     void run(id, reviewQuestion, "review", { conversation: [], memory: null }, nextDoc.text, profile.startDate);
   }
 
-  async function extractFile(file: File) {
-    if (uploading || busy) return;
+  async function extractFiles(files: File[]) {
+    if (uploading || busy || files.length === 0) return;
     setUploadError(null);
     const maxBytes = config?.limits.maxFileBytes ?? 10 * 1024 * 1024;
-    if (file.size > maxBytes) {
+    const oversized = files.find((item) => item.size > maxBytes);
+    if (oversized) {
       setUploadError(
         new ApiError(
           "payload_too_large",
-          `文件超过 ${Math.round(maxBytes / 1024 / 1024)}MB 限制，请缩小材料或直接粘贴文本。`,
+          `${oversized.name} 超过 ${Math.round(maxBytes / 1024 / 1024)}MB 限制，请压缩后再上传或直接粘贴文本。`,
           false,
         ),
       );
@@ -291,7 +292,7 @@ export function ContractAgent({
     }
     setUploading(true);
     try {
-      const { data } = await api.extract(file);
+      const { data } = files.length === 1 ? await api.extract(files[0]) : await api.extractMany(files);
       const nextDoc: ContractDoc = {
         text: data.text,
         sourceName: data.sourceName,
@@ -318,14 +319,14 @@ export function ContractAgent({
     }
   }
 
-  function handleFile(file: File) {
-    if (uploading || busy) return;
+  function handleFiles(files: File[]) {
+    if (uploading || busy || files.length === 0) return;
     if (sessionHasContent(session)) {
       askConfirm("开始审查新合同？", "当前合同与对话将被替换；已开启本机保存时会先存入历史，已存为证据的内容不受影响。", () =>
-        void extractFile(file),
+        void extractFiles(files),
       );
     } else {
-      void extractFile(file);
+      void extractFiles(files);
     }
   }
 
@@ -602,8 +603,8 @@ export function ContractAgent({
   function onDrop(event: React.DragEvent) {
     event.preventDefault();
     setDragOver(false);
-    const file = event.dataTransfer.files?.[0];
-    if (file && !uploading && !busy) handleFile(file);
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (files.length > 0 && !uploading && !busy) handleFiles(files);
   }
 
   return (
@@ -655,7 +656,7 @@ export function ContractAgent({
             </span>
             <h2 className="mt-4 text-[22px] font-semibold tracking-tight">把合同发给我</h2>
             <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-muted-foreground">
-              上传合同图片、PDF，或直接粘贴合同文本；我会先看押金、退租和维修责任。
+              上传合同图片、PDF（支持多张/多页，可一次多选），或直接粘贴合同文本；我会先看押金、退租和维修责任。
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">首条消息会直接开始审查，之后可以继续追问。</p>
           </div>
@@ -721,7 +722,7 @@ export function ContractAgent({
               text={question}
               onTextChange={setQuestion}
               onSend={() => submit()}
-              onFile={handleFile}
+              onFiles={handleFiles}
               textareaRef={textareaRef}
             />
             <p className="mt-1.5 text-center text-[10px] leading-relaxed text-muted-foreground">

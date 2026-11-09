@@ -15,7 +15,7 @@ export function Composer({
   text,
   onTextChange,
   onSend,
-  onFile,
+  onFiles,
   textareaRef,
 }: {
   hasDoc: boolean;
@@ -26,7 +26,7 @@ export function Composer({
   text: string;
   onTextChange: (value: string) => void;
   onSend: () => void;
-  onFile: (file: File) => void;
+  onFiles: (files: File[]) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -42,7 +42,7 @@ export function Composer({
       {uploading && (
         <div className="flex items-center gap-2 px-3 pb-1 pt-2 text-[12px] text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
-          正在读取合同…
+          正在读取合同材料…
         </div>
       )}
 
@@ -56,7 +56,7 @@ export function Composer({
             if (canSend) onSend();
           }
         }}
-        placeholder={hasDoc ? "继续追问合同里的问题…" : "上传合同图片/文件，或直接粘贴合同文本…"}
+        placeholder={hasDoc ? "继续追问合同里的问题…" : "上传合同图片/文件（可多选），或直接粘贴合同文本…"}
         aria-label="输入问题或合同文本"
         className="max-h-48 min-h-[52px] resize-none border-0 bg-transparent px-3 py-2 text-[15px] leading-6 shadow-none focus-visible:border-0 focus-visible:ring-0"
       />
@@ -66,10 +66,11 @@ export function Composer({
           ref={fileRef}
           type="file"
           accept={ACCEPT}
+          multiple
           className="hidden"
           onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) onFile(file);
+            const files = Array.from(event.target.files ?? []);
+            if (files.length > 0) onFiles(files);
             event.target.value = "";
           }}
         />
@@ -80,7 +81,7 @@ export function Composer({
           className="size-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
           onClick={() => fileRef.current?.click()}
           disabled={uploading || busy}
-          aria-label="上传合同"
+          aria-label="上传合同（可多选）"
         >
           <Plus className="size-4" />
         </Button>
