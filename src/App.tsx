@@ -42,6 +42,8 @@ function Views() {
   function navigate(next: ViewId) {
     if (next === view) return;
     pendingReset.current = true;
+    // 让挂在 portal 里的浮层（帮助提示等）随模块切换收起。
+    window.dispatchEvent(new Event("zzyj:navigate"));
     setView(next);
   }
 

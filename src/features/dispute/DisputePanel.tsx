@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import {
   Scale,
   ArrowUp,
+  ArrowLeft,
+  ArrowRight,
   Loader2,
   ShieldAlert,
-  Copy,
   ClipboardCopy,
   RotateCw,
   CalendarClock,
@@ -12,6 +13,8 @@ import {
   Check,
   BookmarkPlus,
 } from "lucide-react";
+import { HelpTip } from "@/components/HelpTip";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -60,6 +63,64 @@ function todayLocal(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+const STEPS = [
+  { id: 0, label: "发生了什么" },
+  { id: 1, label: "证据与事实" },
+  { id: 2, label: "匹配方向" },
+] as const;
+
+function DisputeSteps({
+  step,
+  maxStep,
+  ready,
+  onSelect,
+}: {
+  step: 0 | 1 | 2;
+  maxStep: 0 | 1 | 2;
+  ready: { issue: boolean; result: boolean };
+  onSelect: (next: 0 | 1 | 2) => void;
+}) {
+  const done = [ready.issue, maxStep > 0, ready.result];
+  return (
+    <ol className="flex items-center gap-1" aria-label="争议处理步骤">
+      {STEPS.map((item, index) => {
+        const active = step === item.id;
+        const reached = item.id <= maxStep;
+        const complete = done[index] && !active;
+        return (
+          <li key={item.id} className="flex min-w-0 flex-1 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => reached && onSelect(item.id)}
+              disabled={!reached}
+              aria-current={active ? "step" : undefined}
+              className={cn(
+                "flex min-w-0 flex-1 items-center gap-1.5 rounded-full px-2 py-1.5 text-[11px] transition-colors",
+                active
+                  ? "bg-foreground text-background"
+                  : reached
+                    ? "text-foreground hover:bg-black/[0.04]"
+                    : "cursor-default text-muted-foreground/60",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-medium",
+                  active ? "bg-background/25" : complete ? "bg-stage-dispute/15 text-stage-dispute" : "bg-black/[0.06]",
+                )}
+              >
+                {complete ? <Check className="size-2.5" /> : item.id + 1}
+              </span>
+              <span className="truncate">{item.label}</span>
+            </button>
+            {index < STEPS.length - 1 && <span className="h-px w-3 shrink-0 bg-border" aria-hidden="true" />}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => void }) {
   const { config } = useConfig();
   const aiAvailable = config?.aiAvailable ?? false;
@@ -92,6 +153,8 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const [scriptNotice, setScriptNotice] = useState("");
   const [tab, setTab] = useState<"script" | "analysis" | "progress">("analysis");
   const [archivedScripts, setArchivedScripts] = useState<Record<string, string>>({});
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [maxStep, setMaxStep] = useState<0 | 1 | 2>(0);
   const prefill = useDisputePrefill();
   useEffect(() => {
     if (!prefill) return;
@@ -106,9 +169,16 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     setScriptDraft("");
     setError(null);
     setNotice("已从证据带入所选材料，可补充事实后整理方向。");
+    setStep(1);
+    setMaxStep((m) => (m < 1 ? 1 : m));
     // 仅在证据页发出预填时消费一次。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
+
+  function goStep(next: 0 | 1 | 2) {
+    setStep(next);
+    setMaxStep((m) => (next > m ? next : m));
+  }
 
   const selectedChannelLabel = selectedChannelId
     ? result?.recommendations.find((rec) => rec.channelId === selectedChannelId)?.title ??
@@ -265,12 +335,27 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
       )}
 
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
-        <div className="space-y-4">
-          <div className="panel p-4">
-            <h2 className="mb-3 text-sm font-semibold">争议与必要事实</h2>
-            <div className="space-y-3">
+        <div className="space-y-3">
+          <DisputeSteps
+            step={step}
+            maxStep={maxStep}
+            ready={{ issue: issue.trim().length > 0, result: !!result }}
+            onSelect={goStep}
+          />
+
+          {step === 0 && (
+            <div className="panel space-y-3 p-4 step-appear">
+              <div>
+                <h2 className="text-sm font-semibold">发生了什么</h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">只填你确定的信息，其余留空即可。</p>
+              </div>
               <div className="space-y-1">
-                <Label htmlFor="dp-issue" className="text-xs">争议事项（必填）</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="dp-issue" className="text-xs">争议事项（必填）</Label>
+                  <HelpTip label="争议事项说明">
+                    用一句话说清问题与诉求，例如「退租后房东以墙面损坏为由扣除全部押金」。系统会据此整理事实并匹配处理方向。
+                  </HelpTip>
+                </div>
                 <Textarea id="dp-issue" value={issue} onChange={(e) => setIssue(e.target.value)} className="min-h-20 text-sm" placeholder="例如：退租后房东以墙面损坏为由扣除全部押金，协商无果。" />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -287,13 +372,74 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                   <Input id="dp-counterparty" value={counterparty} onChange={(e) => setCounterparty(e.target.value)} placeholder="例如：房东 / 中介 / 合租室友" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="dp-amount" className="text-xs">涉及金额（元，可选）</Label>
+                  <div className="flex items-center gap-1">
+                    <Label htmlFor="dp-amount" className="text-xs">涉及金额（元，可选）</Label>
+                    <HelpTip label="涉及金额说明">
+                      例如被扣押金或需维修的费用。留空表示未知，不会被当作 0 计算。
+                    </HelpTip>
+                  </div>
                   <Input id="dp-amount" inputMode="decimal" value={amountYuan} onChange={(e) => setAmountYuan(e.target.value)} placeholder="留空表示未知，不计为 0" />
                 </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="dp-goal" className="text-xs">你的目标（可选）</Label>
                 <Input id="dp-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="例如：退还被扣押金 / 完成维修 / 解除合约" />
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" onClick={() => goStep(1)} disabled={!issue.trim()} className="ml-auto">
+                  下一步：证据与事实
+                  <ArrowRight className="size-4" />
+                </Button>
+              </div>
+              {!issue.trim() && <p className="text-right text-[11px] text-muted-foreground">先填写争议事项才能继续。</p>}
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="panel space-y-3 p-4 step-appear">
+              <div>
+                <h2 className="text-sm font-semibold">带上证据，补充事实</h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">证据是你的陈述材料，未经验证；未知项可不填，系统会提示缺项。</p>
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1">
+                    <h3 className="text-xs font-medium">相关证据（{selectedEvidence.length}）</h3>
+                    <HelpTip label="证据选择说明">
+                      勾选要带入的记录，系统会用其中的金额、日期与材料名称填写话术。最多 {maxEvidence} 条。
+                    </HelpTip>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => onNavigate("evidence")}>
+                    <CalendarClock className="size-4" />
+                    去证据画布
+                  </Button>
+                </div>
+                {allRecords.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">证据画布还没有记录，可先去添加，也可以直接跳过。</p>
+                ) : (
+                  <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {allRecords.map((r) => (
+                      <li key={r.id} className="list-appear flex items-start gap-2 rounded-md border bg-secondary/30 p-2">
+                        <Checkbox
+                          checked={selectedIds.includes(r.id)}
+                          onCheckedChange={() => selection.toggle(r.id)}
+                          aria-label="选择此证据"
+                          className="mt-0.5"
+                        />
+                        <div className="min-w-0 flex-1 text-xs">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Badge variant="outline">{EVIDENCE_STATUS_LABELS[r.materialStatus]}</Badge>
+                            <span className="text-muted-foreground">{r.occurredAt ?? "时间未知"}</span>
+                          </div>
+                          <p className="mt-0.5 line-clamp-2">{r.description}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {overEvidenceLimit && (
+                  <p className="mt-2 text-xs text-destructive">已选超过 {maxEvidence} 条，请减少选择后再生成。</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="dp-facts" className="text-xs">补充事实（可选）</Label>
@@ -303,54 +449,49 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                 <Label htmlFor="dp-prior" className="text-xs">已采取的行动（可选）</Label>
                 <Input id="dp-prior" value={priorAction} onChange={(e) => setPriorAction(e.target.value)} placeholder="例如：已微信协商两次，对方拒绝" />
               </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" variant="ghost" onClick={() => goStep(0)}>
+                  <ArrowLeft className="size-4" />
+                  上一步
+                </Button>
+                <Button size="sm" onClick={() => goStep(2)} className="ml-auto">
+                  下一步：匹配方向
+                  <ArrowRight className="size-4" />
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="panel p-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">相关证据（{selectedEvidence.length}）</h2>
-              <Button size="sm" variant="ghost" onClick={() => onNavigate("evidence")}>
-                <CalendarClock className="size-4" />
-                去证据画布
-              </Button>
+          {step === 2 && (
+            <div className="panel space-y-3 p-4 step-appear">
+              <div>
+                <h2 className="text-sm font-semibold">确认后匹配处理方向</h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">系统先整理事实、提示缺项，再给出一个优先方向与少量可考虑项。</p>
+              </div>
+              <dl className="space-y-1.5 rounded-lg bg-secondary/40 p-3 text-[12px] leading-relaxed">
+                <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">争议事项</dt><dd className="min-w-0 flex-1">{issue.trim() || "未填写"}</dd></div>
+                <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">证据</dt><dd className="min-w-0 flex-1">{selectedEvidence.length > 0 ? `${selectedEvidence.length} 条` : "未选择"}</dd></div>
+                <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">目标</dt><dd className="min-w-0 flex-1">{goal.trim() || "未填写"}</dd></div>
+                <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">已行动</dt><dd className="min-w-0 flex-1">{priorAction.trim() || "未填写"}</dd></div>
+              </dl>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="ghost" onClick={() => goStep(1)} disabled={busy}>
+                  <ArrowLeft className="size-4" />
+                  上一步
+                </Button>
+                <Button onClick={submitCandidates} disabled={!canSubmit} className="flex-1">
+                  {loading && !selectedChannelId ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
+                  {loading && !selectedChannelId ? "整理中…" : result ? "重新整理事实与方向" : "整理事实并匹配方向"}
+                </Button>
+              </div>
+              {!aiAvailable && <p className="text-xs text-muted-foreground">服务端未配置模型密钥，争议分析暂不可用。</p>}
+              {result && (
+                <p className="text-[11px] text-muted-foreground">
+                  右侧已给出 {result.recommendations.length} 个方向，选定一个即可生成话术。
+                </p>
+              )}
             </div>
-            <p className="mb-2 text-xs text-muted-foreground">
-              勾选带入争议处理的记录（你的陈述，未验证真实性）。最多 {maxEvidence} 条。
-            </p>
-            {allRecords.length === 0 ? (
-              <p className="text-xs text-muted-foreground">证据画布还没有记录，可先去添加。</p>
-            ) : (
-              <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {allRecords.map((r) => (
-                  <li key={r.id} className="flex items-start gap-2 rounded-md border bg-secondary/30 p-2">
-                    <Checkbox
-                      checked={selectedIds.includes(r.id)}
-                      onCheckedChange={() => selection.toggle(r.id)}
-                      aria-label="选择此证据"
-                      className="mt-0.5"
-                    />
-                    <div className="min-w-0 flex-1 text-xs">
-                      <div className="flex flex-wrap items-center gap-1">
-                        <Badge variant="outline">{EVIDENCE_STATUS_LABELS[r.materialStatus]}</Badge>
-                        <span className="text-muted-foreground">{r.occurredAt ?? "时间未知"}</span>
-                      </div>
-                      <p className="mt-0.5 line-clamp-2">{r.description}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {overEvidenceLimit && (
-              <p className="mt-2 text-xs text-destructive">已选超过 {maxEvidence} 条，请减少选择后再生成。</p>
-            )}
-          </div>
-
-          <Button onClick={submitCandidates} disabled={!canSubmit} className="w-full">
-            {loading && !selectedChannelId ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
-            {loading && !selectedChannelId ? "整理中…" : "整理事实并匹配方向"}
-          </Button>
-          {!aiAvailable && <p className="text-xs text-muted-foreground">服务端未配置模型密钥，争议分析暂不可用。</p>}
-          {!issue.trim() && aiAvailable && <p className="text-xs text-muted-foreground">请先填写争议事项。</p>}
+          )}
         </div>
 
         <div className="space-y-4">
@@ -366,16 +507,35 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
           {!result && !error && (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-              <Scale className="size-8 text-muted-foreground" />
-              <p className="mt-3 text-sm font-medium">填写争议事项后整理事实</p>
-              <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                系统先整理已确认事实、提示关键缺项，并给出一个优先方向与少量可考虑项；选定方向后才生成对应话术。
-              </p>
+              {loading ? (
+                <>
+                  <Loader2 className="size-7 animate-spin text-stage-dispute" />
+                  <p className="mt-3 text-sm font-medium">正在整理事实并匹配方向…</p>
+                  <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-muted-foreground">
+                    先核对你的陈述与证据，再检索本地资料，通常需要十几秒。
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Scale className="size-8 text-muted-foreground" />
+                  <p className="mt-3 text-sm font-medium">
+                    {step === 2 ? "点「整理事实并匹配方向」开始" : "按步骤填写，右侧会出现处理方向"}
+                  </p>
+                  <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                    系统先整理已确认事实、提示关键缺项，并给出一个优先方向与少量可考虑项；选定方向后才生成对应话术。
+                  </p>
+                </>
+              )}
             </div>
           )}
 
           {result && (
-            <div id="dispute-result" className="panel flex flex-col overflow-hidden lg:h-[calc(100dvh-15rem)] lg:min-h-[520px]">
+            <div id="dispute-result" className="panel relative flex flex-col overflow-hidden lg:h-[calc(100dvh-15rem)] lg:min-h-[520px]">
+              {busy && (
+                <div className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-stage-dispute/15">
+                  <span className="block h-full w-1/3 animate-[progress-slide_1.1s_ease-in-out_infinite] rounded-full bg-stage-dispute" />
+                </div>
+              )}
               <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border/60 px-2 pt-2">
                 {(
                   [

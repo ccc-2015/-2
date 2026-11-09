@@ -1,6 +1,7 @@
-import { FileText, Loader2, MapPin, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Check, FileText, Loader2, MapPin, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { ContractIntent, ContractResult, Excerpt, Finding } from "@/shared/api";
 import { SourceList } from "@/components/SourceList";
+import { HelpTip } from "@/components/HelpTip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,69 @@ const STAGE_LABELS: Record<string, string> = {
   retrieving: "正在检索郑州审核资料…",
   generating: "正在核对原文并生成意见…",
 };
+
+const STAGE_ORDER = ["reading", "retrieving", "generating"] as const;
+
+function StageProgress({
+  stage,
+  auto,
+  streaming,
+}: {
+  stage: string | null;
+  auto: boolean;
+  streaming: boolean;
+}) {
+  const activeIndex = Math.max(
+    STAGE_ORDER.indexOf((stage ?? "reading") as (typeof STAGE_ORDER)[number]),
+    0,
+  );
+  return (
+    <div className="py-1" role="status" aria-live="polite">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {STAGE_ORDER.map((id, index) => {
+          const done = index < activeIndex || (index === activeIndex && streaming);
+          const active = index === activeIndex && !streaming;
+          return (
+            <div key={id} className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  "flex size-3.5 items-center justify-center rounded-full border text-[9px]",
+                  done
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : active
+                      ? "border-primary/50 text-primary"
+                      : "border-border text-muted-foreground/50",
+                )}
+              >
+                {done ? (
+                  <Check className="size-2.5" />
+                ) : active ? (
+                  <Loader2 className="size-2.5 animate-spin" />
+                ) : (
+                  index + 1
+                )}
+              </span>
+              <span
+                className={cn(
+                  "text-[12px]",
+                  index === activeIndex ? "text-foreground" : done ? "text-muted-foreground" : "text-muted-foreground/50",
+                )}
+              >
+                {STAGE_LABELS[id].replace("正在", "").replace("…", "")}
+              </span>
+              {index < STAGE_ORDER.length - 1 && <span className="h-px w-4 bg-border" aria-hidden="true" />}
+            </div>
+          );
+        })}
+      </div>
+      {!streaming && (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {auto ? "正在读取并审查合同…" : "正在分析并核验引文…"}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function Thread({
   exchanges,
@@ -82,10 +146,11 @@ export function Thread({
             </div>
 
             {exchange.loading && (
-              <div className="flex items-center gap-2 py-1 text-[13px] text-muted-foreground">
-                <Loader2 className="size-3.5 animate-spin" />
-                {STAGE_LABELS[exchange.stage ?? ""] ?? (exchange.auto ? "正在读取并审查合同…" : "正在分析并核验引文…")}
-              </div>
+              <StageProgress
+                stage={exchange.stage ?? null}
+                auto={!!exchange.auto}
+                streaming={!!exchange.partialAnswer}
+              />
             )}
 
             {exchange.partialAnswer ? (
@@ -179,6 +244,9 @@ function ResultBlock({
               ? "知识库覆盖有限"
               : "暂无本地知识库"}
         </span>
+        <HelpTip label="知识库覆盖说明">
+          已覆盖：郑州本地与全国性资料能支撑这类问题；覆盖有限：只有部分依据；暂无：本次未检索到可用资料，回答仅基于合同原文。
+        </HelpTip>
       </div>
 
       {result.answer && <p className="whitespace-pre-wrap text-[15px] leading-7">{result.answer}</p>}

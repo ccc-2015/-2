@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarClock,
   Plus,
@@ -37,6 +37,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { HelpTip } from "@/components/HelpTip";
 import { EVIDENCE_STATUS_LABELS, type EvidenceStatus } from "@/shared/api";
 import { cn } from "@/lib/utils";
 import type { ViewId } from "../../components/AppShell";
@@ -148,6 +149,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     open: false,
     initial: null,
   });
+  const [flash, setFlash] = useState("");
 
   const stats = overviewStats(allRecords, allUtilities);
   const selectedSet = new Set(selectedIds);
@@ -205,7 +207,13 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     else records.add(record);
     rememberStage(record.stage);
     closeForms();
+    setFlash(recordForm.initial ? "记录已更新" : "记录已保存到本机");
   }
+  useEffect(() => {
+    if (!flash) return;
+    const timer = window.setTimeout(() => setFlash(""), 2400);
+    return () => window.clearTimeout(timer);
+  }, [flash]);
   async function exportPackage(mode: "zip" | "print" = "zip") {
     if (exporting || allRecords.length === 0) return;
     setExporting(true);
@@ -226,6 +234,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     if (utilityForm.initial) utilities.update(u.id, u);
     else utilities.add(u);
     closeForms();
+    setFlash(utilityForm.initial ? "费用已更新" : "费用已保存到本机");
   }
 
   return (
@@ -241,7 +250,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
             <Button size="sm" variant="outline" onClick={() => exportPackage("zip")} disabled={exporting || allRecords.length === 0}>
               {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-              导出证据包
+              {exporting ? "打包中…" : "导出证据包"}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => exportPackage("print")} disabled={exporting || allRecords.length === 0}>
               <Printer className="size-3.5" />
@@ -266,6 +275,16 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         missing={stats.missing}
         toConfirm={stats.toConfirm}
       />
+
+      {flash && (
+        <div
+          role="status"
+          className="success-feedback fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/70 bg-white/90 px-3.5 py-1.5 text-[12px] shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw-248px)/2)]"
+        >
+          <Check className="size-3.5 text-primary check-appear" />
+          {flash}
+        </div>
+      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
         <span>{stats.span ? `${stats.span.from} – ${stats.span.to}` : "未记录日期"}</span>
@@ -473,7 +492,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
       </div>
 
       {selectedCount > 0 && (
-        <div className="fixed bottom-4 left-1/2 z-30 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border border-white/70 bg-white/85 px-4 py-2 shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw-248px)/2)]">
+        <div className="step-appear fixed bottom-4 left-1/2 z-30 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border border-white/70 bg-white/85 px-4 py-2 shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw-248px)/2)]">
           <span className="text-[12px]">已选 {selectedCount} 条证据</span>
           <button type="button" onClick={() => selection.clear()} className="text-[11px] text-muted-foreground hover:text-foreground">
             清空
@@ -506,10 +525,23 @@ function RecordRow({
   onStartDispute: () => void;
 }) {
   const [preview, setPreview] = useState<EvidenceAttachment | null>(null);
+  const [removing, setRemoving] = useState(false);
   const attachments = record.attachments ?? [];
 
+  function remove() {
+    if (removing) return;
+    setRemoving(true);
+    window.setTimeout(onDelete, 160);
+  }
+
   return (
-    <details className={cn("group", bordered && "border-t border-black/[0.05]")}>
+    <details
+      className={cn(
+        "group list-appear transition-[opacity,transform] duration-150",
+        removing && "pointer-events-none -translate-x-1 opacity-0",
+        bordered && "border-t border-black/[0.05]",
+      )}
+    >
       <summary className="flex cursor-pointer list-none items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-black/[0.02] [&::-webkit-details-marker]:hidden">
         <span className="w-[82px] shrink-0 font-mono text-[11px] text-muted-foreground">
           {record.occurredAt ?? "时间待补"}
@@ -587,7 +619,7 @@ function RecordRow({
             <Scale className="size-3.5" />
             就此发起争议
           </Button>
-          <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={onDelete}>
+          <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={remove}>
             <Trash2 className="size-3.5" />
             删除
           </Button>
@@ -957,7 +989,12 @@ function RecordForm({
                 <Input id="rec-mat-type" value={draft.materialType} onChange={(e) => set("materialType", e.target.value)} placeholder="例如：照片 / 聊天记录 / 票据" />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="rec-status" className="text-xs">材料状态</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="rec-status" className="text-xs">材料状态</Label>
+                  <HelpTip label="材料状态说明">
+                    已有：材料在你手里；缺失：对方应提供但没有；待确认：还需要核实。状态只作整理标记，不代表证据效力。
+                  </HelpTip>
+                </div>
                 <Select value={draft.materialStatus} onValueChange={(v) => set("materialStatus", v as EvidenceStatus)}>
                   <SelectTrigger id="rec-status" size="sm" className="w-full">
                     <SelectValue />
@@ -970,7 +1007,12 @@ function RecordForm({
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="rec-amount" className="text-xs">金额（元）</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="rec-amount" className="text-xs">金额（元）</Label>
+                  <HelpTip label="金额填写说明">
+                    填实际发生的金额，例如被扣押金 4000。留空表示未知，不会被当作 0 参与核对。
+                  </HelpTip>
+                </div>
                 <Input id="rec-amount" inputMode="decimal" value={draft.amountYuan} onChange={(e) => set("amountYuan", e.target.value)} placeholder="留空表示未知，不计为 0" />
               </div>
               <div className="space-y-1">

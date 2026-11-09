@@ -250,3 +250,51 @@ body {
     animation: none;
   }
 }
+
+/* 步骤切换：内容轻微上浮淡入 */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility step-appear {
+  animation: step-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* 列表新增项：淡入并轻微左移，避免整块重排 */
+@keyframes list-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@utility list-appear {
+  animation: list-in 200ms ease-out;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* 顶部不确定进度条：生成话术时的等待反馈 */
+@keyframes progress-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(310%);
+  }
+}

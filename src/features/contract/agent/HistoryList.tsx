@@ -122,7 +122,7 @@ export function HistoryList({
                   {group.rows.map((item) => {
                     const active = item.id === currentId;
                     return (
-                      <li key={item.id} className="group flex items-center gap-0.5">
+                      <li key={item.id} className="group list-appear flex items-center gap-0.5">
                         <button
                           type="button"
                           onClick={() => {
