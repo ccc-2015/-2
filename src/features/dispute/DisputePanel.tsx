@@ -64,9 +64,9 @@ function todayLocal(): string {
 }
 
 const STEPS = [
-  { id: 0, label: "发生了什么" },
-  { id: 1, label: "证据与事实" },
-  { id: 2, label: "匹配方向" },
+  { id: 0, label: "发生了什么", short: "问题" },
+  { id: 1, label: "证据与事实", short: "证据" },
+  { id: 2, label: "匹配方向", short: "方向" },
 ] as const;
 
 function DisputeSteps({
@@ -82,7 +82,7 @@ function DisputeSteps({
 }) {
   const done = [ready.issue, maxStep > 0, ready.result];
   return (
-    <ol className="flex items-center gap-1" aria-label="争议处理步骤">
+    <ol className="flex w-full min-w-0 items-center gap-1" aria-label="争议处理步骤">
       {STEPS.map((item, index) => {
         const active = step === item.id;
         const reached = item.id <= maxStep;
@@ -95,7 +95,7 @@ function DisputeSteps({
               disabled={!reached}
               aria-current={active ? "step" : undefined}
               className={cn(
-                "flex min-w-0 flex-1 items-center gap-1.5 rounded-full px-2 py-1.5 text-[11px] transition-colors",
+                "flex min-w-0 flex-1 items-center gap-1.5 rounded-full px-1.5 py-1.5 text-[11px] transition-colors sm:px-2",
                 active
                   ? "bg-foreground text-background"
                   : reached
@@ -111,7 +111,10 @@ function DisputeSteps({
               >
                 {complete ? <Check className="size-2.5" /> : item.id + 1}
               </span>
-              <span className="truncate">{item.label}</span>
+              <span className="min-w-0 truncate">
+                <span className="min-[420px]:hidden">{item.short}</span>
+                <span className="hidden min-[420px]:inline">{item.label}</span>
+              </span>
             </button>
             {index < STEPS.length - 1 && <span className="h-px w-3 shrink-0 bg-border" aria-hidden="true" />}
           </li>
@@ -335,7 +338,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
       )}
 
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <DisputeSteps
             step={step}
             maxStep={maxStep}
@@ -494,7 +497,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {error && (
             <Alert variant="destructive">
               <ShieldAlert className="size-4" />
