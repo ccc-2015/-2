@@ -13,6 +13,7 @@ import {
   ImagePlus,
   Download,
   Loader2,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ import { RentalProfileCard } from "../rental/RentalProfileCard";
 import { MoveInChecklist } from "./MoveInChecklist";
 import { MoveOutCompare } from "./MoveOutCompare";
 import { buildEvidencePackage, downloadBlob } from "./exportPackage";
+import { printHtml } from "../../lib/print";
 import { useRentalProfile } from "../rental/profile";
 import { disputePrefill } from "./disputePrefill";
 import {
@@ -192,16 +194,21 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     rememberStage(record.stage);
     closeForms();
   }
-  async function exportPackage() {
+  async function exportPackage(mode: "zip" | "print" = "zip") {
     if (exporting || allRecords.length === 0) return;
     setExporting(true);
     try {
-      const { zip, fileName } = await buildEvidencePackage({
+      const { zip, fileName, printHtml: reportHtml } = await buildEvidencePackage({
         profile: rentalProfile,
         records: allRecords,
         utilities: allUtilities,
       });
-      downloadBlob(zip, `${fileName}.zip`);
+      if (mode === "zip") downloadBlob(zip, `${fileName}.zip`);
+      else {
+        // 打印版只保留报告正文，附件原图仍留在 ZIP 里。
+        const printable = reportHtml.replace(/<h2>附件原图<\/h2>[\s\S]*?(<\/body>)/, "$1");
+        printHtml(printable);
+      }
     } finally {
       setExporting(false);
     }
@@ -224,9 +231,13 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={exportPackage} disabled={exporting || allRecords.length === 0}>
+            <Button size="sm" variant="outline" onClick={() => exportPackage("zip")} disabled={exporting || allRecords.length === 0}>
               {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
               导出证据包
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => exportPackage("print")} disabled={exporting || allRecords.length === 0}>
+              <Printer className="size-3.5" />
+              打印 / 存为 PDF
             </Button>
             <Button size="sm" variant="outline" onClick={openUtility}>
               <Droplets className="size-3.5" />

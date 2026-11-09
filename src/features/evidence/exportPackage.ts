@@ -71,6 +71,7 @@ export interface EvidencePackageInput {
 export async function buildEvidencePackage({ profile, records, utilities }: EvidencePackageInput): Promise<{
   zip: Blob;
   fileName: string;
+  printHtml: string;
 }> {
   const exportedRecords: ExportedRecord[] = [];
   for (const record of records) {
@@ -338,7 +339,7 @@ export async function buildEvidencePackage({ profile, records, utilities }: Evid
     }
   }
 
-  return { zip: createZip(entries), fileName };
+  return { zip: createZip(entries), fileName, printHtml: html };
 }
 
 export function downloadBlob(blob: Blob, fileName: string): void {

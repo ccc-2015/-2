@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, FileText, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Download, FileText, Printer, ShieldCheck } from "lucide-react";
 import type { ContractIntent, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -25,6 +25,9 @@ import { ContractSheet } from "./ContractSheet";
 import { historyBus, useHistoryRequest } from "./historyBus";
 import { RevisionCopyPanel } from "./ResultCards";
 import { Thread } from "./Thread";
+import { buildReviewReport } from "./reviewReport";
+import { downloadBlob } from "../../evidence/exportPackage";
+import { printHtml } from "../../../lib/print";
 import {
   formatSessionTime,
   getConsent,
@@ -507,6 +510,30 @@ export function ContractAgent({
     });
   }
 
+  function exportReport(mode: "html" | "print" = "html") {
+    const latest = [...exchanges].reverse().find((exchange) => exchange.result);
+    if (!latest?.result) return;
+    const { html, json, fileName } = buildReviewReport({
+      result: latest.result,
+      knowledgeVersion: latest.meta?.knowledgeVersion ?? null,
+      warnings: latest.meta?.warnings ?? [],
+      docName: doc?.sourceName ?? "合同",
+      docText: latest.docText ?? doc?.text ?? "",
+      signingDate,
+      profile,
+      exchanges,
+    });
+    if (mode === "print") {
+      printHtml(html);
+      return;
+    }
+    downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), `${fileName}.html`);
+    setTimeout(
+      () => downloadBlob(new Blob([json], { type: "application/json;charset=utf-8" }), `${fileName}.json`),
+      400,
+    );
+  }
+
   function flushCurrent() {
     if (consent !== "on" || !sessionHasContent(session)) return;
     void saveSession(session).then(refreshHistory).catch(() => undefined);
@@ -633,6 +660,18 @@ export function ContractAgent({
               <FileText className="size-3.5" />
               合同文本
             </Button>
+          )}
+          {exchanges.some((exchange) => exchange.result) && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => exportReport("html")}>
+                <Download className="size-3.5" />
+                导出报告
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => exportReport("print")}>
+                <Printer className="size-3.5" />
+                打印 / 存为 PDF
+              </Button>
+            </>
           )}
           {latestRevisionExchangeId && (
             <Button variant="ghost" size="sm" onClick={() => openRevision(latestRevisionExchangeId)}>
