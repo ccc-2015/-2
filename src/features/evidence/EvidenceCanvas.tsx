@@ -43,6 +43,7 @@ import type { ViewId } from "../../components/AppShell";
 import { RentalProfileCard } from "../rental/RentalProfileCard";
 import { MoveInChecklist } from "./MoveInChecklist";
 import { MoveOutCompare } from "./MoveOutCompare";
+import { EvidenceOverview } from "./EvidenceOverview";
 import { buildEvidencePackage, downloadBlob } from "./exportPackage";
 import { printHtml } from "../../lib/print";
 import { useRentalProfile } from "../rental/profile";
@@ -237,7 +238,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
               按时间记录租住过程中的事件与材料，退租或发生争议时可直接选用。
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
             <Button size="sm" variant="outline" onClick={() => exportPackage("zip")} disabled={exporting || allRecords.length === 0}>
               {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
               导出证据包
@@ -258,12 +259,20 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         </div>
       </header>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+      <EvidenceOverview
+        records={allRecords}
+        startDate={rentalProfile.startDate}
+        present={stats.present}
+        missing={stats.missing}
+        toConfirm={stats.toConfirm}
+      />
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
         <span>{stats.span ? `${stats.span.from} – ${stats.span.to}` : "未记录日期"}</span>
         <span className="text-border">·</span>
         <span>{stats.totalRecords} 条记录</span>
         <span className="text-border">·</span>
-        <span>材料 已有 {stats.present} / 缺失 {stats.missing} / 待确认 {stats.toConfirm}</span>
+        <span>水电 {stats.utilityCount} 条</span>
         {utilityDiff && (
           <>
             <span className="text-border">·</span>
