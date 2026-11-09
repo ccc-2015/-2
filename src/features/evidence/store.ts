@@ -64,6 +64,26 @@ export function moveInChecklist(recordList: EvidenceRecord[]): ChecklistProgress
   });
 }
 
+/** 记住上次录入的阶段，连续记录时不用反复选择。 */
+const LAST_STAGE_KEY = "zzyj.evidence.last_stage.v1";
+
+export function lastStage(): EvidenceStage | null {
+  try {
+    const raw = window.localStorage.getItem(LAST_STAGE_KEY);
+    return raw && STAGE_LABELS[raw as EvidenceStage] ? (raw as EvidenceStage) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function rememberStage(stage: EvidenceStage): void {
+  try {
+    window.localStorage.setItem(LAST_STAGE_KEY, stage);
+  } catch {
+    // 存储不可用时不影响本次录入。
+  }
+}
+
 export type UtilityKind = "water" | "electricity" | "gas" | "other";
 
 export const UTILITY_KIND_LABELS: Record<UtilityKind, string> = {

@@ -61,6 +61,8 @@ import {
   compressImage,
   storeSizeChars,
   MAX_ATTACHMENTS,
+  lastStage,
+  rememberStage,
   MAX_STORE_CHARS,
   type EvidenceAttachment,
   type EvidenceRecord,
@@ -155,7 +157,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     setRecordForm({
       open: true,
       initial: null,
-      stage: stage ?? (stageFilter === "all" ? "signing" : stageFilter),
+      stage: stage ?? (stageFilter === "all" ? lastStage() ?? "signing" : stageFilter),
       preset: null,
     });
   }
@@ -181,6 +183,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
   function saveRecord(record: EvidenceRecord) {
     if (recordForm.initial) records.update(record.id, record);
     else records.add(record);
+    rememberStage(record.stage);
     closeForms();
   }
   function saveUtility(u: UtilityAccount) {
@@ -655,10 +658,16 @@ interface RecordDraft {
   attachments: EvidenceAttachment[];
 }
 
+function todayLocal(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
 function draftFrom(record: EvidenceRecord | null, initialStage: EvidenceStage): RecordDraft {
   return {
     stage: record?.stage ?? initialStage,
-    occurredAt: record?.occurredAt ?? "",
+    occurredAt: record?.occurredAt ?? todayLocal(),
     description: record?.description ?? "",
     contractClause: record?.contractClause ?? "",
     materialName: record?.materialName ?? "",
@@ -695,6 +704,9 @@ function RecordForm({
   });
   const [error, setError] = useState("");
   const [compressing, setCompressing] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(() => !!initial);
+  const advancedFilled =
+    !!draft.materialName || !!draft.materialType || !!draft.amountYuan || !!draft.reading || !!draft.contractClause;
   const imageRef = useRef<HTMLInputElement>(null);
   const stageHint = STAGES.find((s) => s.id === draft.stage)?.hint ?? "";
 
@@ -779,7 +791,49 @@ function RecordForm({
 
   return (
     <div className="panel p-4">
-      <h3 className="mb-3 text-[13px] font-semibold">{initial ? "编辑记录" : "添加记录"}</h3>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-[13px] font-semibold">{initial ? "编辑记录" : "快速记录"}</h3>
+        {!initial && <span className="text-[11px] text-muted-foreground">拍照 + 一句话即可保存</span>}
+      </div>
+
+      {!initial && (
+        <div className="mb-3 rounded-xl border border-dashed border-border/80 bg-secondary/20 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {draft.attachments.map((a) => (
+              <div key={a.id} className="relative size-16 overflow-hidden rounded-lg border border-black/[0.06]">
+                <img src={a.dataUrl} alt={a.name} className="size-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(a.id)}
+                  aria-label={`移除 ${a.name}`}
+                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+            {draft.attachments.length < MAX_ATTACHMENTS && (
+              <button
+                type="button"
+                onClick={() => imageRef.current?.click()}
+                disabled={compressing}
+                className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground disabled:opacity-60"
+              >
+                <ImagePlus className="size-4" />
+                <span className="text-[10px]">{compressing ? "处理中" : "拍照/选图"}</span>
+              </button>
+            )}
+          </div>
+          <Input
+            value={draft.description}
+            onChange={(event) => set("description", event.target.value)}
+            className="mt-2"
+            placeholder="一句话说明：例如 入住时客厅墙面已有裂缝"
+          />
+        </div>
+      )}
+
+      {!initial && <p className="mb-2 text-[11px] font-medium text-muted-foreground">时间与阶段（已自动带出，可改）</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="rec-stage" className="text-xs">阶段</Label>
@@ -800,44 +854,61 @@ function RecordForm({
           <Input id="rec-occurred" type="date" value={draft.occurredAt} onChange={(e) => set("occurredAt", e.target.value)} />
           <p className="text-[11px] text-muted-foreground">录入时间保存时自动记录。</p>
         </div>
-        <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="rec-desc" className="text-xs">事件描述（你的陈述）</Label>
-          <Textarea id="rec-desc" value={draft.description} onChange={(e) => set("description", e.target.value)} className="min-h-20 text-[13px]" placeholder="例如：入住时客厅墙面已有裂缝，已拍照留存。" />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="rec-mat-name" className="text-xs">材料名称（可选）</Label>
-          <Input id="rec-mat-name" value={draft.materialName} onChange={(e) => set("materialName", e.target.value)} placeholder="例如：入住交接照片" />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="rec-mat-type" className="text-xs">材料类型（可选）</Label>
-          <Input id="rec-mat-type" value={draft.materialType} onChange={(e) => set("materialType", e.target.value)} placeholder="例如：照片 / 聊天记录 / 票据" />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="rec-status" className="text-xs">材料状态</Label>
-          <Select value={draft.materialStatus} onValueChange={(v) => set("materialStatus", v as EvidenceStatus)}>
-            <SelectTrigger id="rec-status" size="sm" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>{EVIDENCE_STATUS_LABELS[s]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="rec-amount" className="text-xs">金额（元，可选）</Label>
-          <Input id="rec-amount" inputMode="decimal" value={draft.amountYuan} onChange={(e) => set("amountYuan", e.target.value)} placeholder="留空表示未知，不计为 0" />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="rec-reading" className="text-xs">读数（可选）</Label>
-          <Input id="rec-reading" value={draft.reading} onChange={(e) => set("reading", e.target.value)} placeholder="例如：水表 123.5" />
-        </div>
-        <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="rec-clause" className="text-xs">关联合同条款（可选）</Label>
-          <Input id="rec-clause" value={draft.contractClause} onChange={(e) => set("contractClause", e.target.value)} placeholder="例如：第七条 房屋维修责任" />
-        </div>
+        {initial && (
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor="rec-desc" className="text-xs">事件描述（你的陈述）</Label>
+            <Textarea id="rec-desc" value={draft.description} onChange={(e) => set("description", e.target.value)} className="min-h-20 text-[13px]" placeholder="例如：入住时客厅墙面已有裂缝，已拍照留存。" />
+          </div>
+        )}
         <div className="space-y-1.5 sm:col-span-2">
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-expanded={moreOpen}
+            className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            <span>{moreOpen ? "收起更多信息" : "更多信息（可选）"}</span>
+            {!moreOpen && advancedFilled && <span className="text-primary">已填写</span>}
+          </button>
+          {moreOpen && (
+            <div className="mt-2 grid gap-3 rounded-lg bg-secondary/30 p-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="rec-mat-name" className="text-xs">材料名称</Label>
+                <Input id="rec-mat-name" value={draft.materialName} onChange={(e) => set("materialName", e.target.value)} placeholder="例如：入住交接照片" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rec-mat-type" className="text-xs">材料类型</Label>
+                <Input id="rec-mat-type" value={draft.materialType} onChange={(e) => set("materialType", e.target.value)} placeholder="例如：照片 / 聊天记录 / 票据" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rec-status" className="text-xs">材料状态</Label>
+                <Select value={draft.materialStatus} onValueChange={(v) => set("materialStatus", v as EvidenceStatus)}>
+                  <SelectTrigger id="rec-status" size="sm" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>{EVIDENCE_STATUS_LABELS[s]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rec-amount" className="text-xs">金额（元）</Label>
+                <Input id="rec-amount" inputMode="decimal" value={draft.amountYuan} onChange={(e) => set("amountYuan", e.target.value)} placeholder="留空表示未知，不计为 0" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rec-reading" className="text-xs">读数</Label>
+                <Input id="rec-reading" value={draft.reading} onChange={(e) => set("reading", e.target.value)} placeholder="例如：水表 123.5" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rec-clause" className="text-xs">关联合同条款</Label>
+                <Input id="rec-clause" value={draft.contractClause} onChange={(e) => set("contractClause", e.target.value)} placeholder="例如：第七条 房屋维修责任" />
+              </div>
+            </div>
+          )}
+        </div>
+        <div className={initial ? "space-y-1.5 sm:col-span-2" : "hidden"}>
           <Label className="text-xs">图片材料（可选）</Label>
           <div className="flex flex-wrap items-center gap-2">
             {draft.attachments.map((a) => (

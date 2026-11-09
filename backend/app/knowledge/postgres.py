@@ -378,13 +378,19 @@ class PostgresKnowledgeStore:
         scores = rerank_api(query, documents)
         if scores is None:
             return None
-        ranked = [
-            (score, entry)
-            for score, (_, entry) in zip(scores, candidates)
-            if score >= settings.rerank_min_score
-        ]
-        ranked.sort(key=lambda item: (-item[0], item[1].id))
-        return ranked[:top_k] or None
+        # 精排分与粗排分加权：避免短条款因字面相似度高而挤掉更具体的条文。
+        coarse = [score for score, _ in candidates]
+        top_coarse = max(coarse) or 1.0
+        merged: list[tuple[float, str, KnowledgeEntry]] = []
+        for (coarse_score, entry), rerank_score in zip(candidates, scores):
+            if rerank_score < settings.rerank_min_score:
+                continue
+            total = (coarse_score / top_coarse) * 0.4 + rerank_score * 0.6
+            merged.append((total, entry.id, entry))
+        if not merged:
+            return None
+        merged.sort(key=lambda item: (-item[0], item[1]))
+        return [(total, entry) for total, _, entry in merged[:top_k]]
 
     @staticmethod
     def _rerank_text(entry: KnowledgeEntry) -> str:
