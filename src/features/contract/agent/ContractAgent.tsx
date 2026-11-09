@@ -59,6 +59,19 @@ import {
   type RevisionSuggestion,
 } from "./types";
 
+const SAMPLE_CONTRACT = [
+  "房屋租赁合同",
+  "出租方（甲方）：张某　　承租方（乙方）：李某",
+  "第一条 房屋位于郑州市金水区花园路 88 号 3 号楼 502，月租金 2600 元，押金 4000 元。",
+  "第二条 租赁期限自 2026 年 3 月 1 日至 2027 年 2 月 28 日。",
+  "第三条 乙方应于每月 5 日前支付租金，逾期每日加收 5% 滞纳金。",
+  "第四条 租期届满、乙方结清费用并交还房屋后 30 日内退还押金；自然损耗由甲方负责维修。",
+  "第五条 乙方提前退租的，押金不予退还，并需支付一个月租金作为违约金。",
+  "第六条 甲方有权在提前 24 小时通知后进入房屋检查。",
+  "第七条 保洁费 300 元、家电折旧费每月 200 元从押金中扣除。",
+  "第八条 甲方可单方调整租金，提前 10 日通知乙方即可。",
+].join(String.fromCharCode(10));
+
 interface PendingConfirm {
   title: string;
   description: string;
@@ -719,9 +732,41 @@ export function ContractAgent({
             </span>
             <h2 className="mt-4 text-[22px] font-semibold tracking-tight">把合同发给我</h2>
             <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-muted-foreground">
-              上传合同图片、PDF（支持多张/多页，可一次多选），或直接粘贴合同文本；我会先看押金、退租和维修责任。
+              上传合同图片、PDF（支持多张/多页，可一次多选），或直接粘贴合同文本。
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">首条消息会直接开始审查，之后可以继续追问。</p>
+
+            <div className="mt-5 grid w-full max-w-md grid-cols-3 gap-2">
+              {[
+                { step: "1", label: "上传或粘贴", detail: "PDF、图片、文本都行" },
+                { step: "2", label: "自动审查", detail: "对照郑州审核资料" },
+                { step: "3", label: "看风险与依据", detail: "可继续追问" },
+              ].map((item) => (
+                <div key={item.step} className="rounded-xl border border-border/70 bg-background px-2 py-2.5">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-secondary text-[10px] font-medium">
+                    {item.step}
+                  </span>
+                  <p className="mt-1.5 text-[12px] font-medium">{item.label}</p>
+                  <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => {
+                const nextDoc: ContractDoc = { text: SAMPLE_CONTRACT, sourceName: "示例合同", meta: PASTE_META };
+                startNewSession(nextDoc);
+                startReview(nextDoc);
+              }}
+              disabled={busy || uploading || !aiAvailable}
+            >
+              试用示例合同
+            </Button>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              示例包含押金不退、单方涨租、保洁折旧等常见问题。
+            </p>
           </div>
         ) : (
           <div className="pb-28 pt-5">

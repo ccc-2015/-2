@@ -379,14 +379,38 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         ))}
 
         {groups.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/80 py-14 text-center">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/80 px-4 py-12 text-center">
             <CalendarClock className="size-7 text-muted-foreground" />
             <p className="mt-2.5 text-[13px] font-medium">
               {allRecords.length === 0 ? "还没有记录" : "该阶段暂无记录"}
             </p>
             <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-muted-foreground">
-              添加事件时间、描述、材料状态与图片；水电账目在下方「水电与费用」中单独记录。
+              {allRecords.length === 0
+                ? "先拍入住现状最有用：水电底数、墙面地面、家具家电，退租时能直接对照。"
+                : "这个阶段还没有记录，可以从下面挑一项开始。"}
             </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {allRecords.length === 0 ? (
+                <>
+                  <Button size="sm" onClick={() => openChecklistRecord("水电燃气底数", "表读数", "水表、电表、燃气表读数并拍表盘")}>
+                    <Plus className="size-3.5" />
+                    记录入住
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={openUtility}>
+                    <Droplets className="size-3.5" />
+                    记一笔水电
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" onClick={() => openRecord(stageFilter === "all" ? undefined : stageFilter)}>
+                  <Plus className="size-3.5" />
+                  添加记录
+                </Button>
+              )}
+            </div>
+            {allRecords.length === 0 && (
+              <p className="mt-2 text-[10px] text-muted-foreground">也可以直接用上方「入住必拍清单」逐项拍。</p>
+            )}
           </div>
         )}
       </div>

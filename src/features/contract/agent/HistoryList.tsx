@@ -91,11 +91,26 @@ export function HistoryList({
             当前浏览器不支持本机历史存储。
           </p>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center px-3 py-8 text-center">
+          <div className="flex flex-col items-center px-3 py-7 text-center">
             <MessageSquare className="size-6 text-muted-foreground/50" />
-            <p className="mt-2 text-[11px] text-muted-foreground">还没有历史对话</p>
+            <p className="mt-2 text-[11px] font-medium text-muted-foreground">还没有历史对话</p>
             <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground/80">
-              完成一次合同审查后会自动出现在这里
+              完成一次合同审查后会自动出现在这里，按今天 / 昨天 / 更早分组。
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2.5 h-7 px-2 text-[11px]"
+              onClick={() => {
+                historyBus.request({ kind: "new" });
+                onNavigate?.();
+              }}
+            >
+              <Plus className="size-3" />
+              去审查一份合同
+            </Button>
+            <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground/70">
+              历史只存本浏览器，不上传服务器。
             </p>
           </div>
         ) : (
