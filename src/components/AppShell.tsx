@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from "react";
-import { FileSearch, CalendarClock, Scale, ShieldCheck, X, History } from "lucide-react";
+import { FileSearch, CalendarClock, Scale, ShieldCheck, X, History, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConfig } from "../lib/config-context";
 import { HistoryList } from "../features/contract/agent/HistoryList";
+import { Onboarding, openOnboarding } from "./Onboarding";
 
 export type ViewId = "contract" | "evidence" | "dispute";
 
@@ -119,7 +120,17 @@ export function AppShell({
         </div>
 
         <div className="space-y-2 border-t border-black/[0.05] px-5 py-4">
-          <ModelStatus />
+          <div className="flex items-center justify-between gap-2">
+            <ModelStatus />
+            <button
+              type="button"
+              onClick={openOnboarding}
+              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              <HelpCircle className="size-3" />
+              使用说明
+            </button>
+          </div>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             信息辅助工具，不替代专业法律意见，不承诺处理结果，不代你提交。
           </p>
@@ -161,6 +172,8 @@ export function AppShell({
 
         <main className="min-w-0 flex-1">{children}</main>
       </div>
+
+      <Onboarding onNavigate={onNavigate} />
     </div>
   );
 }
