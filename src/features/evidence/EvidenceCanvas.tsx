@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ImagePlus,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,8 @@ import type { ViewId } from "../../components/AppShell";
 import { RentalProfileCard } from "../rental/RentalProfileCard";
 import { MoveInChecklist } from "./MoveInChecklist";
 import { MoveOutCompare } from "./MoveOutCompare";
+import { buildEvidencePackage, downloadText } from "./exportPackage";
+import { useRentalProfile } from "../rental/profile";
 import { disputePrefill } from "./disputePrefill";
 import {
   STAGES,
@@ -109,6 +113,8 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 
 export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => void }) {
   const allRecords = useEvidenceRecords();
+  const rentalProfile = useRentalProfile();
+  const [exporting, setExporting] = useState(false);
   const allUtilities = useUtilities();
   const selectedIds = useSelectedIds();
 
@@ -186,6 +192,22 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     rememberStage(record.stage);
     closeForms();
   }
+  async function exportPackage() {
+    if (exporting || allRecords.length === 0) return;
+    setExporting(true);
+    try {
+      const { html, json, fileName } = await buildEvidencePackage({
+        profile: rentalProfile,
+        records: allRecords,
+        utilities: allUtilities,
+      });
+      downloadText(html, `${fileName}.html`, "text/html");
+      setTimeout(() => downloadText(json, `${fileName}.json`, "application/json"), 400);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function saveUtility(u: UtilityAccount) {
     if (utilityForm.initial) utilities.update(u.id, u);
     else utilities.add(u);
@@ -202,7 +224,11 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
               按时间记录租住过程中的事件与材料，退租或发生争议时可直接选用。
             </p>
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={exportPackage} disabled={exporting || allRecords.length === 0}>
+              {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+              导出证据包
+            </Button>
             <Button size="sm" variant="outline" onClick={openUtility}>
               <Droplets className="size-3.5" />
               添加费用
