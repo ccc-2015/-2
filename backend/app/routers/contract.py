@@ -99,12 +99,18 @@ async def analyze_stream(inp: AnalyzeContractInput):
 
             if not data_text.strip() and not "".join(answer_parts).strip():
                 raise ApiError("upstream_invalid", "模型服务未返回有效结果，请稍后手动重试。")
+            streamed = "".join(answer_parts).strip()
             raw = parse_json(data_text) if data_text.strip() else {
-                "answer": "".join(answer_parts).strip(),
                 "findings": [],
                 "revision": None,
                 "followUpQuestions": [],
             }
+            # 正文以流式内容为准；模型若仍把正文写进 answer，则保留更完整的那一份。
+            model_answer = raw.get("answer") if isinstance(raw.get("answer"), str) else ""
+            if streamed and len(streamed) >= len(model_answer.strip()):
+                raw["answer"] = streamed
+            elif streamed and not model_answer.strip():
+                raw["answer"] = streamed
             analysis = materialize(inp, sources, raw)
             payload = {
                 "type": "result",

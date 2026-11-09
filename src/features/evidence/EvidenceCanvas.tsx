@@ -204,11 +204,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         utilities: allUtilities,
       });
       if (mode === "zip") downloadBlob(zip, `${fileName}.zip`);
-      else {
-        // 打印版只保留报告正文，附件原图仍留在 ZIP 里。
-        const printable = reportHtml.replace(/<h2>附件原图<\/h2>[\s\S]*?(<\/body>)/, "$1");
-        printHtml(printable);
-      }
+      else printHtml(reportHtml);
     } finally {
       setExporting(false);
     }

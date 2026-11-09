@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from ..knowledge import knowledge_store
 from ..knowledge.citations import collect_cited_ids, map_source_refs
 from ..knowledge.models import KnowledgeEntry
-from ..model import chat_json, chat_stream
+from ..model import chat, parse_json
 from ..prompts import CONTRACT_SYSTEM_PROMPT
 from ..schemas import (
     AnalyzeContractInput,
@@ -96,11 +96,18 @@ def model_messages(inp: AnalyzeContractInput, sources: list[KnowledgeEntry]) -> 
 
 async def analyze_contract(inp: AnalyzeContractInput) -> ContractAnalysis:
     sources = prepare_sources(inp)
-    raw = await chat_json(
+    content = await chat(
         _messages(inp, sources),
         temperature=0.2,
         max_tokens=_MAX_TOKENS.get(inp.intent, 2400),
     )
+    # 提示词约定「正文 + 分隔符 + JSON」；非流式路径同样要拆开，正文优先。
+    body, _, data_text = content.partition(DATA_MARKER)
+    raw = parse_json(data_text) if data_text.strip() else parse_json(content)
+    streamed = body.strip()
+    model_answer = raw.get("answer") if isinstance(raw.get("answer"), str) else ""
+    if streamed and len(streamed) >= len(model_answer.strip()):
+        raw["answer"] = streamed
     return materialize(inp, sources, raw)
 
 

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ConfigProvider, useConfig } from "./lib/config-context";
 import { AppShell, type ViewId } from "./components/AppShell";
 import { ContractAgent } from "./features/contract/agent/ContractAgent";
@@ -37,11 +37,22 @@ function Views() {
   const [currentSessionId, setCurrentSessionId] = useState("");
 
   // 切换模块时回到顶部，避免沿用上一个页面的滚动位置。
+  const pendingReset = useRef(false);
+
   function navigate(next: ViewId) {
     if (next === view) return;
+    pendingReset.current = true;
     setView(next);
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }
+
+  // 视图切换完成后复位滚动，避免沿用上一个页面的位置。
+  useEffect(() => {
+    if (!pendingReset.current) return;
+    pendingReset.current = false;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const timer = window.setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }), 80);
+    return () => window.clearTimeout(timer);
+  }, [view]);
   // 三个视图常驻挂载，只切换可见性：切模块不丢失合同文本、对话、修订副本与争议表单。
   return (
     <AppShell active={view} onNavigate={navigate} currentSessionId={currentSessionId}>

@@ -25,6 +25,12 @@ from app.services.contract import _build_user_prompt, analyze_contract
 PACK = json.loads((DATA_DIR / "zz.json").read_text(encoding="utf-8"))
 
 
+def _model_text(payload: dict) -> str:
+    """模拟模型的「正文 + ===DATA=== + JSON」输出。"""
+    body = payload.get("answer") or "模型回答正文。"
+    return chr(10).join([body, "===DATA===", json.dumps(payload, ensure_ascii=False)])
+
+
 class KnowledgeStoreTests(unittest.TestCase):
     def test_seed_available_and_version(self):
         self.assertTrue(knowledge_store.available)
@@ -158,7 +164,7 @@ class ContractKnowledgeTests(unittest.TestCase):
             "followUpQuestions": [],
         }
         inp = AnalyzeContractInput(text="房屋维修由谁负责？", intent="review", cityCode="ZZ", eventDate="2026-11-08")
-        with patch.object(contract_service, "chat_json", new=AsyncMock(return_value=fake)):
+        with patch.object(contract_service, "chat", new=AsyncMock(return_value=_model_text(fake))):
             analysis = asyncio.run(analyze_contract(inp))
         self.assertEqual(analysis.processing_mode, "knowledge_ai")
         self.assertEqual(analysis.result.coverage, PACK["topicCoverage"]["contract_review"])
@@ -178,7 +184,7 @@ class ContractKnowledgeTests(unittest.TestCase):
             "followUpQuestions": [],
         }
         inp = AnalyzeContractInput(text="维修责任", intent="review", cityCode="BJ", eventDate="2026-11-08")
-        with patch.object(contract_service, "chat_json", new=AsyncMock(return_value=fake)):
+        with patch.object(contract_service, "chat", new=AsyncMock(return_value=_model_text(fake))):
             analysis = asyncio.run(analyze_contract(inp))
         self.assertEqual(analysis.processing_mode, "ai")
         self.assertEqual(analysis.result.coverage, "unsupported")
@@ -194,7 +200,7 @@ class ContractKnowledgeTests(unittest.TestCase):
             "followUpQuestions": [],
         }
         inp = AnalyzeContractInput(text="维修责任", intent="review", cityCode="ZZ", eventDate="2000-01-01")
-        with patch.object(contract_service, "chat_json", new=AsyncMock(return_value=fake)):
+        with patch.object(contract_service, "chat", new=AsyncMock(return_value=_model_text(fake))):
             analysis = asyncio.run(analyze_contract(inp))
         self.assertEqual(analysis.processing_mode, "ai")
         self.assertEqual(analysis.result.references, [])

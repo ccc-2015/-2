@@ -339,7 +339,11 @@ export async function buildEvidencePackage({ profile, records, utilities }: Evid
     }
   }
 
-  return { zip: createZip(entries), fileName, printHtml: html };
+  // 打印版只保留报告，原图仍留在 ZIP。
+  const marker = "<h2>附件原图</h2>";
+  const cut = html.indexOf(marker);
+  const printable = cut === -1 ? html : html.slice(0, cut) + "</body></html>";
+  return { zip: createZip(entries), fileName, printHtml: printable };
 }
 
 export function downloadBlob(blob: Blob, fileName: string): void {
