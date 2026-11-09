@@ -120,8 +120,28 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const canSubmit = aiAvailable && issue.trim().length > 0 && !overEvidenceLimit && !busy;
 
   useEffect(() => {
-    if (selectedChannelId && result?.script) setTab("script");
+    if (!selectedChannelId || !result?.script) return;
+    setTab("script");
   }, [selectedChannelId, result?.script]);
+
+  // 话术生成后，小屏自动滚到结果区，避免用户找不到草稿。
+  const hasScript = !!result?.script;
+  useEffect(() => {
+    if (!hasScript) return;
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      tries += 1;
+      const panel = document.getElementById("dispute-result");
+      if (panel) {
+        window.clearInterval(timer);
+        window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - 12, behavior: "smooth" });
+      } else if (tries > 20) {
+        window.clearInterval(timer);
+      }
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [hasScript]);
 
   async function diagnose(channelId: string | null) {
     if (!aiAvailable || !issue.trim() || overEvidenceLimit) return;
@@ -355,7 +375,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
           )}
 
           {result && (
-            <div className="panel flex h-[calc(100dvh-15rem)] min-h-[520px] flex-col overflow-hidden">
+            <div id="dispute-result" className="panel flex flex-col overflow-hidden lg:h-[calc(100dvh-15rem)] lg:min-h-[520px]">
               <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border/60 px-2 pt-2">
                 {(
                   [
@@ -397,7 +417,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                 )}
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <div className="min-h-0 flex-1 p-4 lg:overflow-y-auto">
                 {tab === "script" && (
                   result.script ? (
                     <div className="flex h-full flex-col">
@@ -427,7 +447,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                       <Textarea
                         value={scriptDraft}
                         onChange={(e) => setScriptDraft(e.target.value)}
-                        className="min-h-[260px] flex-1 resize-none bg-background text-[14px] leading-7"
+                        className="min-h-[260px] flex-1 resize-y bg-background text-[14px] leading-7"
                         aria-label="话术草稿（可编辑）"
                       />
                       <div className="mt-2 flex flex-wrap items-center gap-2">
