@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { RegionSelect } from "../../../components/RegionSelect";
 import { analyzeContractStream, api, ApiError, errorMessage } from "../../../lib/api";
+import { extractLocally, LOCAL_SITE } from "../../../lib/extractLocal";
 import { useConfig } from "../../../lib/config-context";
 import { useRegionCode } from "../../../lib/region";
 import { newId, saveRecordChecked, type EvidenceRecord } from "../../evidence/store";
@@ -110,7 +111,7 @@ export function ContractAgent({
   const historyRequest = useHistoryRequest();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
 
   const busy = exchanges.some((exchange) => exchange.loading);
   const empty = !doc && exchanges.length === 0;
@@ -188,7 +189,8 @@ export function ContractAgent({
   }, [session.id, onSessionChange]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
+    const thread = threadRef.current;
+    if (thread) thread.scrollTop = thread.scrollHeight;
   }, [exchanges.length, busy]);
 
   useEffect(() => {
@@ -315,7 +317,8 @@ export function ContractAgent({
     }
     setUploading(true);
     try {
-      const { data } = files.length === 1 ? await api.extract(files[0]) : await api.extractMany(files);
+      // 公网版没有 Python 后端，文件在本机浏览器解析；本地开发仍可走 /api 的后端抽取。
+      const data = LOCAL_SITE ? await extractLocally(files) : (await api.extractMany(files)).data;
       const nextDoc: ContractDoc = {
         text: data.text,
         sourceName: data.sourceName,
@@ -328,12 +331,16 @@ export function ContractAgent({
         },
       };
       startNewSession(nextDoc);
+      // 图片走多模态转写，可能有错字漏字；先打开文本面板让用户核对，确认后再点「重新审查」，不自动分析。
+      const ocrConfirm = LOCAL_SITE && data.ocrUsed;
+      if (ocrConfirm) setDocOpen(true);
       if (!nextDoc.text.trim()) {
         setUploadError(
           new ApiError("invalid_input", "未识别到合同文本，请换一张更清晰的文件，或在合同文本中手动补充。", false),
         );
         return;
       }
+      if (ocrConfirm) return;
       startReview(nextDoc);
     } catch (err) {
       setUploadError(err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false));
@@ -656,7 +663,7 @@ export function ContractAgent({
 
   return (
     <div
-      className="mx-auto flex min-h-[calc(100dvh-7rem)] w-full max-w-[680px] flex-col px-4 pb-4 pt-5 md:min-h-dvh md:px-6 md:pt-6"
+      className="mx-auto flex h-full min-h-0 w-full max-w-[960px] flex-col overflow-hidden px-4 pb-4 pt-5 md:px-8 md:pt-6"
       onDragOver={(event) => {
         event.preventDefault();
         if (!uploading) setDragOver(true);
@@ -664,7 +671,7 @@ export function ContractAgent({
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
     >
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
         <div className="flex items-center gap-2">
           <RegionSelect compact />
           <h1 className="text-[12px] font-medium text-muted-foreground">合同审查</h1>
@@ -724,9 +731,9 @@ export function ContractAgent({
         </div>
       </header>
 
-      <div className={empty ? "flex flex-1 flex-col justify-center" : "flex flex-1 flex-col"}>
+      <div className="flex min-h-0 flex-1 flex-col">
         {empty ? (
-          <div className="flex flex-col items-center px-4 text-center">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-6 text-center">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-foreground text-background shadow-sm">
               <ShieldCheck className="size-5" />
             </span>
@@ -738,7 +745,7 @@ export function ContractAgent({
             <div className="mt-5 grid w-full max-w-md grid-cols-3 gap-2">
               {[
                 { step: "1", label: "上传或粘贴", detail: "PDF、图片、文本都行" },
-                { step: "2", label: "自动审查", detail: "对照郑州审核资料" },
+                { step: "2", label: "自动审查", detail: cityCode === "ZZ" ? "全国与郑州审核资料" : "对照全国性法律资料" },
                 { step: "3", label: "看风险与依据", detail: "可继续追问" },
               ].map((item) => (
                 <div key={item.step} className="rounded-xl border border-border/70 bg-background px-2 py-2.5">
@@ -769,7 +776,7 @@ export function ContractAgent({
             </p>
           </div>
         ) : (
-          <div className="pb-28 pt-5">
+          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-5">
             <Thread
               exchanges={exchanges}
               doc={doc}
@@ -786,18 +793,11 @@ export function ContractAgent({
               onOpenRevision={openRevision}
               onQuickAction={(intent) => submit(intent)}
             />
-            <div ref={endRef} className="scroll-mb-40" />
           </div>
         )}
 
-        <div
-          className={
-            empty
-              ? "mt-8"
-              : "sticky bottom-0 z-10 mt-4 -mx-4 border-t border-border/60 bg-background/85 px-4 py-3 backdrop-blur-xl md:-mx-6 md:px-6"
-          }
-        >
-          <div className="mx-auto w-full max-w-[680px]">
+        <div className="z-10 mt-3 shrink-0 -mx-4 border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-xl md:-mx-6 md:px-6">
+          <div className="mx-auto w-full max-w-[880px]">
             {uploadError && (
               <Alert variant="destructive" className="mb-2 py-2">
                 <AlertTriangle className="size-4" />

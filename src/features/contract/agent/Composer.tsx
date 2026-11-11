@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+/** 文本类在本机解析，图片走云端多模态转写；两种部署都开放图片格式。 */
 const ACCEPT = ".txt,.md,.markdown,.docx,.pdf,.png,.jpg,.jpeg,.webp";
 
 export function Composer({
@@ -42,7 +43,7 @@ export function Composer({
       {uploading && (
         <div className="flex items-center gap-2 px-3 pb-1 pt-2 text-[12px] text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
-          正在读取合同材料…
+          正在读取 / 识别合同材料…
         </div>
       )}
 
@@ -56,7 +57,7 @@ export function Composer({
             if (canSend) onSend();
           }
         }}
-        placeholder={hasDoc ? "继续追问合同里的问题…" : "上传合同图片/文件（可多选），或直接粘贴合同文本…"}
+        placeholder={hasDoc ? "继续追问合同里的问题…" : "上传合同图片 / PDF / DOCX / TXT（可多选），或直接粘贴合同文本…"}
         aria-label="输入问题或合同文本"
         className="max-h-48 min-h-[52px] resize-none border-0 bg-transparent px-3 py-2 text-[15px] leading-6 shadow-none focus-visible:border-0 focus-visible:ring-0"
       />

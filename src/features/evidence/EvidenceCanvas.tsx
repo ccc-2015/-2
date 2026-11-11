@@ -78,6 +78,7 @@ import {
   type UtilityAccount,
   type UtilityKind,
 } from "./store";
+import { loadEvidenceSample } from "./sample";
 
 const STATUS_OPTIONS: EvidenceStatus[] = ["present", "missing", "to_confirm"];
 
@@ -260,6 +261,16 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
               <Droplets className="size-3.5" />
               添加费用
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const sample = loadEvidenceSample();
+                setFlash(`示例证据已就绪，共 ${sample.recordIds.length} 条演示记录`);
+              }}
+            >
+              试用示例证据
+            </Button>
             <Button size="sm" onClick={() => openRecord()}>
               <Plus className="size-3.5" />
               添加记录
@@ -428,7 +439,9 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
               )}
             </div>
             {allRecords.length === 0 && (
-              <p className="mt-2 text-[10px] text-muted-foreground">也可以直接用上方「入住必拍清单」逐项拍。</p>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                也可以直接用上方「入住必拍清单」逐项拍；点「试用示例证据」可一键看完整流程。
+              </p>
             )}
           </div>
         )}

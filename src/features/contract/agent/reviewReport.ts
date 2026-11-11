@@ -133,7 +133,7 @@ export function buildReviewReport({
     <span>${coverageLabel}</span>
     <span>风险 ${result.findings.length} 条</span>
     <span>引用 ${result.references.length} 条</span>
-    ${knowledgeVersion ? `<span>知识库 ${escapeHtml(knowledgeVersion)}</span>` : ""}
+    ${knowledgeVersion ? `<span>资料包版本 ${escapeHtml(knowledgeVersion)}</span>` : ""}
   </p>
   <p class="notice">AI 辅助意见，不构成法律结论，也不替代律师或主管部门判断。结论请以合同原文与当地规定为准；报告中的原文引用已逐字核对。</p>
 

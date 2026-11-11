@@ -159,22 +159,25 @@ class PostgresKnowledgeStore:
         )
 
     def version_for(self, city_code: str | None) -> str | None:
-        pack = self.pack_for(city_code)
-        return pack.version if pack else None
+        pack = self.pack_for("ZZ")
+        versions = [pack.version] if pack else []
+        return "+".join(versions) if versions else None
 
     def coverage_for(self, city_code: str | None, scenario: str | None = None) -> str:
-        pack = self.pack_for(city_code)
-        if not pack:
+        entries = self.list_sources(city_code, scenario=scenario)
+        if not entries:
             return "unsupported"
-        if scenario and scenario in pack.topicCoverage:
-            return pack.topicCoverage[scenario]
-        return pack.coverage
+        if city_code == "ZZ":
+            pack = self.pack_for("ZZ")
+            if pack:
+                return pack.topicCoverage.get(scenario or "", pack.coverage)
+        return "limited"
 
-    def _filters(self, city_code: str, event_date: str | None, scenario: str | None) -> tuple[str, list]:
+    def _filters(self, city_code: str | None, event_date: str | None, scenario: str | None) -> tuple[str, list]:
         effective_on = event_date or date.today().isoformat()
         clauses = [
-            "pack_city = %s",
-            "review_status = 'approved'",
+            "(scope = 'national' OR (scope = 'city' AND city_code = 'ZZ' AND %s = 'ZZ'))",
+            "review_status = 'approved'", 
             "(effective_from IS NULL OR effective_from <= %s)",
             "(effective_to IS NULL OR effective_to >= %s)",
         ]

@@ -58,6 +58,24 @@ class DisputeKnowledgeTests(unittest.TestCase):
         self.assertIsNotNone(pack)
         self.assertEqual(errors, [])
 
+    def test_other_city_cannot_receive_zhengzhou_channel(self):
+        inp = DiagnoseDisputeInput(issue="房东不退押金", cityCode="SH", eventDate="2026-11-08")
+        with patch.object(dispute_service, "chat_json", new=AsyncMock(return_value=LOCAL_RESULT)):
+            analysis = asyncio.run(diagnose_dispute(inp))
+        self.assertEqual(analysis.coverage, "limited")
+        self.assertTrue(all(ref.cityCode == "CN" for ref in analysis.result.references))
+        self.assertFalse(any(item.channelId == "zz_12345" for item in analysis.result.recommendations))
+        self.assertTrue(all(item.eligibility == "general_only" for item in analysis.result.recommendations))
+
+    def test_local_channel_is_available_when_legal_top_k_is_empty(self):
+        inp = DiagnoseDisputeInput(issue="房东不退押金", cityCode="ZZ", eventDate="2026-11-08")
+        with patch.object(dispute_service, "knowledge_store", FIXTURE_STORE), patch.object(
+            dispute_service.knowledge_store, "retrieve", return_value=[]
+        ), patch.object(dispute_service, "chat_json", new=AsyncMock(return_value=LOCAL_RESULT)):
+            analysis = asyncio.run(diagnose_dispute(inp))
+        self.assertEqual(analysis.result.recommendations[0].channelId, "zz_12345")
+        self.assertEqual(analysis.result.references[0].id, "zz-test-12345")
+
     def test_local_verified_channel_from_source(self):
         inp = DiagnoseDisputeInput(issue="房东不退押金", cityCode="ZZ", eventDate="2026-11-08")
         with patch.object(dispute_service, "knowledge_store", FIXTURE_STORE), patch.object(
@@ -105,6 +123,14 @@ class DisputeNoKnowledgeTests(unittest.TestCase):
         self.assertEqual(analysis.processing_mode, "ai")
         self.assertEqual(analysis.result.recommendations, [])
         self.assertEqual(analysis.result.references, [])
+
+    def test_selected_channel_must_be_available_for_city(self):
+        inp = DiagnoseDisputeInput(
+            issue="房东不退押金", cityCode="SH", eventDate="2026-11-08", selectedChannelId="zz_12345"
+        )
+        with patch.object(dispute_service, "chat_json", new=AsyncMock(return_value=LOCAL_RESULT)):
+            analysis = asyncio.run(diagnose_dispute(inp))
+        self.assertIsNone(analysis.result.script)
 
 
 if __name__ == "__main__":

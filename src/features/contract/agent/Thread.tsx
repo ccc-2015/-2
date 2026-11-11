@@ -8,14 +8,6 @@ import { cn } from "@/lib/utils";
 import { FindingCard } from "./ResultCards";
 import type { ContractDoc, Exchange } from "./types";
 
-const STAGE_LABELS: Record<string, string> = {
-  reading: "正在读取合同…",
-  retrieving: "正在检索郑州审核资料…",
-  generating: "正在核对原文并生成意见…",
-};
-
-const STAGE_ORDER = ["reading", "retrieving", "generating"] as const;
-
 function StageProgress({
   stage,
   auto,
@@ -25,54 +17,18 @@ function StageProgress({
   auto: boolean;
   streaming: boolean;
 }) {
-  const activeIndex = Math.max(
-    STAGE_ORDER.indexOf((stage ?? "reading") as (typeof STAGE_ORDER)[number]),
-    0,
-  );
+  const message = streaming
+    ? "正在逐段生成回答并整理审查结果…"
+    : stage === "retrieving"
+      ? "正在匹配郑州审核资料…"
+      : auto
+        ? "正在读取并审查合同…"
+        : "正在分析问题并核对依据…";
+
   return (
-    <div className="py-1" role="status" aria-live="polite">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        {STAGE_ORDER.map((id, index) => {
-          const done = index < activeIndex || (index === activeIndex && streaming);
-          const active = index === activeIndex && !streaming;
-          return (
-            <div key={id} className="flex items-center gap-1.5">
-              <span
-                className={cn(
-                  "flex size-3.5 items-center justify-center rounded-full border text-[9px]",
-                  done
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : active
-                      ? "border-primary/50 text-primary"
-                      : "border-border text-muted-foreground/50",
-                )}
-              >
-                {done ? (
-                  <Check className="size-2.5" />
-                ) : active ? (
-                  <Loader2 className="size-2.5 animate-spin" />
-                ) : (
-                  index + 1
-                )}
-              </span>
-              <span
-                className={cn(
-                  "text-[12px]",
-                  index === activeIndex ? "text-foreground" : done ? "text-muted-foreground" : "text-muted-foreground/50",
-                )}
-              >
-                {STAGE_LABELS[id].replace("正在", "").replace("…", "")}
-              </span>
-              {index < STAGE_ORDER.length - 1 && <span className="h-px w-4 bg-border" aria-hidden="true" />}
-            </div>
-          );
-        })}
-      </div>
-      {!streaming && (
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          {auto ? "正在读取并审查合同…" : "正在分析并核验引文…"}
-        </p>
-      )}
+    <div className="flex items-center gap-2 py-1 text-[12px] text-muted-foreground" role="status" aria-live="polite">
+      <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" />
+      <span>{message}</span>
     </div>
   );
 }

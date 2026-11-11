@@ -1,6 +1,7 @@
 """合同分析服务：检索审核资料、调用模型并核验引文与来源。"""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from ..knowledge import knowledge_store
@@ -43,14 +44,12 @@ def _str_array(value, max_items: int = 8) -> list[str]:
 
 def _warnings(sources: list[KnowledgeEntry], cited_ids: list[str], coverage: str, city: str) -> list[str]:
     if not sources:
-        if knowledge_store.pack_for(city) is None:
-            return ["当前城市暂无审核知识库，以下为一般建议，不构成法律结论。"]
         return ["当前没有匹配到可用审核资料，以下为一般建议，不构成法律结论。"]
     warnings = [f"已提供 {len(sources)} 条审核资料；仅核对条文原文，未作个案适用性判断。"]
     if not cited_ids:
         warnings.append("本次回答未引用审核资料。")
     if coverage == "limited":
-        warnings.append("当前地区知识库覆盖有限，缺少本地审核资料。")
+        warnings.append("当前城市仅提供全国性法律资料，未覆盖当地地方法规。")
     return warnings
 
 
@@ -180,12 +179,28 @@ def _normalize_findings(raw, full_text: str, source_map: dict[str, KnowledgeEntr
     return findings
 
 
+_REVISION_NOTE = re.compile(
+    r"^\s*(?:(?:以下为)?(?:协商|修订|修改|条款)?草稿(?:如下)?|建议(?:修改|修订)如下|修改建议)\s*(?:[（(][^）)]*[）)]\s*)?[:：]?\s*"
+)
+_REVISION_QUOTE = re.compile(r"^\s*(?:修订后的条款|修改后的条款|建议条款|修改建议|修订建议)\s*[:：]\s*")
+
+
+def _strip_revision_note(text: str) -> str:
+    """去掉模型自行加在条款前的「协商草稿（…）：」说明，副本里只留可替换正文。"""
+    cleaned = text.strip()
+    previous = None
+    while cleaned != previous:
+        previous = cleaned
+        cleaned = _REVISION_QUOTE.sub("", _REVISION_NOTE.sub("", cleaned))
+    return cleaned.strip()
+
+
 def _normalize_revision(raw, inp: AnalyzeContractInput) -> Revision | None:
     if inp.intent not in ("suggest_revision", "draft_revision"):
         return None
     if not isinstance(raw, dict):
         return None
-    text = _str(raw.get("text"))
+    text = _strip_revision_note(_str(raw.get("text")))
     if not text.strip():
         return None
     target = close_excerpt(raw.get("targetExcerpt"), inp.text) or inp.targetExcerpt

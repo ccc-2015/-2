@@ -107,7 +107,7 @@ export function AppShell({
   const [mobileHistory, setMobileHistory] = useState(false);
 
   return (
-    <div className="flex min-h-dvh bg-background text-foreground">
+    <div className={cn("flex bg-background text-foreground", active === "contract" ? "h-dvh overflow-hidden" : "min-h-dvh")}>
       <aside className="glass sticky top-0 hidden h-dvh w-[248px] shrink-0 flex-col border-r border-black/[0.06] md:flex">
         <div className="px-5 pb-4 pt-6">
           <Brand />
@@ -137,8 +137,8 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass sticky top-0 z-20 border-b border-black/[0.06] md:hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="glass sticky top-0 z-20 shrink-0 border-b border-black/[0.06] md:hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-2">
             <Brand />
             <div className="flex items-center gap-1">
@@ -170,7 +170,7 @@ export function AppShell({
           )}
         </header>
 
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className={cn("min-w-0 flex-1", active === "contract" && "min-h-0 overflow-hidden")}>{children}</main>
       </div>
 
       <Onboarding onNavigate={onNavigate} />

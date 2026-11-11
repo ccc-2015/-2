@@ -69,6 +69,14 @@ export function FindingCard({
   );
 }
 
+function replaceRevisionText(copy: string, index: number, target: string, replacement: string): string {
+  const before = copy.slice(0, index);
+  const heading = replacement.match(/^(第[一二三四五六七八九十百千零〇两\d]+条)[ \t]*/);
+  const linePrefix = before.slice(before.lastIndexOf("\n") + 1).trim();
+  const text = heading && linePrefix === heading[1] ? replacement.slice(heading[0].length) : replacement;
+  return before + text + copy.slice(index + target.length);
+}
+
 export function RevisionCopyPanel({
   draft,
   sourceName,
@@ -113,9 +121,9 @@ export function RevisionCopyPanel({
         });
         return;
       }
-      next = draft.copy.slice(0, index) + suggestion.text + draft.copy.slice(index + target.length);
+      next = replaceRevisionText(draft.copy, index, target, suggestion.text);
     } else {
-      next = `${draft.copy}\n\n【新增条款草稿】\n${suggestion.text}`;
+      next = `${draft.copy}\n\n${suggestion.text}`;
     }
     onDraftChange({
       copy: next,
@@ -140,9 +148,9 @@ export function RevisionCopyPanel({
           skipped++;
           continue;
         }
-        next = next.slice(0, index) + suggestion.text + next.slice(index + target.length);
+        next = replaceRevisionText(next, index, target, suggestion.text);
       } else {
-        next = `${next}\n\n【新增条款草稿】\n${suggestion.text}`;
+        next = `${next}\n\n${suggestion.text}`;
       }
       done.push(suggestion.id);
     }

@@ -46,6 +46,10 @@ function emit() {
   listeners.forEach((listener) => listener());
 }
 
+export function getRentalProfile(): RentalProfile {
+  return cache;
+}
+
 export function saveRentalProfile(next: RentalProfile): void {
   cache = next;
   try {

@@ -154,6 +154,7 @@ LIMITS: dict = {
 }
 
 CITIES: list[dict] = [
+    {"code": "ZZ", "name": "郑州"},
     {"code": "CN", "name": "不限 / 全国一般建议"},
     {"code": "BJ", "name": "北京"},
     {"code": "SH", "name": "上海"},
@@ -168,7 +169,6 @@ CITIES: list[dict] = [
     {"code": "SU", "name": "苏州"},
     {"code": "TJ", "name": "天津"},
     {"code": "CS", "name": "长沙"},
-    {"code": "ZZ", "name": "郑州"},
     {"code": "QD", "name": "青岛"},
     {"code": "DL", "name": "大连"},
     {"code": "XM", "name": "厦门"},

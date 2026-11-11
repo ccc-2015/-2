@@ -33,7 +33,7 @@ SCENARIO_TOPICS = {
         "brokerage",
         "filing",
     },
-    "dispute": {"dispute", "channel"},
+    "dispute": {"dispute", "channel", "deposit", "repair", "termination", "rent", "return", "brokerage", "filing", "safety"},
 }
 
 
@@ -67,25 +67,28 @@ class KnowledgeStore:
         return self.packs.get(city_code) if city_code else None
 
     def version_for(self, city_code: str | None) -> str | None:
-        pack = self.pack_for(city_code)
-        return pack.version if pack else None
+        pack = self.pack_for("ZZ")
+        versions = [pack.version] if pack else []
+        return "+".join(versions) if versions else None
 
     def coverage_for(self, city_code: str | None, scenario: str | None = None) -> str:
-        pack = self.pack_for(city_code)
-        if not pack:
+        entries = self.list_sources(city_code, scenario=scenario)
+        if not entries:
             return "unsupported"
-        if scenario and scenario in pack.topicCoverage:
-            return pack.topicCoverage[scenario]
-        return pack.coverage
+        if city_code == "ZZ":
+            pack = self.pack_for("ZZ")
+            if pack:
+                return pack.topicCoverage.get(scenario or "", pack.coverage)
+        return "limited"
 
     def _applicable(self, city_code: str | None, event_date: str | None) -> list[KnowledgeEntry]:
-        pack = self.pack_for(city_code)
-        if not pack:
-            return []
         effective_on = event_date or date.today().isoformat()
         result: list[KnowledgeEntry] = []
-        for entry in pack.entries:
-            if entry.reviewStatus != "approved":
+        for entry in self.entries:
+            applies_regionally = entry.scope == "national" or (
+                entry.scope == "city" and city_code == "ZZ" and entry.cityCode == "ZZ"
+            )
+            if not applies_regionally or entry.reviewStatus != "approved":
                 continue
             if entry.effectiveFrom and effective_on < entry.effectiveFrom:
                 continue

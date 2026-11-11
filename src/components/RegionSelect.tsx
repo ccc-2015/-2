@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { MapPin } from "lucide-react";
 import { useConfig } from "../lib/config-context";
 import { setRegion, useRegionCode } from "../lib/region";
@@ -22,6 +23,10 @@ export function RegionSelect({
   const selected = cities.find((city) => city.code === value) ?? FALLBACK;
   const label = compact && value === "CN" ? "全国" : selected.name;
 
+  useEffect(() => {
+    if (config && value !== code) setRegion(value);
+  }, [config, value, code]);
+
   return (
     <Select value={value} onValueChange={setRegion}>
       <SelectTrigger
@@ -44,7 +49,8 @@ export function RegionSelect({
           <SelectValue />
         )}
       </SelectTrigger>
-      <SelectContent>
+      {/* 紧凑模式不渲染 SelectValue，item-aligned 拿不到锚点会把菜单排到视口外；用 popper 锚定触发器。 */}
+      <SelectContent position="popper" align="start" className="max-h-[min(18rem,var(--radix-select-content-available-height))]">
         {cities.map((city) => (
           <SelectItem key={city.code} value={city.code}>
             {city.name}

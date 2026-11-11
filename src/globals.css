@@ -18,6 +18,21 @@
   scrollbar-gutter: stable;
 }
 
+.select-scroll-viewport {
+  scrollbar-width: thin !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.select-scroll-viewport::-webkit-scrollbar {
+  display: block !important;
+  width: 8px;
+}
+
+.select-scroll-viewport::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--muted-foreground) 35%, transparent);
+}
+
 /* 设计参数：近白画布 + 半透明卡片 + 单一蓝色强调（Apple 风格）。 */
 :root {
   --site-bg: #fbfbfd;

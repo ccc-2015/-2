@@ -58,7 +58,7 @@ function Views() {
   // 三个视图常驻挂载，只切换可见性：切模块不丢失合同文本、对话、修订副本与争议表单。
   return (
     <AppShell active={view} onNavigate={navigate} currentSessionId={currentSessionId}>
-      <div className={view === "contract" ? undefined : "hidden"}>
+      <div className={view === "contract" ? "h-full min-h-0" : "hidden"}>
         <ContractAgent onNavigate={navigate} onSessionChange={setCurrentSessionId} />
       </div>
       <div className={view === "evidence" ? undefined : "hidden"}>

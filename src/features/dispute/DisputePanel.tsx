@@ -27,6 +27,7 @@ import { SourceList } from "@/components/SourceList";
 import { RegionSelect } from "../../components/RegionSelect";
 import { EVIDENCE_STATUS_LABELS, type DisputeResult, type ResponseMeta } from "@/shared/api";
 import { disputePrefill, useDisputePrefill } from "../evidence/disputePrefill";
+import { loadEvidenceSample } from "../evidence/sample";
 import { useConfig } from "../../lib/config-context";
 import { useRegionCode } from "../../lib/region";
 import { api, ApiError, errorMessage } from "../../lib/api";
@@ -327,10 +328,42 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8">
       <header className="border-b border-border/60 pb-5">
-        <h1 className="text-[26px] font-semibold leading-tight tracking-tight">争议处理</h1>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-          选择争议与证据，补充必要事实，匹配处理方向；选定方向后生成可编辑话术。话术为辅助草稿，未知项保留待补，系统不代你提交。
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[26px] font-semibold leading-tight tracking-tight">争议处理</h1>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+              选择争议与证据，补充必要事实，匹配处理方向；选定方向后生成可编辑话术。话术为辅助草稿，未知项保留待补，系统不代你提交。
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            onClick={() => {
+              const sample = loadEvidenceSample();
+              setIssue("退租后房东以墙面裂缝为由扣全部押金 4000 元，未提供维修票据");
+              setEventDate("2026-11-10");
+              setCounterparty("个人房东张某");
+              setAmountYuan("4000");
+              setGoal("要回押金 4000 元");
+              setFacts(
+                "2026-03-01 入住时客厅墙面靠窗处已有细微裂缝，已拍照留存；2026-11-10 退租交接时房东以该裂缝为由扣除全部押金 4000 元，未提供维修发票或扣款明细。",
+              );
+              setPriorAction("已通过微信催要两次，房东未回复");
+              selection.set([sample.depositRecordId, sample.recordIds[2], sample.recordIds[0]]);
+              setResult(null);
+              setResultMeta(null);
+              setSelectedChannelId(null);
+              setScriptDraft("");
+              setError(null);
+              setNotice("已载入示例争议与证据，点「整理事实并匹配方向」即可看完整流程。");
+              setStep(2);
+              setMaxStep(2);
+            }}
+          >
+            试用示例争议
+          </Button>
+        </div>
       </header>
 
       {notice && (

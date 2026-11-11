@@ -22,7 +22,7 @@ export function SourceList({
       <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">
         依据（{all.length}）
         {all.length > 0 ? ` · 引用 ${citedCount}` : ""}
-        {knowledgeVersion ? ` · 知识库 ${knowledgeVersion}` : ""}
+        {knowledgeVersion ? ` · 资料包版本 ${knowledgeVersion}` : ""}
       </summary>
       <ul className="mt-2 space-y-2.5">
         {all.map((source) => {

@@ -18,7 +18,11 @@ from ..schemas import (
 GENERAL_CHANNELS = [
     {"id": "negotiate", "title": "与对方直接协商沟通"},
     {"id": "written_notice", "title": "发送书面通知 / 催告并留存记录"},
-    {"id": "consult_authority", "title": "向主管部门或专业机构咨询当地渠道（待核实）"},
+    {"id": "mediation", "title": "申请人民调解或通过公共法律服务平台查询调解组织"},
+    {"id": "arbitration", "title": "按合同约定申请仲裁"},
+    {"id": "court", "title": "向有管辖权的人民法院起诉"},
+    {"id": "legal_aid", "title": "拨打 12348 或访问中国法律服务网咨询"},
+    {"id": "consult_authority", "title": "通过当地 12345 咨询主管部门投诉入口"},
     {"id": "prepare_evidence", "title": "整理证据材料，准备后续处理"},
 ]
 
@@ -32,6 +36,13 @@ def _channel_catalog(sources: list[KnowledgeEntry]) -> dict[str, ChannelProfile]
         if entry.channel and entry.reviewStatus == "approved":
             catalog[entry.channel.id] = entry.channel
     return catalog
+
+
+def _applicable_channel_sources(city: str, event_date: str | None) -> list[KnowledgeEntry]:
+    return [
+        entry for entry in knowledge_store.list_sources(city, event_date, "dispute")
+        if entry.channel and entry.reviewStatus == "approved"
+    ]
 
 
 @dataclass
@@ -55,24 +66,32 @@ def _str_array(value, max_items: int = 12) -> list[str]:
 
 def _warnings(
     sources: list[KnowledgeEntry],
+    channel_sources: list[KnowledgeEntry],
     cited_ids: list[str],
     coverage: str,
     city: str,
 ) -> list[str]:
-    if not sources:
-        if knowledge_store.pack_for(city) is None:
+    if not sources and not channel_sources:
+        if knowledge_store.coverage_for(city, "dispute") == "unsupported":
             return ["当前城市暂无审核知识库，以下为一般方向，不构成法律结论。"]
-        return ["当前地区暂无审核渠道资料，以下为一般方向，不构成法律结论。"]
-    warnings = [f"已提供 {len(sources)} 条审核渠道资料；仅核对原文，未作个案适用性判断。"]
+        return ["当前地区暂无适用的审核资料，以下为一般方向，不构成法律结论。"]
+    warnings = []
+    if sources:
+        warnings.append(f"已提供 {len(sources)} 条审核法规资料。")
+    if channel_sources:
+        warnings.append(f"已提供 {len(channel_sources)} 条审核渠道资料；仅核对原文，未作个案适用性判断。")
     if not cited_ids:
         warnings.append("本次回答未引用审核资料。")
     if coverage == "limited":
-        warnings.append("当前地区渠道资料覆盖有限。")
+        if city == "ZZ":
+            warnings.append("郑州本地维权渠道资料覆盖有限；具体受理口径请以主管部门公开信息为准。")
+        else:
+            warnings.append("当前地区仅提供全国性法律资料与通用渠道指引；本地受理口径请向当地主管部门核实。")
     return warnings
 
 
 async def diagnose_dispute(inp: DiagnoseDisputeInput) -> DisputeAnalysis:
-    city = inp.cityCode or "CN"
+    city = (inp.cityCode or "CN").upper()
     query = "\n".join(
         part
         for part in (
@@ -86,32 +105,38 @@ async def diagnose_dispute(inp: DiagnoseDisputeInput) -> DisputeAnalysis:
         if part
     )
     sources = knowledge_store.retrieve(city, inp.eventDate, query, top_k=4, scenario="dispute")
-    source_map = {f"S{index + 1}": entry for index, entry in enumerate(sources)}
-    channel_catalog = _channel_catalog(sources)
+    channel_sources = _applicable_channel_sources(city, inp.eventDate)
+    prompt_sources = list({entry.id: entry for entry in sources + channel_sources}.values())
+    source_map = {f"S{index + 1}": entry for index, entry in enumerate(prompt_sources)}
+    channel_catalog = _channel_catalog(channel_sources)
     raw = await chat_json(
         [
             {"role": "system", "content": DISPUTE_SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_prompt(inp, sources, channel_catalog)},
+            {"role": "user", "content": _build_user_prompt(inp, prompt_sources, channel_catalog)},
         ],
         temperature=0.2,
         max_tokens=2048,
     )
     cited_ids = collect_cited_ids(raw, source_map, ("recommendations",))
-    references = [entry.to_source_ref() for entry in sources if entry.id in cited_ids]
+    references = [entry.to_source_ref() for entry in prompt_sources if entry.id in cited_ids]
     coverage = knowledge_store.coverage_for(city, "dispute")
     result = DisputeResult(
         factsSummary=_str_array(raw.get("factsSummary")),
         missingFacts=_str_array(raw.get("missingFacts")),
         recommendations=_normalize_recommendations(raw.get("recommendations"), source_map, channel_catalog),
-        script=_normalize_script(raw.get("script")) if inp.selectedChannelId else None,
+        script=(
+            _normalize_script(raw.get("script"))
+            if inp.selectedChannelId in channel_catalog
+            else None
+        ),
         references=references,
     )
     return DisputeAnalysis(
         result=result,
-        processing_mode="knowledge_ai" if sources else "ai",
+        processing_mode="knowledge_ai" if sources or channel_sources else "ai",
         knowledge_version=knowledge_store.version_for(city) if knowledge_store.available else None,
         coverage=coverage,
-        warnings=_warnings(sources, cited_ids, coverage, city),
+        warnings=_warnings(sources, channel_sources, cited_ids, coverage, city),
     )
 
 
@@ -177,6 +202,10 @@ def _build_user_prompt(
                 details.append("材料：" + "；".join(channel.materials))
             if details:
                 line += "｜" + "｜".join(details)
+            channel_entry = next((entry for entry in sources if entry.channel and entry.channel.id == channel.id), None)
+            if channel_entry:
+                source_index = next(index for index, entry in enumerate(sources, start=1) if entry.id == channel_entry.id)
+                line += f"｜依据资料：[S{source_index}] {channel_entry.title}"
             lines.append(line)
         parts.append("\n".join(lines))
     return "\n\n".join(parts)

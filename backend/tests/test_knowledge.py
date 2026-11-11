@@ -56,15 +56,32 @@ class KnowledgeStoreTests(unittest.TestCase):
         self.assertTrue(all(entry.cityCode in ("ZZ", "CN") for entry in entries))
         self.assertEqual(knowledge_store.retrieve("ZZ", "2000-01-01", "维修 损耗 押金"), [])
 
-    def test_other_city_has_no_knowledge(self):
-        self.assertEqual(knowledge_store.list_sources("BJ", "2026-11-08"), [])
-        self.assertEqual(knowledge_store.coverage_for("BJ"), "unsupported")
-        self.assertIsNone(knowledge_store.version_for("BJ"))
+    def test_other_city_uses_national_sources_only(self):
+        entries = knowledge_store.list_sources("SH", "2026-11-08", "contract_review")
+        self.assertTrue(entries)
+        self.assertTrue(all(entry.scope == "national" for entry in entries))
+        self.assertTrue(any(entry.id == "cn-civil-703" for entry in entries))
+        self.assertEqual(knowledge_store.coverage_for("SH", "contract_review"), "limited")
+        self.assertEqual(knowledge_store.version_for("SH"), PACK["version"])
+
+    def test_non_pilot_cities_never_receive_local_sources(self):
+        for city in ("CN", "SH", "BJ", "HZ", "SZ"):
+            for scenario in ("contract_review", "dispute"):
+                with self.subTest(city=city, scenario=scenario):
+                    entries = knowledge_store.list_sources(city, "2026-11-08", scenario)
+                    self.assertTrue(entries)
+                    self.assertTrue(all(entry.scope == "national" for entry in entries))
+                    self.assertFalse(any(entry.channel and entry.channel.eligibility == "local_verified" for entry in entries))
+                    retrieved = knowledge_store.retrieve(city, "2026-11-08", "郑州 12345 押金 维修", scenario=scenario)
+                    self.assertTrue(retrieved)
+                    self.assertTrue(all(entry.scope == "national" for entry in retrieved))
+                    self.assertEqual(knowledge_store.coverage_for(city, scenario), "limited")
 
     def test_dispute_scenario_has_channel_sources(self):
         entries = knowledge_store.list_sources("ZZ", "2026-11-08", "dispute")
         self.assertTrue(entries)
-        self.assertTrue(all({"dispute", "channel"} & set(entry.topics) for entry in entries))
+        self.assertTrue(any(entry.channel for entry in entries))
+        self.assertTrue(any(entry.scope == "national" for entry in entries))
 
     def test_retrieve_repair_wear(self):
         entries = knowledge_store.retrieve("ZZ", "2026-11-08", "房屋维修责任 自然损耗 押金 退租", top_k=4)
@@ -91,15 +108,19 @@ class KnowledgeStoreTests(unittest.TestCase):
         self.assertEqual(body["meta"]["knowledgeVersion"], PACK["version"])
         self.assertEqual(body["data"][0]["publisher"], "全国人民代表大会")
 
-    def test_sources_endpoint_for_other_city(self):
+    def test_sources_endpoint_for_other_city_uses_national_law(self):
         client = TestClient(app)
-        response = client.get("/api/sources", params={"cityCode": "BJ", "eventDate": "2026-11-08"})
+        response = client.get(
+            "/api/sources",
+            params={"cityCode": "SH", "eventDate": "2026-11-08", "scenario": "contract_review"},
+        )
         body = response.json()
         self.assertTrue(body["ok"])
-        self.assertEqual(body["data"], [])
-        self.assertEqual(body["meta"]["coverage"], "unsupported")
-        self.assertEqual(body["meta"]["processingMode"], "ai")
-        self.assertIsNone(body["meta"]["knowledgeVersion"])
+        self.assertTrue(body["data"])
+        self.assertTrue(all(item["cityCode"] == "CN" for item in body["data"]))
+        self.assertEqual(body["meta"]["coverage"], "limited")
+        self.assertEqual(body["meta"]["processingMode"], "knowledge_ai")
+        self.assertEqual(body["meta"]["knowledgeVersion"], PACK["version"])
 
     def test_config_knowledge_flag(self):
         client = TestClient(app)
@@ -175,7 +196,7 @@ class ContractKnowledgeTests(unittest.TestCase):
         self.assertEqual(analysis.result.findings[0].sourceRefs, [analysis.result.references[0].id])
         self.assertEqual(analysis.knowledge_version, PACK["version"])
 
-    def test_other_city_analysis_has_no_sources(self):
+    def test_other_city_analysis_uses_national_sources(self):
         fake = {
             "answer": "一般建议。",
             "sourceRefs": ["S1"],
@@ -186,10 +207,10 @@ class ContractKnowledgeTests(unittest.TestCase):
         inp = AnalyzeContractInput(text="维修责任", intent="review", cityCode="BJ", eventDate="2026-11-08")
         with patch.object(contract_service, "chat", new=AsyncMock(return_value=_model_text(fake))):
             analysis = asyncio.run(analyze_contract(inp))
-        self.assertEqual(analysis.processing_mode, "ai")
-        self.assertEqual(analysis.result.coverage, "unsupported")
-        self.assertEqual(analysis.result.references, [])
-        self.assertTrue(any("暂无审核知识库" in warning for warning in analysis.warnings))
+        self.assertEqual(analysis.processing_mode, "knowledge_ai")
+        self.assertEqual(analysis.result.coverage, "limited")
+        self.assertTrue(analysis.result.references)
+        self.assertTrue(all(ref.cityCode == "CN" for ref in analysis.result.references))
 
     def test_no_sources_before_effective_date(self):
         fake = {
@@ -205,6 +226,24 @@ class ContractKnowledgeTests(unittest.TestCase):
         self.assertEqual(analysis.processing_mode, "ai")
         self.assertEqual(analysis.result.references, [])
         self.assertTrue(any("没有匹配到" in warning for warning in analysis.warnings))
+
+    def test_revision_text_strips_draft_note(self):
+        fake = {
+            "answer": "修订建议如下。",
+            "sourceRefs": [],
+            "findings": [],
+            "revision": {
+                "text": "协商草稿（请自行核对后使用）：第八条 租赁期内租金保持不变。",
+                "targetExcerpt": {"text": "第八条 甲方可单方调整租金。", "start": 0, "end": 13},
+            },
+            "followUpQuestions": [],
+        }
+        text = "第八条 甲方可单方调整租金。"
+        inp = AnalyzeContractInput(text=text, intent="draft_revision", cityCode="ZZ", eventDate="2026-11-08")
+        with patch.object(contract_service, "chat", new=AsyncMock(return_value=_model_text(fake))):
+            analysis = asyncio.run(analyze_contract(inp))
+        self.assertIsNotNone(analysis.result.revision)
+        self.assertEqual(analysis.result.revision.text, "第八条 租赁期内租金保持不变。")
 
 
 if __name__ == "__main__":

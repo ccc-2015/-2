@@ -1,21 +1,21 @@
 {
   "cityCode": "ZZ",
   "cityName": "郑州",
-  "version": "zz-2026.11.08.2",
+  "version": "zz-2026.11.11.1",
   "coverage": "supported",
   "topicCoverage": {
     "contract_review": "supported",
     "dispute": "limited"
   },
-  "checkedAt": "2026-11-08",
+  "checkedAt": "2026-11-11",
   "entries": [
     {
       "id": "cn-civil-703",
       "title": "中华人民共和国民法典 第七百零三条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -35,15 +35,15 @@
       ],
       "text": "租赁合同是出租人将租赁物交付承租人使用、收益，承租人支付租金的合同。",
       "summary": "租赁合同的核心是交付使用与支付租金。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-704",
       "title": "中华人民共和国民法典 第七百零四条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -66,15 +66,15 @@
       ],
       "text": "租赁合同的内容一般包括租赁物的名称、数量、用途、租赁期限、租金及其支付期限和方式、租赁物维修等条款。",
       "summary": "合同应尽量写清租赁物、期限、租金支付和维修等基本内容。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-710",
       "title": "中华人民共和国民法典 第七百一十条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -96,15 +96,15 @@
       ],
       "text": "承租人按照约定的方法或者根据租赁物的性质使用租赁物，致使租赁物受到损耗的，不承担赔偿责任。",
       "summary": "正常使用造成的损耗，承租人不承担赔偿责任。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-712",
       "title": "中华人民共和国民法典 第七百一十二条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -122,15 +122,15 @@
       ],
       "text": "出租人应当履行租赁物的维修义务，但是当事人另有约定的除外。",
       "summary": "除另有约定外，出租人承担租赁物维修义务。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-713",
       "title": "中华人民共和国民法典 第七百一十三条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -151,15 +151,15 @@
       ],
       "text": "承租人在租赁物需要维修时可以请求出租人在合理期限内维修。出租人未履行维修义务的，承租人可以自行维修，维修费用由出租人负担。因维修租赁物影响承租人使用的，应当相应减少租金或者延长租期。因承租人的过错致使租赁物需要维修的，出租人不承担前款规定的维修义务。",
       "summary": "出租人不维修时，承租人可自行维修并要求出租人负担费用；维修影响使用的可减租或延长租期。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-715",
       "title": "中华人民共和国民法典 第七百一十五条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -179,15 +179,15 @@
       ],
       "text": "承租人经出租人同意，可以对租赁物进行改善或者增设他物。承租人未经出租人同意，对租赁物进行改善或者增设他物的，出租人可以请求承租人恢复原状或者赔偿损失。",
       "summary": "装修或改造应经出租人同意；未经同意，出租人可要求恢复原状或赔偿。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-722",
       "title": "中华人民共和国民法典 第七百二十二条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -208,15 +208,15 @@
       ],
       "text": "承租人无正当理由未支付或者迟延支付租金的，出租人可以请求承租人在合理期限内支付；承租人逾期不支付的，出租人可以解除合同。",
       "summary": "承租人无正当理由欠租时，出租人应先催告，逾期不付才可解除合同。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-731",
       "title": "中华人民共和国民法典 第七百三十一条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -237,15 +237,15 @@
       ],
       "text": "租赁物危及承租人的安全或者健康的，即使承租人订立合同时明知该租赁物质量不合格，承租人仍然可以随时解除合同。",
       "summary": "房屋危及安全或健康时，承租人可随时解除合同。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-733",
       "title": "中华人民共和国民法典 第七百三十三条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -268,15 +268,15 @@
       ],
       "text": "租赁期限届满，承租人应当返还租赁物。返还的租赁物应当符合按照约定或者根据租赁物的性质使用后的状态。",
       "summary": "退租时应按约定或正常使用后的状态返还房屋，而不是要求恢复成全新状态。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "cn-civil-734",
       "title": "中华人民共和国民法典 第七百三十四条",
       "publisher": "全国人民代表大会",
       "url": "https://kjj.luohe.gov.cn/fzzfjs/ggflfg/content_1052322",
-      "scope": "city",
-      "cityCode": "ZZ",
+      "scope": "national",
+      "cityCode": "CN",
       "effectiveFrom": "2021-01-01",
       "effectiveTo": null,
       "version": "2020-05-28",
@@ -296,7 +296,7 @@
       ],
       "text": "租赁期限届满，承租人继续使用租赁物，出租人没有提出异议的，原租赁合同继续有效，但是租赁期限为不定期。租赁期限届满，房屋承租人享有以同等条件优先承租的权利。",
       "summary": "到期后继续使用且出租人未异议的，转为不定期租赁；房屋承租人享有同等条件优先承租权。",
-      "limitations": "仅核对条文原文；未结合个案作适用性判断，当前仅在郑州试点开放；不构成法律意见。"
+      "limitations": "全国适用法条原文；未结合个案作适用性判断，不构成法律意见。"
     },
     {
       "id": "zz-rent-reg-9",
@@ -307,8 +307,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -339,8 +339,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "deposit",
@@ -373,8 +373,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -402,8 +402,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "termination"
@@ -427,8 +427,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "alteration"
@@ -452,8 +452,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -481,8 +481,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -507,8 +507,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -533,8 +533,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -559,8 +559,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -585,8 +585,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -611,8 +611,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -637,8 +637,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "sublease"
@@ -661,8 +661,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -694,8 +694,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -727,8 +727,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -760,8 +760,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -783,8 +783,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -806,8 +806,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "rent"
@@ -830,8 +830,8 @@
       "cityCode": "ZZ",
       "effectiveFrom": "2025-01-01",
       "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
+      "version": "2026-08-13",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "rent"
@@ -846,35 +846,6 @@
       "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
     },
     {
-      "id": "zz-rent-reg-35",
-      "title": "郑州市住房租赁管理条例 第三十五条",
-      "publisher": "郑州市人民代表大会常务委员会",
-      "url": "https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE5MjdmMTI3NjAxOTMwOTM5M2M3NjVlYzA%3D",
-      "scope": "city",
-      "cityCode": "ZZ",
-      "effectiveFrom": "2025-01-01",
-      "effectiveTo": null,
-      "version": "2026-08-01",
-      "checkedAt": "2026-11-08",
-      "reviewStatus": "approved",
-      "topics": [
-        "brokerage",
-        "filing"
-      ],
-      "keywords": [
-        "经纪机构",
-        "合同备案",
-        "中介",
-        "佣金",
-        "中介费",
-        "虚假房源",
-        "租赁备案"
-      ],
-      "text": "第三十五条 违反本条例第十二条第三款规定，住房租赁企业、房地产经纪机构未按照要求办理住房租赁合同备案的，由县（市）、区住房租赁主管部门责令改正，由县（市）、区城市管理综合执法部门给予警告；拒不改正的，处二万元以上十万元以下罚款。",
-      "summary": "郑州市住房租赁管理条例：违反本条例第十二条第三款规定，住房租赁企业、房地产经纪机构未按照要求办理住房租赁合同备案的，由县（市）、区住房租赁主管部门责令改正，由县（市）、区城市管理综",
-      "limitations": "仅摘录该条原文，个案适用需结合合同全文与事实；不构成法律意见。"
-    },
-    {
       "id": "cn-housing-lease-reg-6",
       "title": "住房租赁条例 第六条",
       "publisher": "国务院",
@@ -884,7 +855,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "alteration",
@@ -915,7 +886,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -938,7 +909,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "deposit",
@@ -968,7 +939,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "alteration",
@@ -999,7 +970,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "return",
@@ -1028,7 +999,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -1058,7 +1029,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "sublease"
@@ -1082,7 +1053,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -1111,7 +1082,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -1140,7 +1111,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -1166,7 +1137,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -1192,7 +1163,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "alteration",
@@ -1227,7 +1198,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -1253,7 +1224,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -1282,7 +1253,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "rent"
@@ -1306,7 +1277,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -1329,7 +1300,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -1355,7 +1326,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "deposit",
@@ -1388,7 +1359,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "deposit",
@@ -1417,7 +1388,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "alteration",
@@ -1447,7 +1418,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -1473,7 +1444,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage",
@@ -1502,7 +1473,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -1528,7 +1499,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "sublease"
@@ -1552,7 +1523,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "alteration",
@@ -1588,7 +1559,7 @@
       "effectiveFrom": "2025-09-15",
       "effectiveTo": null,
       "version": "2025-07-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -1614,7 +1585,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "rent"
@@ -1638,7 +1609,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "deposit",
@@ -1671,7 +1642,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "rent",
@@ -1705,7 +1676,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "alteration",
@@ -1736,7 +1707,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "restoration",
@@ -1766,7 +1737,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -1790,7 +1761,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -1814,7 +1785,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -1838,7 +1809,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing",
@@ -1865,7 +1836,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -1889,7 +1860,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing",
@@ -1919,7 +1890,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing",
@@ -1946,7 +1917,7 @@
       "effectiveFrom": "2011-02-01",
       "effectiveTo": null,
       "version": "2011-04-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "filing"
@@ -1970,7 +1941,7 @@
       "effectiveFrom": "2025-03-26",
       "effectiveTo": null,
       "version": "2025-03-26",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "deposit",
@@ -1999,7 +1970,7 @@
       "effectiveFrom": "2025-04-09",
       "effectiveTo": null,
       "version": "2025-04-09",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "contract"
@@ -2025,7 +1996,7 @@
       "effectiveFrom": "2024-01-15",
       "effectiveTo": null,
       "version": "2024-01-15",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "brokerage"
@@ -2052,7 +2023,7 @@
       "effectiveFrom": "2026-01-20",
       "effectiveTo": null,
       "version": "2026-01-20",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "deposit",
@@ -2082,7 +2053,7 @@
       "effectiveFrom": "2026-07-10",
       "effectiveTo": null,
       "version": "2026-07-10",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "deposit",
@@ -2112,7 +2083,7 @@
       "effectiveFrom": "2018-08-31",
       "effectiveTo": null,
       "version": "2018-08-31",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "channel",
@@ -2161,7 +2132,7 @@
       "effectiveFrom": "2026-07-10",
       "effectiveTo": null,
       "version": "2026-07-10",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "channel",
@@ -2206,7 +2177,7 @@
       "effectiveFrom": "2023-11-16",
       "effectiveTo": null,
       "version": "2023-11-16",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "channel",
@@ -2253,7 +2224,7 @@
       "effectiveFrom": "2025-09-09",
       "effectiveTo": null,
       "version": "2025-09-09",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "channel",
@@ -2298,7 +2269,7 @@
       "effectiveFrom": "2024-08-14",
       "effectiveTo": null,
       "version": "2024-08-14",
-      "checkedAt": "2026-11-08",
+      "checkedAt": "2026-11-11",
       "reviewStatus": "approved",
       "topics": [
         "contract",
@@ -2313,6 +2284,181 @@
       "text": "第一条 为加强和规范全市保障性租赁住房管理工作，缓解新市民、青年人住房困难，根据国家和省有关规定，结合本市实际，制定本办法。",
       "summary": "郑州保障性租赁住房另有专门管理办法，市场租房合同纠纷不直接适用该办法。",
       "limitations": "仅用于说明适用边界，不摘录具体条款；具体资格与配租以官方公告为准。"
+    },
+    {
+      "id": "zz-zhenghaoban-services",
+      "title": "郑好办：郑州政务服务掌上办官方说明",
+      "publisher": "郑州政务服务网",
+      "url": "https://zz.hnzwfw.gov.cn/col/col3546/index.html",
+      "scope": "city",
+      "cityCode": "ZZ",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "version": "2026-11-11",
+      "checkedAt": "2026-11-11",
+      "reviewStatus": "approved",
+      "topics": [
+        "channel",
+        "dispute"
+      ],
+      "keywords": [
+        "郑好办",
+        "政务服务",
+        "住房",
+        "咨询",
+        "郑州"
+      ],
+      "text": "郑州政务服务网介绍郑好办提供掌上政务与公共服务，包含住房相关服务、在线咨询及意见反馈等功能。具体可办事项和入口以应用实际展示为准。",
+      "summary": "可通过郑好办查询住房相关政务服务及咨询入口。",
+      "limitations": "不是租房纠纷专门受理或裁决渠道；不承诺存在特定投诉菜单，不承诺押金纠纷受理或退款。",
+      "channel": {
+        "id": "zz_zhenghaoban",
+        "title": "郑好办（查询住房政务服务与咨询入口）",
+        "eligibility": "local_verified",
+        "responsibilities": [
+          "查询住房相关政务服务与在线咨询入口"
+        ],
+        "conditions": [
+          "以应用当前公示事项为准；民事押金争议仍需协商、调解或司法程序"
+        ],
+        "materials": [
+          "租赁合同",
+          "争议事项说明",
+          "相关证据"
+        ]
+      }
+    },
+    {
+      "id": "cn-channel-12345",
+      "title": "全国通用指引：当地 12345 政务服务便民热线",
+      "publisher": "国务院办公厅",
+      "url": "https://www.mee.gov.cn/zcwj/gwywj/202205/t20220516_982293.shtml",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": "2022-05-16",
+      "effectiveTo": null,
+      "version": "2022-05-16",
+      "checkedAt": "2026-11-11",
+      "reviewStatus": "approved",
+      "topics": [
+        "channel",
+        "dispute"
+      ],
+      "keywords": [
+        "12345",
+        "政务热线",
+        "投诉",
+        "政府服务"
+      ],
+      "text": "12345政务服务便民热线受理企业和群众对政府管理和服务的非紧急诉求。具体租赁事项的受理部门、范围和办理方式以房屋所在地政府公布的信息为准。",
+      "summary": "用于向房屋所在地政府咨询非紧急政务诉求和投诉转办路径，不替代法院、仲裁或行政执法程序。",
+      "limitations": "全国通用入口指引；各地受理事项和转办流程不同，不承诺受理或处理结果。",
+      "channel": {
+        "id": "cn_12345",
+        "title": "房屋所在地 12345 政务服务便民热线",
+        "eligibility": "general_only",
+        "responsibilities": [
+          "咨询当地住房租赁主管部门及非紧急政务诉求转办路径"
+        ],
+        "conditions": [
+          "选择房屋所在地或事项发生地；是否受理以当地热线公布范围为准"
+        ],
+        "materials": [
+          "租赁合同",
+          "付款凭证",
+          "沟通记录",
+          "争议事项和明确诉求"
+        ]
+      }
+    },
+    {
+      "id": "cn-channel-12348",
+      "title": "全国通用指引：中国法律服务网与 12348 公共法律服务",
+      "publisher": "中华人民共和国司法部",
+      "url": "https://12348.moj.gov.cn/",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "version": "2026-11-11",
+      "checkedAt": "2026-11-11",
+      "reviewStatus": "approved",
+      "topics": [
+        "channel",
+        "dispute"
+      ],
+      "keywords": [
+        "12348",
+        "法律咨询",
+        "人民调解",
+        "法律援助",
+        "调解组织"
+      ],
+      "text": "中国法律服务网提供法律咨询、查找调解组织、法律援助、仲裁等公共法律服务信息；也可拨打当地12348公共法律服务热线咨询。具体服务和资格以司法行政部门及平台公布信息为准。",
+      "summary": "用于查询法律咨询、调解组织及公共法律服务，不代表个案法律结论或必然符合援助资格。",
+      "limitations": "服务内容、地区覆盖和法律援助资格以司法行政部门及平台实际公布信息为准。",
+      "channel": {
+        "id": "cn_12348_legal_services",
+        "title": "12348 公共法律服务与中国法律服务网",
+        "eligibility": "general_only",
+        "responsibilities": [
+          "法律咨询",
+          "查询调解组织及其他公共法律服务"
+        ],
+        "conditions": [
+          "法律援助需符合相应法定条件；平台提供信息不代表已经受理"
+        ],
+        "materials": [
+          "租赁合同",
+          "付款凭证",
+          "沟通记录",
+          "争议事项和相关证据"
+        ]
+      }
+    },
+    {
+      "id": "cn-channel-court-online",
+      "title": "全国通用指引：人民法院在线服务",
+      "publisher": "中华人民共和国最高人民法院",
+      "url": "https://zxfw.court.gov.cn/",
+      "scope": "national",
+      "cityCode": "CN",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "version": "2026-11-11",
+      "checkedAt": "2026-11-11",
+      "reviewStatus": "approved",
+      "topics": [
+        "channel",
+        "dispute"
+      ],
+      "keywords": [
+        "法院",
+        "在线立案",
+        "诉讼",
+        "人民法院在线服务",
+        "在线调解"
+      ],
+      "text": "人民法院在线服务网提供人民法院在线诉讼服务入口。是否符合立案条件、由哪一法院管辖及具体办理方式，应以有管辖权人民法院审核和平台规则为准。",
+      "summary": "用于查找人民法院在线诉讼服务；不代替对管辖、立案条件和诉讼时效的核实。",
+      "limitations": "起诉应向有管辖权的人民法院提出；平台入口不构成立案或受理承诺。",
+      "channel": {
+        "id": "cn_court_online",
+        "title": "人民法院在线服务",
+        "eligibility": "general_only",
+        "responsibilities": [
+          "查询和办理人民法院在线诉讼服务事项"
+        ],
+        "conditions": [
+          "由有管辖权人民法院依法审查；具体事项以平台和法院指引为准"
+        ],
+        "materials": [
+          "租赁合同",
+          "当事人身份信息",
+          "付款凭证",
+          "沟通记录及其他证据"
+        ]
+      }
     }
   ]
 }
