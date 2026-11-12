@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..schemas import SourceRef
 
 ReviewStatus = Literal["draft", "source_verified", "approved"]
-Scope = Literal["national", "city"]
+Scope = Literal["national", "province", "city"]
 Coverage = Literal["supported", "limited", "unsupported"]
 
 

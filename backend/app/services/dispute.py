@@ -83,7 +83,7 @@ def _warnings(
     if not cited_ids:
         warnings.append("本次回答未引用审核资料。")
     if coverage == "limited":
-        if city == "ZZ":
+        if knowledge_store.pack_for(city):
             warnings.append("郑州本地维权渠道资料覆盖有限；具体受理口径请以主管部门公开信息为准。")
         else:
             warnings.append("当前地区仅提供全国性法律资料与通用渠道指引；本地受理口径请向当地主管部门核实。")

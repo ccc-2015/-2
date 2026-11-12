@@ -107,7 +107,7 @@ cd backend
 - `reviewStatus`：`draft` 不入检索；`source_verified` / `approved` 才会被使用。当前检索只取 `approved`。
 - `url`：`approved` 资料必须有官方地址；校验脚本会检查。
 - `effectiveFrom` / `effectiveTo`：`YYYY-MM-DD`；`effectiveTo` 为空表示仍有效。
-- `topics`：用于场景过滤；合同审查常用 `contract`、`rent`、`repair`、`wear`、`return`、`termination`、`deposit`；争议渠道条目请使用 `channel`、`dispute`。
+- `topics`：用于场景过滤；合同审查常用 `contract`、`rent`、`repair`、`wear`、`return`、`termination`、`renewal`、`priority`、`deposit`、`alteration`、`restoration`、`safety`、`sublease`、`rent_increase`、`brokerage`、`filing`、`transfer`、`identity`；争议渠道条目请使用 `channel`、`dispute`。主题词表以后端 `store.py` 的 `SCENARIO_TOPICS` 为准，站点 `site/functions/lib/knowledge.ts` 必须与之逐项一致。
 - `keywords`：中文关键词，用于关键词检索；至少一个。
 - `coverage` / `topicCoverage`：`supported` / `limited` / `unsupported`；未配置场景时回退到资料包整体 `coverage`。
 - 条目 `cityCode` 必须等于资料包城市，或为 `CN`（全国性资料）；一期只把资料放入郑州包，其他城市不会读到。
@@ -115,7 +115,9 @@ cd backend
 
 ## 当前资料
 
-`zz.json` 现有 80 条：10 条民法典条文 + 70 条来自郑州/全国官方语料（`法律条例/documents.jsonl`），其中 41 条为郑州本地资料、4 条本地渠道（`local_verified`）。`contract_review` 为 `supported`，`dispute` 为 `limited`。
+`zz.json` 现有 109 条：15 条民法典条文、8 条河南省级规章（`scope=province`）、86 条来自郑州/全国官方语料（`法律条例/documents.jsonl`），其中 34 条为郑州本地资料、8 条渠道（5 条 `local_verified`）。`contract_review` 为 `supported`，`dispute` 为 `limited`。
+
+民法典与省级规章由 `backend/app/knowledge/sources/` 下的 `civil-code.json`、`provincial-lease.json` 生成，出处分别为最高人民法院官网与河南省人民政府官网，不再从现有资料包继承，资料包可只凭源文件复现。条号切分前会剔除「第X章」章标题，避免下一条被并入；省级条文直接放进城市包并标 `province`，检索时按 `national ∪ province ∪ city` 取用。
 
 资料包来自官方语料整理，转换脚本与标注评测脚本仅本地保留（含抓取数据与用例，不随仓库分发）。
 

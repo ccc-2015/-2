@@ -54,7 +54,12 @@ class KnowledgeStoreTests(unittest.TestCase):
         self.assertTrue(entries)
         # 资料包内同时收录郑州地方资料与全国性资料。
         self.assertTrue(all(entry.cityCode in ("ZZ", "CN") for entry in entries))
-        self.assertEqual(knowledge_store.retrieve("ZZ", "2000-01-01", "维修 损耗 押金"), [])
+        # 2000 年时只有无生效日期的渠道资料可用；不得召回任何当时尚未施行的条文。
+        retrieved = knowledge_store.retrieve("ZZ", "2000-01-01", "维修 损耗 押金")
+        self.assertFalse(
+            [entry.id for entry in retrieved if entry.effectiveFrom and entry.effectiveFrom > "2000-01-01"],
+            [entry.id for entry in retrieved],
+        )
 
     def test_other_city_uses_national_sources_only(self):
         entries = knowledge_store.list_sources("SH", "2026-11-08", "contract_review")

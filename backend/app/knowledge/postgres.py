@@ -158,30 +158,39 @@ class PostgresKnowledgeStore:
             entries=[],
         )
 
+    def _national_pack(self) -> KnowledgePack | None:
+        row = self._fetchone("SELECT pack_city FROM knowledge_entries WHERE scope = 'national' LIMIT 1")
+        return self.pack_for(row["pack_city"]) if row else None
+
     def version_for(self, city_code: str | None) -> str | None:
-        pack = self.pack_for("ZZ")
-        versions = [pack.version] if pack else []
-        return "+".join(versions) if versions else None
+        pack = self.pack_for(city_code) or self._national_pack()
+        return pack.version if pack else None
 
     def coverage_for(self, city_code: str | None, scenario: str | None = None) -> str:
         entries = self.list_sources(city_code, scenario=scenario)
         if not entries:
             return "unsupported"
-        if city_code == "ZZ":
-            pack = self.pack_for("ZZ")
-            if pack:
-                return pack.topicCoverage.get(scenario or "", pack.coverage)
+        pack = self.pack_for(city_code)
+        if pack:
+            return pack.topicCoverage.get(scenario or "", pack.coverage)
         return "limited"
 
     def _filters(self, city_code: str | None, event_date: str | None, scenario: str | None) -> tuple[str, list]:
         effective_on = event_date or date.today().isoformat()
+        params: list = []
+        region = "scope = 'national'"
+        if city_code:
+            region = f"({region} OR (scope IN ('city', 'province') AND city_code = %s))"
+            params.append(city_code)
+        else:
+            region = f"({region})"
         clauses = [
-            "(scope = 'national' OR (scope = 'city' AND city_code = 'ZZ' AND %s = 'ZZ'))",
-            "review_status = 'approved'", 
+            region,
+            "review_status = 'approved'",
             "(effective_from IS NULL OR effective_from <= %s)",
             "(effective_to IS NULL OR effective_to >= %s)",
         ]
-        params: list = [city_code, effective_on, effective_on]
+        params += [effective_on, effective_on]
         topics = SCENARIO_TOPICS.get(scenario or "")
         if topics:
             clauses.append("topics && %s::text[]")
