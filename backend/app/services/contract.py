@@ -20,7 +20,7 @@ from ..validation import close_excerpt
 
 _PRIORITIES = ("confirm_first", "needs_attention", "insufficient_info")
 _PRIORITY_ORDER = {"confirm_first": 0, "needs_attention": 1, "insufficient_info": 2}
-_MAX_TOKENS = {"ask": 1600, "review": 2400, "suggest_revision": 2400, "draft_revision": 2400}
+_MAX_TOKENS = {"ask": 1600, "review": 4000, "suggest_revision": 4000, "draft_revision": 2400}
 DATA_MARKER = "===DATA==="
 
 

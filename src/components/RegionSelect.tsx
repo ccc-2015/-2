@@ -4,8 +4,9 @@ import { useConfig } from "../lib/config-context";
 import { setRegion, useRegionCode } from "../lib/region";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import type { CityOption } from "@/shared/api";
 
-const FALLBACK = { code: "CN", name: "不限 / 全国一般建议" };
+const FALLBACK: CityOption = { code: "CN", name: "不限 / 全国一般建议" };
 
 export function RegionSelect({
   compact = false,
@@ -43,7 +44,7 @@ export function RegionSelect({
         {compact ? (
           <span className="flex items-center gap-1.5">
             <MapPin className="size-3.5 text-muted-foreground" />
-            <span>{label}</span>
+            <span>{label}{selected.pilot ? "（试点）" : ""}</span>
           </span>
         ) : (
           <SelectValue />
@@ -54,6 +55,7 @@ export function RegionSelect({
         {cities.map((city) => (
           <SelectItem key={city.code} value={city.code}>
             {city.name}
+            {city.pilot ? "（试点）" : ""}
           </SelectItem>
         ))}
       </SelectContent>

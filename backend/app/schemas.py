@@ -137,6 +137,7 @@ class DisputeResult(_Base):
 class CityOption(_Base):
     code: str
     name: str
+    pilot: bool = False
 
 
 class AppConfig(_Base):

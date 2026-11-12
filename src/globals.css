@@ -35,6 +35,8 @@
 
 /* 设计参数：近白画布 + 半透明卡片 + 单一蓝色强调（Apple 风格）。 */
 :root {
+  /* 只有浅色主题：显式声明可关闭手机浏览器/WebView 的自动深色反色。 */
+  color-scheme: only light;
   --site-bg: #fbfbfd;
   --site-fg: #1d1d1f;
   --site-accent: #0071e3;
@@ -175,6 +177,11 @@
   --default-transition-duration: calc(150ms * var(--site-motion));
 }
 
+html {
+  /* 不透明浅色画布：半透明卡片在手机上不会叠到深色底上。 */
+  background-color: var(--site-bg);
+}
+
 body {
   background:
     radial-gradient(1100px 640px at 88% -12%, #eef1f6 0%, rgba(238, 241, 246, 0) 58%),
@@ -186,6 +193,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.011em;
+}
+
+@media (max-width: 767px) {
+  /* iOS Safari 在 fixed 背景上叠 backdrop-filter 会把透明卡片渲染成黑块；
+     小屏改为随页面滚动，保留玻璃效果。 */
+  body {
+    background-attachment: scroll;
+  }
 }
 
 /* 内容面板：半透明玻璃 + 极细亮边，用于主要卡片。 */

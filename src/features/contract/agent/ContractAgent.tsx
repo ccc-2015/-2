@@ -745,7 +745,7 @@ export function ContractAgent({
             <div className="mt-5 grid w-full max-w-md grid-cols-3 gap-2">
               {[
                 { step: "1", label: "上传或粘贴", detail: "PDF、图片、文本都行" },
-                { step: "2", label: "自动审查", detail: cityCode === "ZZ" ? "全国与郑州审核资料" : "对照全国性法律资料" },
+                { step: "2", label: "自动审查", detail: ["ZZ", "WH", "HZ"].includes(cityCode) ? "全国与本地审核资料" : "对照全国性法律资料" },
                 { step: "3", label: "看风险与依据", detail: "可继续追问" },
               ].map((item) => (
                 <div key={item.step} className="rounded-xl border border-border/70 bg-background px-2 py-2.5">

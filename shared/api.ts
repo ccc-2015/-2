@@ -33,6 +33,7 @@ export type Envelope<T> = Success<T> | Failure;
 export interface CityOption {
   code: string;
   name: string;
+  pilot?: boolean;
 }
 
 export interface InputLimits {

@@ -17,7 +17,7 @@ const STEPS: { view: ViewId; title: string; detail: string; icon: typeof FileSea
   {
     view: "contract",
     title: "合同审查",
-    detail: "上传或粘贴合同，自动对照郑州审核资料给出风险与依据，可继续追问、起草修订。",
+    detail: "上传或粘贴合同，自动对照所选城市的审核资料给出风险与依据，可继续追问、起草修订。",
     icon: FileSearch,
     tone: "text-stage-living",
   },

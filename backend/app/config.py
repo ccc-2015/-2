@@ -154,15 +154,15 @@ LIMITS: dict = {
 }
 
 CITIES: list[dict] = [
-    {"code": "ZZ", "name": "郑州"},
     {"code": "CN", "name": "不限 / 全国一般建议"},
+    {"code": "ZZ", "name": "郑州", "pilot": True},
+    {"code": "WH", "name": "武汉", "pilot": True},
+    {"code": "HZ", "name": "杭州", "pilot": True},
     {"code": "BJ", "name": "北京"},
     {"code": "SH", "name": "上海"},
     {"code": "GZ", "name": "广州"},
     {"code": "SZ", "name": "深圳"},
-    {"code": "HZ", "name": "杭州"},
     {"code": "CD", "name": "成都"},
-    {"code": "WH", "name": "武汉"},
     {"code": "NJ", "name": "南京"},
     {"code": "CQ", "name": "重庆"},
     {"code": "XA", "name": "西安"},

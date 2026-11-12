@@ -290,7 +290,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
       {flash && (
         <div
           role="status"
-          className="success-feedback fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/70 bg-white/90 px-3.5 py-1.5 text-[12px] shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw-248px)/2)]"
+          className="success-feedback fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/70 bg-white/90 px-3.5 py-1.5 text-[12px] shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw+248px)/2)]"
         >
           <Check className="size-3.5 text-primary check-appear" />
           {flash}
@@ -505,7 +505,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
       </div>
 
       {selectedCount > 0 && (
-        <div className="step-appear fixed bottom-4 left-1/2 z-30 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border border-white/70 bg-white/85 px-4 py-2 shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw-248px)/2)]">
+        <div className="step-appear fixed bottom-4 left-1/2 z-30 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border border-white/70 bg-white/85 px-4 py-2 shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw+248px)/2)]">
           <span className="text-[12px]">已选 {selectedCount} 条证据</span>
           <button type="button" onClick={() => selection.clear()} className="text-[11px] text-muted-foreground hover:text-foreground">
             清空

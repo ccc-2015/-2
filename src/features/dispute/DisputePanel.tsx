@@ -405,7 +405,18 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="dp-counterparty" className="text-xs">对方身份（可选）</Label>
-                  <Input id="dp-counterparty" value={counterparty} onChange={(e) => setCounterparty(e.target.value)} placeholder="例如：房东 / 中介 / 合租室友" />
+                  <Select value={counterparty} onValueChange={setCounterparty}>
+                    <SelectTrigger id="dp-counterparty" className="w-full">
+                      <SelectValue placeholder="请选择对方身份" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="个人房东">个人房东</SelectItem>
+                      <SelectItem value="二房东（个人转租）">二房东（个人转租）</SelectItem>
+                      <SelectItem value="住房租赁企业">住房租赁企业</SelectItem>
+                      <SelectItem value="房地产经纪机构（中介）">房地产经纪机构（中介）</SelectItem>
+                      <SelectItem value="其他">其他</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-1">
