@@ -23,6 +23,7 @@ from app.services import contract as contract_service
 from app.services.contract import _build_user_prompt, analyze_contract
 
 PACK = json.loads((DATA_DIR / "zz.json").read_text(encoding="utf-8"))
+CN_PACK = json.loads((DATA_DIR / "cn.json").read_text(encoding="utf-8"))
 
 
 def _model_text(payload: dict) -> str:
@@ -67,10 +68,10 @@ class KnowledgeStoreTests(unittest.TestCase):
         self.assertTrue(all(entry.scope == "national" for entry in entries))
         self.assertTrue(any(entry.id == "cn-civil-703" for entry in entries))
         self.assertEqual(knowledge_store.coverage_for("SH", "contract_review"), "limited")
-        self.assertEqual(knowledge_store.version_for("SH"), PACK["version"])
+        self.assertEqual(knowledge_store.version_for("SH"), CN_PACK["version"])
 
     def test_non_pilot_cities_never_receive_local_sources(self):
-        for city in ("CN", "SH", "BJ", "HZ", "SZ"):
+        for city in ("CN", "SH", "BJ", "SZ"):
             for scenario in ("contract_review", "dispute"):
                 with self.subTest(city=city, scenario=scenario):
                     entries = knowledge_store.list_sources(city, "2026-11-08", scenario)
@@ -80,13 +81,36 @@ class KnowledgeStoreTests(unittest.TestCase):
                     retrieved = knowledge_store.retrieve(city, "2026-11-08", "郑州 12345 押金 维修", scenario=scenario)
                     self.assertTrue(retrieved)
                     self.assertTrue(all(entry.scope == "national" for entry in retrieved))
-                    self.assertEqual(knowledge_store.coverage_for(city, scenario), "limited")
+                    # 全国包按自身声明返回 supported；无城市包的真实城市回退为 limited。
+                    expected = CN_PACK["topicCoverage"][scenario] if city == "CN" else "limited"
+                    self.assertEqual(knowledge_store.coverage_for(city, scenario), expected)
 
     def test_dispute_scenario_has_channel_sources(self):
         entries = knowledge_store.list_sources("ZZ", "2026-11-08", "dispute")
         self.assertTrue(entries)
         self.assertTrue(any(entry.channel for entry in entries))
         self.assertTrue(any(entry.scope == "national" for entry in entries))
+
+    def test_city_packs_are_isolated(self):
+        owned = {"ZZ": ("zz-", "hn-"), "WH": ("wh-",), "HZ": ("hz-", "zj-")}
+        for city, prefixes in owned.items():
+            ids = {entry.id for entry in knowledge_store.list_sources(city, "2026-11-08", "contract_review")}
+            self.assertTrue(any(entry_id.startswith(prefixes) for entry_id in ids), city)
+            foreign = [i for i in ids if not i.startswith(prefixes) and not i.startswith("cn-")]
+            self.assertEqual(foreign, [], f"{city} 混入了其他城市的条目")
+        # 用郑州关键词检索武汉，不得带出郑州或杭州条目。
+        wh = {entry.id for entry in knowledge_store.retrieve("WH", "2026-11-08", "郑州 隔断 押金")}
+        self.assertFalse(any(i.startswith(("zz-", "hz-", "zj-")) for i in wh), wh)
+
+    def test_individual_counterparty_excludes_12315(self):
+        from app.services.dispute import _applicable_channel_sources, _filter_by_counterparty
+
+        entries = _applicable_channel_sources("ZZ", "2026-11-08")
+        self.assertTrue(any(entry.channel and entry.channel.id == "cn_12315" for entry in entries))
+        individual = _filter_by_counterparty(entries, "个人房东")
+        self.assertFalse(any(entry.channel and entry.channel.id == "cn_12315" for entry in individual))
+        company = _filter_by_counterparty(entries, "住房租赁企业")
+        self.assertTrue(any(entry.channel and entry.channel.id == "cn_12315" for entry in company))
 
     def test_retrieve_repair_wear(self):
         entries = knowledge_store.retrieve("ZZ", "2026-11-08", "房屋维修责任 自然损耗 押金 退租", top_k=4)
@@ -125,7 +149,7 @@ class KnowledgeStoreTests(unittest.TestCase):
         self.assertTrue(all(item["cityCode"] == "CN" for item in body["data"]))
         self.assertEqual(body["meta"]["coverage"], "limited")
         self.assertEqual(body["meta"]["processingMode"], "knowledge_ai")
-        self.assertEqual(body["meta"]["knowledgeVersion"], PACK["version"])
+        self.assertEqual(body["meta"]["knowledgeVersion"], CN_PACK["version"])
 
     def test_config_knowledge_flag(self):
         client = TestClient(app)
@@ -196,7 +220,7 @@ class ContractKnowledgeTests(unittest.TestCase):
         self.assertEqual(analysis.result.coverage, PACK["topicCoverage"]["contract_review"])
         self.assertEqual(len(analysis.result.references), 1)
         # 引用必须来自资料包中的真实条目，且与 finding 的 sourceRefs 一致。
-        pack_ids = {entry["id"] for entry in PACK["entries"]}
+        pack_ids = {entry["id"] for entry in PACK["entries"]} | {entry["id"] for entry in CN_PACK["entries"]}
         self.assertIn(analysis.result.references[0].id, pack_ids)
         self.assertEqual(analysis.result.findings[0].sourceRefs, [analysis.result.references[0].id])
         self.assertEqual(analysis.knowledge_version, PACK["version"])

@@ -45,6 +45,27 @@ def _applicable_channel_sources(city: str, event_date: str | None) -> list[Knowl
     ]
 
 
+_ENTITY_MARKERS = ("企业", "公司", "中介", "机构", "公寓", "平台", "二房东公司")
+_INDIVIDUAL_MARKERS = ("个人", "房东", "自然人", "二房东")
+
+
+def _is_individual(counterparty: str) -> bool:
+    """对方身份是否更可能是个人；含企业/中介等字样时按经营者处理。"""
+    text = counterparty or ""
+    if any(marker in text for marker in _ENTITY_MARKERS):
+        return False
+    return any(marker in text for marker in _INDIVIDUAL_MARKERS)
+
+
+def _filter_by_counterparty(
+    entries: list[KnowledgeEntry], counterparty: str
+) -> list[KnowledgeEntry]:
+    """12315 只受理经营者消费争议；对方为个人时服务端直接剔除，不依赖模型自觉。"""
+    if not _is_individual(counterparty):
+        return entries
+    return [entry for entry in entries if not (entry.channel and entry.channel.id == "cn_12315")]
+
+
 @dataclass
 class DisputeAnalysis:
     result: DisputeResult
@@ -105,7 +126,9 @@ async def diagnose_dispute(inp: DiagnoseDisputeInput) -> DisputeAnalysis:
         if part
     )
     sources = knowledge_store.retrieve(city, inp.eventDate, query, top_k=4, scenario="dispute")
-    channel_sources = _applicable_channel_sources(city, inp.eventDate)
+    channel_sources = _filter_by_counterparty(
+        _applicable_channel_sources(city, inp.eventDate), inp.counterparty
+    )
     prompt_sources = list({entry.id: entry for entry in sources + channel_sources}.values())
     source_map = {f"S{index + 1}": entry for index, entry in enumerate(prompt_sources)}
     channel_catalog = _channel_catalog(channel_sources)

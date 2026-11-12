@@ -115,9 +115,11 @@ cd backend
 
 ## 当前资料
 
-`zz.json` 现有 109 条：15 条民法典条文、8 条河南省级规章（`scope=province`）、86 条来自郑州/全国官方语料（`法律条例/documents.jsonl`），其中 34 条为郑州本地资料、8 条渠道（5 条 `local_verified`）。`contract_review` 为 `supported`，`dispute` 为 `limited`。
+资料按城市分包：`cn.json` 收 67 条全国资料（15 条民法典条文 + 52 条全国法规/政策 + 3 条全国渠道）；`zz.json` 收 42 条郑州资料（34 条市域法规/政策/渠道 + 8 条河南省级规章）；`wh.json` 17 条武汉、`hz.json` 17 条杭州（含浙江省规章）。新增城市时只加该城市的 `<city>.json`，不要复制全国条目，否则 `validate` 会因跨文件 id 重复而失败。
 
-民法典与省级规章由 `backend/app/knowledge/sources/` 下的 `civil-code.json`、`provincial-lease.json` 生成，出处分别为最高人民法院官网与河南省人民政府官网，不再从现有资料包继承，资料包可只凭源文件复现。条号切分前会剔除「第X章」章标题，避免下一条被并入；省级条文直接放进城市包并标 `province`，检索时按 `national ∪ province ∪ city` 取用。
+城市资料流程：`scripts/fetch_city_sources.py <wh|hz>` 按登记的官方 URL 抓取并生成 `sources/drafts/<city>.json`（`reviewStatus=draft`，不会被后端加载）；人工确认后运行 `scripts/promote_city_draft.py <city>` 转为 `approved` 并写入 `data/<city>.json`。原文快照与 sha256 留在 `sources/raw/<city>/`。
+
+民法典与省级规章由 `sources/` 下的 `civil-code.json`、`provincial-lease.json` 生成，出处分别为最高人民法院官网与河南省人民政府官网，不再从现有资料包继承，资料包可只凭源文件复现。条号切分前会剔除「第X章」章标题，避免下一条被并入；省级条文直接放进城市包并标 `province`，检索时按 `national ∪ province ∪ city` 取用。
 
 资料包来自官方语料整理，转换脚本与标注评测脚本仅本地保留（含抓取数据与用例，不随仓库分发）。
 

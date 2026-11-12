@@ -1,12 +1,14 @@
 import './check-node.mjs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// 预生成站点知识库向量：复用 backend/.env 的远程 embedding（与云函数查询时同模型同维度）。
-// 密钥只从 .env 读取，绝不打印、绝不写入产物。产物 zz.vectors.json 仅含公开法条的向量。
+// 预生成站点知识库向量：读取后端全部资料包，复用 backend/.env 的远程 embedding（与云函数查询同模型同维度）。
+// 密钥只从 .env 读取，绝不打印、绝不写入产物。产物 vectors.json 仅含公开法条的向量。
 
 const envUrl = new URL('../backend/.env', import.meta.url);
-const packUrl = new URL('../../site/functions/knowledge/zz.json', import.meta.url);
-const outUrl = new URL('../../site/functions/knowledge/zz.vectors.json', import.meta.url);
+const dataDir = fileURLToPath(new URL('../backend/app/knowledge/data/', import.meta.url));
+const outUrl = new URL('../../site/functions/knowledge/vectors.json', import.meta.url);
 
 function parseEnv(text) {
   const out = {};
@@ -40,8 +42,13 @@ if (!baseUrl || !apiKey || !model || !dim) {
 }
 const endpoint = baseUrl.endsWith('/embeddings') ? baseUrl : `${baseUrl}/embeddings`;
 
-const pack = JSON.parse(await readFile(packUrl, 'utf8'));
-const entries = pack.entries;
+const packFiles = (await readdir(dataDir)).filter((name) => name.endsWith('.json'));
+const packs = [];
+for (const name of packFiles) {
+  packs.push(JSON.parse(await readFile(join(dataDir, name), 'utf8')));
+}
+const entries = packs.flatMap((pack) => pack.entries ?? []);
+const versions = Object.fromEntries(packs.map((pack) => [pack.cityCode, pack.version]));
 
 // 与后端 postgres.py::_embed_text 完全一致：标题+摘要+正文+关键词+主题。
 function embedText(entry) {
@@ -71,7 +78,7 @@ async function embedBatch(texts) {
   }
 }
 
-console.log(`模型 ${model} · 维度 ${dim} · 资料 ${entries.length} 条 · 批大小 ${batch}`);
+console.log(`模型 ${model} · 维度 ${dim} · 包 ${packs.length} 个 · 资料 ${entries.length} 条 · 批大小 ${batch}`);
 const vectors = {};
 for (let start = 0; start < entries.length; start += batch) {
   const slice = entries.slice(start, start + batch);
@@ -86,7 +93,7 @@ for (let start = 0; start < entries.length; start += batch) {
   console.log(`  已生成 ${Math.min(start + batch, entries.length)}/${entries.length}`);
 }
 
-const output = { model, dim, generatedAt: new Date().toISOString(), sourceVersion: pack.version, vectors };
+const output = { model, dim, generatedAt: new Date().toISOString(), versions, vectors };
 await writeFile(outUrl, JSON.stringify(output), 'utf8');
 const bytes = (await readFile(outUrl)).length;
-console.log(`完成：site/functions/knowledge/zz.vectors.json（${(bytes / 1024).toFixed(0)} KB，${Object.keys(vectors).length} 条向量）`);
+console.log(`完成：site/functions/knowledge/vectors.json（${(bytes / 1024).toFixed(0)} KB，${Object.keys(vectors).length} 条向量）`);

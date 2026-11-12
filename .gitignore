@@ -26,3 +26,6 @@ _eval*.txt
 _corpus*.txt
 _clause*.txt
 _short_docs.txt
+
+# 知识库抓取中间产物（可重新生成）
+backend/app/knowledge/sources/drafts/

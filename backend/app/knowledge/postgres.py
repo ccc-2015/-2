@@ -440,6 +440,12 @@ class PostgresKnowledgeStore:
         index = 0
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
+                # 全国条目可能从城市包迁到 cn 包（或反向），按 id 先清掉旧归属，避免主键冲突。
+                if entries:
+                    cur.execute(
+                        "DELETE FROM knowledge_entries WHERE id = ANY(%s)",
+                        ([entry.id for entry in entries],),
+                    )
                 for pack in packs:
                     cur.execute(
                         """
