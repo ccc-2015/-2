@@ -2,7 +2,7 @@
 import { useSyncExternalStore } from "react";
 
 const KEY = "zzyj.region.v1";
-export const DEFAULT_REGION = "ZZ";
+export const DEFAULT_REGION = "CN";
 
 function readRegion(): string {
   if (typeof window === "undefined" || !window.localStorage) return DEFAULT_REGION;
