@@ -65,6 +65,14 @@ export function Onboarding({ onNavigate }: { onNavigate: (view: ViewId) => void 
     close();
   }
 
+  function trial(view: "contract" | "dispute") {
+    onNavigate(view);
+    close();
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event(view === "contract" ? "zzyj:trial-contract" : "zzyj:trial-dispute"));
+    }, 80);
+  }
+
   return (
     <Dialog
       open={open}
@@ -110,9 +118,22 @@ export function Onboarding({ onNavigate }: { onNavigate: (view: ViewId) => void 
           })}
         </div>
 
-        <p className="rounded-lg bg-secondary/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-          提示：合同页空状态里有「试用示例合同」，可以直接看完整流程；证据页的「入住必拍清单」建议入住当天就拍。
-        </p>
+        <div className="rounded-xl border border-dashed border-foreground/15 bg-secondary/40 px-3 py-2.5">
+          <p className="text-[11px] font-medium">第一次来？不用准备材料</p>
+          <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+            不用准备材料，点一下就能看到审查结果与争议方向；证据页的「入住必拍清单」建议入住当天就拍。
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" className="h-7 px-2 text-[11px]" onClick={() => trial("contract")}>
+              <FileSearch className="size-3" />
+              试用示例合同
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => trial("dispute")}>
+              <Scale className="size-3" />
+              试用示例争议
+            </Button>
+          </div>
+        </div>
 
         <DialogFooter>
           <Button size="sm" onClick={close}>

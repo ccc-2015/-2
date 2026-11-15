@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Download, FileText, MoreHorizontal, Printer, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Download, FileText, MoreHorizontal, Printer, ShieldCheck, Sparkles } from "lucide-react";
 import type { ContractIntent, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -187,6 +187,25 @@ export function ContractAgent({
   useEffect(() => {
     onSessionChange?.(session.id);
   }, [session.id, onSessionChange]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (busy || uploading || !aiAvailable) return;
+      const nextDoc: ContractDoc = { text: SAMPLE_CONTRACT, sourceName: "示例合同", meta: PASTE_META };
+      const load = () => {
+        startNewSession(nextDoc);
+        startReview(nextDoc);
+      };
+      if (sessionHasContent(session)) {
+        askConfirm("载入示例合同？", "当前合同与对话会被替换；已开启本机保存时会先存入历史。", load);
+      } else {
+        load();
+      }
+    };
+    window.addEventListener("zzyj:trial-contract", handler);
+    return () => window.removeEventListener("zzyj:trial-contract", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, uploading, aiAvailable, session]);
 
   useEffect(() => {
     const thread = threadRef.current;
@@ -758,22 +777,27 @@ export function ContractAgent({
               ))}
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4"
-              onClick={() => {
-                const nextDoc: ContractDoc = { text: SAMPLE_CONTRACT, sourceName: "示例合同", meta: PASTE_META };
-                startNewSession(nextDoc);
-                startReview(nextDoc);
-              }}
-              disabled={busy || uploading || !aiAvailable}
-            >
-              试用示例合同
-            </Button>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              示例包含押金不退、单方涨租、保洁折旧等常见问题。
-            </p>
+            <div className="mt-5 w-full max-w-md rounded-2xl border border-dashed border-foreground/15 bg-secondary/40 px-4 py-3 text-center">
+              <p className="flex items-center justify-center gap-1.5 text-[11px] font-medium">
+                <Sparkles className="size-3.5 text-stage-living" />
+                第一次用？先看示例，不用准备材料
+              </p>
+              <Button
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  const nextDoc: ContractDoc = { text: SAMPLE_CONTRACT, sourceName: "示例合同", meta: PASTE_META };
+                  startNewSession(nextDoc);
+                  startReview(nextDoc);
+                }}
+                disabled={busy || uploading || !aiAvailable}
+              >
+                试用示例合同
+              </Button>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
+                示例包含押金不退、单方涨租、保洁折旧等常见问题，点一下就能看完整审查结果。
+              </p>
+            </div>
           </div>
         ) : (
           <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-5">
@@ -834,13 +858,26 @@ export function ContractAgent({
               textareaRef={textareaRef}
             />
             <p className="mt-1.5 text-center text-[10px] leading-relaxed text-muted-foreground">
-              {!aiAvailable
-                ? "服务端未配置模型密钥，审查暂不可用。"
-                : consent === "on"
-                  ? `AI 辅助意见，不构成法律结论；请核对原文。合同与对话仅保存在本浏览器，可随时删除。${
-                      savedAt ? ` 已保存 ${formatSessionTime(savedAt)}` : ""
-                    }`
-                  : "AI 辅助意见，不构成法律结论；请核对原文。合同全文不自动保存。"}
+              {!aiAvailable ? (
+                "服务端未配置模型密钥，审查暂不可用。"
+              ) : consent === "on" ? (
+                `AI 辅助意见，不构成法律结论；请核对原文。合同与对话仅保存在本浏览器，可随时删除。${
+                  savedAt ? ` 已保存 ${formatSessionTime(savedAt)}` : ""
+                }`
+              ) : (
+                <>
+                  AI 辅助意见，不构成法律结论；请核对原文。合同全文不自动保存。
+                  {supported && (
+                    <button
+                      type="button"
+                      onClick={acceptHistory}
+                      className="ml-1 font-medium text-foreground underline underline-offset-2"
+                    >
+                      开启本机保存
+                    </button>
+                  )}
+                </>
+              )}
             </p>
           </div>
         </div>

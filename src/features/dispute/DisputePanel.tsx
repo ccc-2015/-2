@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Check,
   BookmarkPlus,
+  Sparkles,
 } from "lucide-react";
 import { HelpTip } from "@/components/HelpTip";
 import { cn } from "@/lib/utils";
@@ -138,7 +139,8 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const cityCode = useRegionCode();
   const [issue, setIssue] = useState("");
   const [eventDate, setEventDate] = useState("");
-  const [counterparty, setCounterparty] = useState("");
+  // 默认个人房东：多数用户面对的是个人房东，也避免空值时把 12315 混进推荐方向。
+  const [counterparty, setCounterparty] = useState("个人房东");
   const [goal, setGoal] = useState("");
   const [amountYuan, setAmountYuan] = useState("");
   const [facts, setFacts] = useState("");
@@ -325,6 +327,34 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     setScriptNotice(existingId ? "已更新证据画布中的话术存档。" : "话术已存档到证据画布「争议处理」。");
   }
 
+  function loadSample() {
+    const sample = loadEvidenceSample();
+    setIssue("退租后房东以墙面裂缝为由扣全部押金 4000 元，未提供维修票据");
+    setEventDate("2026-11-10");
+    setCounterparty("个人房东");
+    setAmountYuan("4000");
+    setGoal("要回押金 4000 元");
+    setFacts(
+      "2026-03-01 入住时客厅墙面靠窗处已有细微裂缝，已拍照留存；2026-11-10 退租交接时房东以该裂缝为由扣除全部押金 4000 元，未提供维修发票或扣款明细。",
+    );
+    setPriorAction("已通过微信催要两次，房东未回复");
+    selection.set([sample.depositRecordId, sample.recordIds[2], sample.recordIds[0]]);
+    setResult(null);
+    setResultMeta(null);
+    setSelectedChannelId(null);
+    setScriptDraft("");
+    setError(null);
+    setNotice("已载入示例争议与证据，点「整理事实并匹配方向」即可看完整流程。");
+    setStep(2);
+    setMaxStep(2);
+  }
+
+  useEffect(() => {
+    const handler = () => loadSample();
+    window.addEventListener("zzyj:trial-dispute", handler);
+    return () => window.removeEventListener("zzyj:trial-dispute", handler);
+  });
+
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8">
       <header className="border-b border-border/60 pb-5">
@@ -339,28 +369,9 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
             size="sm"
             variant="outline"
             className="shrink-0"
-            onClick={() => {
-              const sample = loadEvidenceSample();
-              setIssue("退租后房东以墙面裂缝为由扣全部押金 4000 元，未提供维修票据");
-              setEventDate("2026-11-10");
-              setCounterparty("个人房东张某");
-              setAmountYuan("4000");
-              setGoal("要回押金 4000 元");
-              setFacts(
-                "2026-03-01 入住时客厅墙面靠窗处已有细微裂缝，已拍照留存；2026-11-10 退租交接时房东以该裂缝为由扣除全部押金 4000 元，未提供维修发票或扣款明细。",
-              );
-              setPriorAction("已通过微信催要两次，房东未回复");
-              selection.set([sample.depositRecordId, sample.recordIds[2], sample.recordIds[0]]);
-              setResult(null);
-              setResultMeta(null);
-              setSelectedChannelId(null);
-              setScriptDraft("");
-              setError(null);
-              setNotice("已载入示例争议与证据，点「整理事实并匹配方向」即可看完整流程。");
-              setStep(2);
-              setMaxStep(2);
-            }}
+            onClick={loadSample}
           >
+            <Sparkles className="size-3.5" />
             试用示例争议
           </Button>
         </div>
@@ -404,7 +415,12 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                   <Input id="dp-date" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="dp-counterparty" className="text-xs">对方身份（可选）</Label>
+                  <div className="flex items-center gap-1">
+                    <Label htmlFor="dp-counterparty" className="text-xs">对方身份</Label>
+                    <HelpTip label="对方身份说明">
+                      决定可推荐的处理渠道：个人房东、个人二房东不会推荐 12315（仅适用于住房租赁企业、中介等经营者）。默认个人房东，请按实际情况改选。
+                    </HelpTip>
+                  </div>
                   <Select value={counterparty} onValueChange={setCounterparty}>
                     <SelectTrigger id="dp-counterparty" className="w-full">
                       <SelectValue placeholder="请选择对方身份" />
@@ -417,6 +433,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                       <SelectItem value="其他">其他</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">默认个人房东；涉及企业或中介请改选。</p>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-1">
@@ -517,6 +534,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
               </div>
               <dl className="space-y-1.5 rounded-lg bg-secondary/40 p-3 text-[12px] leading-relaxed">
                 <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">争议事项</dt><dd className="min-w-0 flex-1">{issue.trim() || "未填写"}</dd></div>
+                <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">对方身份</dt><dd className="min-w-0 flex-1">{counterparty || "未填写"}</dd></div>
                 <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">证据</dt><dd className="min-w-0 flex-1">{selectedEvidence.length > 0 ? `${selectedEvidence.length} 条` : "未选择"}</dd></div>
                 <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">目标</dt><dd className="min-w-0 flex-1">{goal.trim() || "未填写"}</dd></div>
                 <div className="flex gap-2"><dt className="w-16 shrink-0 text-muted-foreground">已行动</dt><dd className="min-w-0 flex-1">{priorAction.trim() || "未填写"}</dd></div>
@@ -571,6 +589,11 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                   <p className="mt-1 max-w-sm text-xs text-muted-foreground">
                     系统先整理已确认事实、提示关键缺项，并给出一个优先方向与少量可考虑项；选定方向后才生成对应话术。
                   </p>
+                  <Button size="sm" variant="outline" className="mt-3" onClick={loadSample}>
+                    <Sparkles className="size-3.5" />
+                    载入示例争议，先看完整流程
+                  </Button>
+                  <p className="mt-1.5 text-[10px] text-muted-foreground">自动带入示例事项与证据，不用自己填写。</p>
                 </>
               )}
             </div>

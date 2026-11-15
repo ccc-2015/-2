@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { FileSearch, CalendarClock, Scale, ShieldCheck, X, History, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useConfig } from "../lib/config-context";
 import { HistoryList } from "../features/contract/agent/HistoryList";
 import { Onboarding, openOnboarding } from "./Onboarding";
@@ -157,21 +158,32 @@ export function AppShell({
           <div className="px-3 pb-2">
             <NavList active={active} onNavigate={onNavigate} />
           </div>
-          {mobileHistory && (
-            <div className="flex max-h-64 flex-col overflow-hidden border-t border-black/[0.05]">
-              <HistoryList
-                currentId={currentSessionId}
-                onNavigate={() => {
-                  setMobileHistory(false);
-                  onNavigate("contract");
-                }}
-              />
-            </div>
-          )}
         </header>
 
         <main className={cn("min-w-0 flex-1", active === "contract" && "min-h-0 overflow-hidden")}>{children}</main>
       </div>
+
+      <Sheet open={mobileHistory} onOpenChange={setMobileHistory}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="h-[min(76dvh,640px)] gap-0 rounded-t-2xl border-black/[0.08] p-0 md:hidden"
+        >
+          <div className="shrink-0 pt-2">
+            <div className="mx-auto h-1 w-10 rounded-full bg-black/10" aria-hidden="true" />
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col px-1 pb-2">
+            <HistoryList
+              currentId={currentSessionId}
+              onNavigate={() => {
+                setMobileHistory(false);
+                onNavigate("contract");
+              }}
+              onClose={() => setMobileHistory(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Onboarding onNavigate={onNavigate} />
     </div>

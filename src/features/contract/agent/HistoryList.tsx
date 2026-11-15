@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { MessageSquare, Plus, ShieldCheck, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { MessageSquare, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -38,9 +37,11 @@ function groupByDay(items: SessionSummary[]): { label: string; rows: SessionSumm
 export function HistoryList({
   currentId,
   onNavigate,
+  onClose,
 }: {
   currentId: string;
   onNavigate?: () => void;
+  onClose?: () => void;
 }) {
   const items = useHistoryItems();
   const consent = useHistoryConsent();
@@ -57,7 +58,10 @@ export function HistoryList({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-1">
-        <span className="text-[11px] font-medium text-muted-foreground">历史对话</span>
+        <div className="min-w-0 leading-tight">
+          <p className="text-[11px] font-medium text-muted-foreground">历史对话</p>
+          <p className="text-[9px] text-muted-foreground/70">仅存本浏览器，可随时删除</p>
+        </div>
         <div className="flex items-center gap-1">
           {items.length > 0 && (
             <Button
@@ -82,6 +86,17 @@ export function HistoryList({
             <Plus className="size-3" />
             新对话
           </Button>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 text-muted-foreground"
+              onClick={onClose}
+              aria-label="关闭历史面板"
+            >
+              <X className="size-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -161,25 +176,30 @@ export function HistoryList({
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-black/[0.05] px-3 py-2">
-        <span className="flex items-center gap-1 text-[10px] text-muted-foreground" title="仅保存在本浏览器">
-          <ShieldCheck className="size-3" />
-          本机保存
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Switch
-            checked={consent === "on"}
-            disabled={!supported}
-            onCheckedChange={(checked) => {
-              historyBus.setConsent(checked ? "on" : "off");
-              setNotice(checked ? "" : "已关闭自动保存");
-            }}
-            aria-label="保存历史到本机"
-            size="sm"
-          />
-          <Badge variant="outline" className="text-[9px] font-normal">
-            {consent === "on" ? "开" : "关"}
-          </Badge>
+      <div className="border-t border-black/[0.05] px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1 text-[11px] font-medium text-foreground">
+              <ShieldCheck className="size-3 text-muted-foreground" />
+              保存历史到本机
+            </p>
+            <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+              只存本浏览器，不上传服务器；关闭后新对话不再自动记录。
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground">{consent === "on" ? "已开启" : "已关闭"}</span>
+            <Switch
+              checked={consent === "on"}
+              disabled={!supported}
+              onCheckedChange={(checked) => {
+                historyBus.setConsent(checked ? "on" : "off");
+                setNotice(checked ? "" : "已关闭自动保存");
+              }}
+              aria-label="保存历史到本机"
+              size="sm"
+            />
+          </div>
         </div>
       </div>
       {notice && <p className="px-3 pb-2 text-[10px] text-muted-foreground">{notice}</p>}
