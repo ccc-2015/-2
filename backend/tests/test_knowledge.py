@@ -123,6 +123,26 @@ class KnowledgeStoreTests(unittest.TestCase):
             ids,
         )
 
+    def test_contract_retrieve_keeps_one_local_source(self):
+        text = (
+            "房屋租赁合同 押金 4000 元 月租金 2600 元 逾期滞纳金 "
+            "提前退租押金不退 甲方可单方调整租金 保洁费和家电折旧费从押金中扣除"
+        )
+        for city in ("ZZ", "WH", "HZ"):
+            with self.subTest(city=city):
+                entries = knowledge_store.retrieve(
+                    city,
+                    "2026-11-08",
+                    f"{text}\n请审查这份合同。\nreview",
+                    top_k=4,
+                    scenario="contract_review",
+                )
+                self.assertEqual(len(entries), 4)
+                self.assertTrue(
+                    any(entry.scope in ("city", "province") for entry in entries),
+                    [entry.id for entry in entries],
+                )
+
     def test_sources_endpoint(self):
         client = TestClient(app)
         response = client.get(

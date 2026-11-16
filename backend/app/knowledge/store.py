@@ -39,6 +39,30 @@ SCENARIO_TOPICS = {
 }
 
 
+def ensure_local_slot(
+    ranked: list[KnowledgeEntry],
+    pool: list[KnowledgeEntry],
+    top_k: int,
+) -> list[KnowledgeEntry]:
+    """城市已选且本地有相关资料时，把最相关的本地条文放到召回首位。
+
+    全国条文关键词更通用，容易把城市/省级条目挤出前几名；这里不改动其余条目的
+    相对顺序，只在本地条文未进前几名时补入并让出最后一席。
+    """
+    if top_k <= 0 or not ranked:
+        return ranked[:top_k]
+    # 同一城市同时有市级与省级资料时优先市级，市级条文通常更具体。
+    local = next((entry for entry in pool if entry.scope == "city"), None) or next(
+        (entry for entry in pool if entry.scope == "province"), None
+    )
+    if local is None:
+        return ranked[:top_k]
+    if ranked[0].id == local.id:
+        return ranked[:top_k]
+    rest = [entry for entry in ranked if entry.id != local.id]
+    return [local, *rest[: top_k - 1]]
+
+
 class KnowledgeStore:
     def __init__(self, data_dir: Path | None = None) -> None:
         self.data_dir = data_dir or DATA_DIR
@@ -141,7 +165,8 @@ class KnowledgeStore:
             if score > 0:
                 scored.append((score, entry.id, entry))
         scored.sort(key=lambda item: (-item[0], item[1]))
-        return [entry for _, _, entry in scored[:top_k]]
+        ranked = [entry for _, _, entry in scored[:top_k]]
+        return ensure_local_slot(ranked, [entry for _, _, entry in scored], top_k)
 
 
 knowledge_store = KnowledgeStore()

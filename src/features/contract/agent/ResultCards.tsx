@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { copyText } from "../../../lib/clipboard";
 import { newId, saveRecordChecked, type EvidenceRecord } from "../../evidence/store";
 import type { RevisionDraft, RevisionSuggestion } from "./types";
 
@@ -175,13 +176,13 @@ export function RevisionCopyPanel({
   }
 
   async function copyClipboard() {
-    try {
-      await navigator.clipboard.writeText(draft.copy);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
+    const ok = await copyText(draft.copy);
+    if (!ok) {
       onDraftChange({ notice: "复制失败，请手动选择副本文本复制。" });
+      return;
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   function saveCopy() {

@@ -16,7 +16,7 @@ from ..config import get_settings
 from .embeddings import embed_query, embed_texts
 from .rerank import rerank as rerank_api
 from .models import ChannelProfile, KnowledgeEntry, KnowledgePack
-from .store import SCENARIO_TOPICS
+from .store import SCENARIO_TOPICS, ensure_local_slot
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +311,9 @@ class PostgresKnowledgeStore:
         ranked = self._rerank(query, candidates, top_k)
         if ranked is None:
             ranked = candidates[:top_k]
-        return [entry for _, entry in ranked]
+        ordered = [entry for _, entry in ranked]
+        pool = [entry for score, entry in candidates if score > 0]
+        return ensure_local_slot(ordered, pool, top_k)
 
     def _rank_candidates(
         self,

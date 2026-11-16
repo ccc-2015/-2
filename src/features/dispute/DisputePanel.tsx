@@ -32,6 +32,7 @@ import { loadEvidenceSample } from "../evidence/sample";
 import { useConfig } from "../../lib/config-context";
 import { useRegionCode } from "../../lib/region";
 import { api, ApiError, errorMessage } from "../../lib/api";
+import { copyText } from "../../lib/clipboard";
 import type { ViewId } from "../../components/AppShell";
 import {
   useEvidenceRecords,
@@ -270,13 +271,13 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   }
 
   async function copyScript() {
-    try {
-      await navigator.clipboard.writeText(scriptDraft);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
+    const ok = await copyText(scriptDraft);
+    if (!ok) {
       setError(new ApiError("internal_error", "复制失败，请手动选择话术文本复制。", false));
+      return;
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   function logProgress() {
