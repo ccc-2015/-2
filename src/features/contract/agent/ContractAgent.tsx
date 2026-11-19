@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Download, FileText, MoreHorizontal, PencilLine, Printer, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, Download, FileText, MoreHorizontal, Printer, ShieldCheck, Sparkles } from "lucide-react";
 import type { ContractIntent, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -13,7 +13,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,8 +30,6 @@ import { useRentalProfile } from "../../rental/profile";
 import { Composer } from "./Composer";
 import { ContractSheet } from "./ContractSheet";
 import { historyBus, useHistoryRequest } from "./historyBus";
-import { RevisionCopyPanel } from "./ResultCards";
-import { resultRevisions } from "./revisions";
 import { Thread } from "./Thread";
 import { buildReviewReport } from "./reviewReport";
 import { downloadBlob } from "../../evidence/exportPackage";
@@ -52,14 +49,7 @@ import {
   type ContractSession,
   type SessionSummary,
 } from "./session";
-import {
-  PASTE_META,
-  defaultQuestion,
-  type ContractDoc,
-  type Exchange,
-  type RevisionDraft,
-  type RevisionSuggestion,
-} from "./types";
+import { PASTE_META, type ContractDoc, type Exchange } from "./types";
 
 const SAMPLE_CONTRACT = [
   "房屋租赁合同",
@@ -94,7 +84,7 @@ export function ContractAgent({
   const maxText = config?.limits.maxTextLength ?? 50000;
 
   const [session, setSession] = useState<ContractSession>(() => emptySession());
-  const { doc, exchanges, revisionDrafts, signingDate, textRecordId, saveNotice } = session;
+  const { doc, exchanges, signingDate, textRecordId, saveNotice } = session;
 
   const [question, setQuestion] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -102,8 +92,6 @@ export function ContractAgent({
   const [dragOver, setDragOver] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [activeExcerpt, setActiveExcerpt] = useState<Excerpt | null>(null);
-  const [revisionTargetId, setRevisionTargetId] = useState<string | null>(null);
-  const [autoOpenRevisionId, setAutoOpenRevisionId] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const [historyNotice, setHistoryNotice] = useState("");
@@ -117,22 +105,6 @@ export function ContractAgent({
 
   const busy = exchanges.some((exchange) => exchange.loading);
   const empty = !doc && exchanges.length === 0;
-  const revisionExchangeIds = exchanges
-    .filter((exchange) => resultRevisions(exchange.result).length > 0)
-    .map((exchange) => exchange.id);
-  const latestRevisionExchangeId = revisionExchangeIds.length
-    ? revisionExchangeIds[revisionExchangeIds.length - 1]
-    : null;
-  const revisionTarget = revisionTargetId
-    ? exchanges.find((exchange) => exchange.id === revisionTargetId) ?? null
-    : null;
-  const revisionDraft = revisionTargetId ? revisionDrafts[revisionTargetId] ?? null : null;
-  const revisionSuggestions: RevisionSuggestion[] = revisionTarget
-    ? resultRevisions(revisionTarget.result).map((item, index) => ({
-        id: `${revisionTarget.id}:${index}`,
-        ...item,
-      }))
-    : [];
 
   const patch = useCallback(
     (next: Partial<ContractSession> | ((current: ContractSession) => Partial<ContractSession>)) => {
@@ -214,20 +186,6 @@ export function ContractAgent({
   }, [exchanges.length, busy]);
 
   useEffect(() => {
-    if (!autoOpenRevisionId) return;
-    const exchange = exchanges.find((item) => item.id === autoOpenRevisionId);
-    if (!exchange) return;
-    if (resultRevisions(exchange.result).length > 0) {
-      setAutoOpenRevisionId(null);
-      openRevision(exchange.id);
-    } else if (!exchange.loading) {
-      setAutoOpenRevisionId(null);
-    }
-    // 只在新修订结果落库后打开一次。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpenRevisionId, exchanges]);
-
-  useEffect(() => {
     if (consent !== "on" || !supported || !sessionHasContent(session)) return;
     const timer = window.setTimeout(() => {
       void saveSession(session)
@@ -243,7 +201,6 @@ export function ContractAgent({
   function resetUi() {
     setQuestion("");
     setActiveExcerpt(null);
-    setRevisionTargetId(null);
     setUploadError(null);
   }
 
@@ -265,7 +222,6 @@ export function ContractAgent({
     context: ReturnType<typeof buildContext>,
     text: string,
     eventDate: string = signingDate,
-    targetExcerpt: Excerpt | null = null,
   ) {
     patch((current) => ({
       exchanges: current.exchanges.map((exchange) =>
@@ -292,7 +248,6 @@ export function ContractAgent({
         intent,
         cityCode,
         eventDate: eventDate || null,
-        targetExcerpt: targetExcerpt ?? null,
       },
       {
         onStage: ({ stage }) => update({ stage }),
@@ -304,11 +259,8 @@ export function ContractAgent({
                 : exchange,
             ),
           })),
-        onResult: (data, meta) => {
-          update({ loading: false, result: data, meta, docText: text, stage: null, partialAnswer: "" });
-          // 修订清单直接打开副本，避免用户还要再找入口。
-          if (data.revisions?.length || data.revision) setAutoOpenRevisionId(id);
-        },
+        onResult: (data, meta) =>
+          update({ loading: false, result: data, meta, docText: text, stage: null, partialAnswer: "" }),
         onError: (error) => update({ loading: false, error, stage: null, partialAnswer: "" }),
       },
     );
@@ -332,7 +284,6 @@ export function ContractAgent({
           loading: true,
         },
       ],
-      revisionDrafts: {},
       textRecordId: null,
       saveNotice: "",
     });
@@ -399,7 +350,7 @@ export function ContractAgent({
     }
   }
 
-  function submit(override?: ContractIntent) {
+  function submit() {
     if (busy || !aiAvailable) return;
     const trimmed = question.trim();
 
@@ -417,10 +368,7 @@ export function ContractAgent({
       return;
     }
 
-    if (!trimmed && !override) return;
-    const intent = override ?? "ask";
-    const displayQuestion = trimmed || defaultQuestion(intent);
-    if (!displayQuestion) return;
+    if (!trimmed) return;
 
     const id = newId();
     const context = buildContext(exchanges);
@@ -428,23 +376,16 @@ export function ContractAgent({
     patch((current) => ({
       exchanges: [
         ...current.exchanges,
-        { id, question: displayQuestion, intent, docText: doc.text, result: null, meta: null, error: null, loading: true },
+        { id, question: trimmed, intent: "ask", docText: doc.text, result: null, meta: null, error: null, loading: true },
       ],
     }));
-    void run(id, displayQuestion, intent, context, doc.text);
+    void run(id, trimmed, "ask", context, doc.text);
   }
 
   function retry(id: string) {
     const index = exchanges.findIndex((exchange) => exchange.id === id);
     if (index === -1 || busy || !doc) return;
     const exchange = exchanges[index];
-    patch((current) => {
-      if (!current.revisionDrafts[id]) return {};
-      const next = { ...current.revisionDrafts };
-      delete next[id];
-      return { revisionDrafts: next };
-    });
-    if (revisionTargetId === id) setRevisionTargetId(null);
     void run(id, exchange.question, exchange.intent, buildContext(exchanges.slice(0, index)), doc.text);
   }
 
@@ -471,72 +412,6 @@ export function ContractAgent({
       ],
     }));
     void run(id, reviewQuestion, "review", context, doc.text);
-  }
-
-  function openRevision(exchangeId: string) {
-    const exchange = exchanges.find((item) => item.id === exchangeId);
-    if (!exchange || resultRevisions(exchange.result).length === 0) return;
-    const originalText = exchange.docText ?? doc?.text ?? "";
-    patch((current) => {
-      if (current.revisionDrafts[exchangeId]) return {};
-      // 新副本从最近一份已存副本继续，避免每次修订都从原文重来。
-      const previous = [...current.exchanges]
-        .reverse()
-        .map((item) => current.revisionDrafts[item.id])
-        .find((draft) => draft && draft.copy.trim());
-      const baseText = previous?.copy ?? originalText;
-      return {
-        revisionDrafts: {
-          ...current.revisionDrafts,
-          [exchangeId]: {
-            exchangeId,
-            originalText,
-            baseText,
-            copy: baseText,
-            applied: [],
-            selected: [],
-            notice: "",
-            archiveNotice: "",
-            archivedId: null,
-            result: null,
-            error: null,
-            loading: false,
-          },
-        },
-      };
-    });
-    setRevisionTargetId(exchangeId);
-  }
-
-  function updateRevisionDraft(exchangeId: string, next: Partial<RevisionDraft>) {
-    patch((current) => {
-      const draft = current.revisionDrafts[exchangeId];
-      if (!draft) return {};
-      return { revisionDrafts: { ...current.revisionDrafts, [exchangeId]: { ...draft, ...next } } };
-    });
-  }
-
-  function reReviewRevision(exchangeId: string) {
-    const draft = revisionDrafts[exchangeId];
-    if (!draft || draft.loading || !aiAvailable || !draft.copy.trim()) return;
-    updateRevisionDraft(exchangeId, { loading: true, error: null });
-    void api
-      .analyzeContract({
-        text: draft.copy,
-        textScope: "full",
-        question: "请复查这份修订副本，指出仍存在的风险。",
-        conversation: [],
-        intent: "review",
-        cityCode,
-        eventDate: signingDate || null,
-      })
-      .then(({ data }) => {
-        updateRevisionDraft(exchangeId, { loading: false, result: data });
-      })
-      .catch((err) => {
-        const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
-        updateRevisionDraft(exchangeId, { loading: false, error });
-      });
   }
 
   function openDoc(excerpt: Excerpt | null = null) {
@@ -725,18 +600,6 @@ export function ContractAgent({
           </p>
         </div>
         <div className="flex items-center gap-1">
-          {latestRevisionExchangeId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openRevision(latestRevisionExchangeId)}
-              className="px-2 sm:px-3"
-              aria-label="修订副本"
-            >
-              <PencilLine className="size-3.5" />
-              <span className="hidden sm:inline">修订副本</span>
-            </Button>
-          )}
           {doc && (
             <Button variant="ghost" size="sm" onClick={() => openDoc()} className="hidden sm:inline-flex">
               <FileText className="size-3.5" />
@@ -759,11 +622,6 @@ export function ContractAgent({
                 <DropdownMenuItem onSelect={() => openDoc()} className="sm:hidden">
                   <FileText className="size-3.5" />
                   合同文本
-                </DropdownMenuItem>
-              )}
-              {latestRevisionExchangeId && (
-                <DropdownMenuItem onSelect={() => openRevision(latestRevisionExchangeId)}>
-                  修订副本
                 </DropdownMenuItem>
               )}
               {onNavigate && (
@@ -854,8 +712,6 @@ export function ContractAgent({
                 textareaRef.current?.focus();
               }}
               onOpenDoc={() => openDoc()}
-              onOpenRevision={openRevision}
-              onQuickAction={(intent) => submit(intent)}
             />
           </div>
         )}
@@ -938,35 +794,6 @@ export function ContractAgent({
         activeExcerpt={activeExcerpt}
         maxText={maxText}
       />
-
-      <Sheet
-        open={revisionTargetId != null}
-        onOpenChange={(open) => {
-          if (!open) setRevisionTargetId(null);
-        }}
-      >
-        <SheetContent className="w-full sm:max-w-2xl">
-          <div className="h-full overflow-y-auto p-4 pt-10">
-            {revisionTarget && revisionDraft && (
-              <RevisionCopyPanel
-                draft={revisionDraft}
-                sourceName={doc?.sourceName ?? ""}
-                signingDate={signingDate}
-                suggestions={revisionSuggestions}
-                aiAvailable={aiAvailable}
-                originalFindingCount={revisionTarget.result?.findings.length ?? null}
-                onDraftChange={(next) => {
-                  if (revisionTargetId) updateRevisionDraft(revisionTargetId, next);
-                }}
-                onReReview={() => {
-                  if (revisionTargetId) reReviewRevision(revisionTargetId);
-                }}
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-
 
       <AlertDialog
         open={pendingConfirm != null}

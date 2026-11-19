@@ -1,5 +1,5 @@
-import { Check, FileText, Loader2, PencilLine, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
-import type { ContractIntent, ContractResult, Excerpt, Finding } from "@/shared/api";
+import { FileText, Loader2, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import type { ContractResult, Excerpt, Finding } from "@/shared/api";
 import { SourceList } from "@/components/SourceList";
 import { HelpTip } from "@/components/HelpTip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AnswerBody } from "./AnswerBody";
 import { FindingCard } from "./ResultCards";
-import { resultRevisions } from "./revisions";
 import type { ContractDoc, Exchange } from "./types";
 
 function StageProgress({
@@ -45,8 +44,6 @@ export function Thread({
   onLocate,
   onFollowUp,
   onOpenDoc,
-  onOpenRevision,
-  onQuickAction,
 }: {
   exchanges: Exchange[];
   doc: ContractDoc | null;
@@ -57,8 +54,6 @@ export function Thread({
   onLocate: (excerpt: Excerpt) => void;
   onFollowUp: (question: string) => void;
   onOpenDoc: () => void;
-  onOpenRevision: (exchangeId: string) => void;
-  onQuickAction: (intent: ContractIntent) => void;
 }) {
   return (
     <div className="space-y-7">
@@ -140,16 +135,12 @@ export function Thread({
 
             {exchange.result && (
               <ResultBlock
-                exchangeId={exchange.id}
                 result={exchange.result}
                 signingDate={signingDate}
                 knowledgeVersion={exchange.meta?.knowledgeVersion ?? null}
                 warnings={exchange.meta?.warnings ?? []}
-                isLast={index === exchanges.length - 1}
                 onLocate={onLocate}
                 onFollowUp={onFollowUp}
-                onOpenRevision={onOpenRevision}
-                onQuickAction={onQuickAction}
               />
             )}
           </div>
@@ -160,29 +151,20 @@ export function Thread({
 }
 
 function ResultBlock({
-  exchangeId,
   result,
   signingDate,
   knowledgeVersion,
   warnings,
-  isLast,
   onLocate,
   onFollowUp,
-  onOpenRevision,
-  onQuickAction,
 }: {
-  exchangeId: string;
   result: ContractResult;
   signingDate: string;
   knowledgeVersion: string | null;
   warnings: string[];
-  isLast: boolean;
   onLocate: (excerpt: Excerpt) => void;
   onFollowUp: (question: string) => void;
-  onOpenRevision: (exchangeId: string) => void;
-  onQuickAction: (intent: ContractIntent) => void;
 }) {
-  const revisionItems = resultRevisions(result);
 
   return (
     <div className="space-y-4">
@@ -221,44 +203,6 @@ function ResultBlock({
         </div>
       )}
 
-      {revisionItems.length > 0 && (
-        <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <PencilLine className="size-3.5 shrink-0 text-primary" />
-              <span className="text-[12px] font-medium">修订清单已生成（{revisionItems.length} 条）</span>
-              <span className="truncate text-[11px] text-muted-foreground">勾选后应用，未选条款保持原文。</span>
-            </div>
-            <Button size="sm" className="h-7 px-2.5 text-[11px]" onClick={() => onOpenRevision(exchangeId)}>
-              打开修订清单
-            </Button>
-          </div>
-          <ul className="space-y-1">
-            {revisionItems.slice(0, 3).map((item, index) => (
-              <li key={index} className="flex items-baseline gap-2 text-[11px]">
-                <span
-                  className={cn(
-                    "shrink-0 rounded px-1.5 py-0.5 text-[10px]",
-                    item.kind === "add" ? "bg-amber-500/10 text-amber-700" : "bg-primary/10 text-primary",
-                  )}
-                >
-                  {item.kind === "add" ? "新增" : "修改"}
-                </span>
-                <span className="font-medium">
-                  {item.kind === "add" ? item.title || item.clauseLabel : item.clauseLabel}
-                </span>
-                {item.kind !== "add" && item.title && (
-                  <span className="text-muted-foreground">· {item.title}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-          {revisionItems.length > 3 && (
-            <p className="mt-1.5 text-[11px] text-muted-foreground">还有 {revisionItems.length - 3} 条，打开清单查看。</p>
-          )}
-        </div>
-      )}
-
       <SourceList
         sources={result.references}
         retrieved={result.retrieved ?? []}
@@ -284,25 +228,6 @@ function ResultBlock({
         </div>
       )}
 
-      {isLast && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
-          <span>继续</span>
-          <button
-            type="button"
-            onClick={() => onQuickAction("suggest_revision")}
-            className="rounded-full border border-border/80 px-3 py-1 text-foreground/80 transition-colors hover:border-foreground/30 hover:text-foreground"
-          >
-            生成修改建议
-          </button>
-          <button
-            type="button"
-            onClick={() => onQuickAction("draft_revision")}
-            className="rounded-full border border-border/80 px-3 py-1 text-foreground/80 transition-colors hover:border-foreground/30 hover:text-foreground"
-          >
-            起草修订条款
-          </button>
-        </div>
-      )}
-    </div>
+          </div>
   );
 }

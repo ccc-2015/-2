@@ -66,19 +66,3 @@ export interface RevisionDraft {
   partialAnswer?: string;
 }
 
-export interface RevisionSuggestion {
-  id: string;
-  kind: "modify" | "add";
-  clauseLabel: string;
-  title: string;
-  text: string;
-  targetExcerpt: Excerpt | null;
-  reason: string;
-}
-
-export function defaultQuestion(intent: ContractIntent): string {
-  if (intent === "review") return "请审查这份合同。";
-  if (intent === "suggest_revision") return "请给出修改建议。";
-  if (intent === "draft_revision") return "请起草修订条款。";
-  return "";
-}

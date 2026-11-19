@@ -1,5 +1,4 @@
 import type { ContractMemory, ConversationTurn } from "@/shared/api";
-import { resultRevisions } from "./revisions";
 import type { Exchange } from "./types";
 
 /** 只把最近 6 轮原文带给模型，更早的轮次压成一段会话记忆，避免长对话丢上下文。 */
@@ -28,7 +27,6 @@ export function deriveMemory(list: Exchange[]): ContractMemory | null {
     const result = exchange.result!;
     questions.push(`第${index + 1}轮：${clip(exchange.question, 40)}`);
     for (const finding of result.findings) pushUnique(facts, finding.issue, 50);
-    if (resultRevisions(result).length > 0) pushUnique(decisions, "生成过修订草稿（协商用，未经用户确认）", 60);
     for (const question of result.followUpQuestions) pushUnique(openQuestions, question, 40);
   });
 
