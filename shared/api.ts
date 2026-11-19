@@ -130,8 +130,15 @@ export interface Finding {
 }
 
 export interface Revision {
+  kind: "modify" | "add";
+  /** 对应条款位置，例如「第五条」；新增条款填「新增条款」。 */
+  clauseLabel: string;
+  /** 这一条要解决的问题，例如「提前退租押金」。 */
+  title: string;
   text: string;
   targetExcerpt: Excerpt | null;
+  /** 为什么这样改，便于用户判断是否勾选。 */
+  reason: string;
 }
 
 export interface SourceRef {
@@ -152,6 +159,8 @@ export interface ContractResult {
   coverage: Coverage;
   findings: Finding[];
   revision: Revision | null;
+  /** 完整修订清单；旧数据可能只有 revision，前端需回退兼容。 */
+  revisions: Revision[];
   followUpQuestions: string[];
   /** 本次回答实际引用的资料。 */
   references: SourceRef[];

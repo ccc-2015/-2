@@ -73,11 +73,13 @@ def materialize(inp: AnalyzeContractInput, sources: list[KnowledgeEntry], raw: d
     cited_ids = collect_cited_ids(raw, source_map)
     references = [entry.to_source_ref() for entry in sources if entry.id in cited_ids]
     coverage = knowledge_store.coverage_for(city, "contract_review")
+    revisions = _normalize_revisions(raw.get("revisions"), raw.get("revision"), inp)
     result = ContractResult(
         answer=_str(raw.get("answer"), "模型未返回有效回答，请重试或调整问题。"),
         coverage=coverage,
         findings=_normalize_findings(raw.get("findings"), inp.text, source_map),
-        revision=_normalize_revision(raw.get("revision"), inp),
+        revision=revisions[0] if revisions else None,
+        revisions=revisions,
         followUpQuestions=_str_array(raw.get("followUpQuestions"), 5),
         references=references,
         retrieved=[entry.to_source_ref() for entry in sources],
@@ -196,13 +198,54 @@ def _strip_revision_note(text: str) -> str:
     return cleaned.strip()
 
 
-def _normalize_revision(raw, inp: AnalyzeContractInput) -> Revision | None:
-    if inp.intent not in ("suggest_revision", "draft_revision"):
-        return None
+_REVISION_LIMIT = 8
+
+
+def _normalize_revision_item(raw, inp: AnalyzeContractInput, allow_input_target: bool) -> Revision | None:
     if not isinstance(raw, dict):
         return None
     text = _strip_revision_note(_str(raw.get("text")))
     if not text.strip():
         return None
-    target = close_excerpt(raw.get("targetExcerpt"), inp.text) or inp.targetExcerpt
-    return Revision(text=text, targetExcerpt=target)
+    target = close_excerpt(raw.get("targetExcerpt"), inp.text)
+    if target is None and allow_input_target:
+        target = inp.targetExcerpt
+    kind_raw = _str(raw.get("kind")).strip().lower()
+    if kind_raw not in ("modify", "add"):
+        kind_raw = "modify" if target else "add"
+    kind = "modify" if kind_raw == "modify" and target else "add"
+    clause = _str(raw.get("clauseLabel")).strip()[:20] or ("新增条款" if kind == "add" else "相关条款")
+    title = _str(raw.get("title")).strip()[:40]
+    reason = _str(raw.get("reason")).strip()[:100]
+    return Revision(
+        kind=kind,
+        clauseLabel=clause,
+        title=title,
+        text=text,
+        targetExcerpt=target,
+        reason=reason,
+    )
+
+
+def _normalize_revisions(raw_list, raw_single, inp: AnalyzeContractInput) -> list[Revision]:
+    if inp.intent not in ("suggest_revision", "draft_revision"):
+        return []
+    candidates: list = []
+    if isinstance(raw_list, list):
+        candidates = raw_list
+    if not candidates and isinstance(raw_single, dict):
+        candidates = [raw_single]
+    items: list[Revision] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(candidates):
+        item = _normalize_revision_item(raw, inp, allow_input_target=index == 0)
+        if item is None:
+            continue
+        key = item.targetExcerpt.text if item.targetExcerpt else f"{item.clauseLabel}\n{item.title}\n{item.text}"
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(item)
+        if len(items) >= _REVISION_LIMIT:
+            break
+    return items

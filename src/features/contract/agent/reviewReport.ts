@@ -3,6 +3,7 @@ import type { ContractResult } from "@/shared/api";
 import { PRIORITY_LABELS } from "@/shared/api";
 import type { Exchange } from "./types";
 import type { RentalProfile } from "../../rental/profile";
+import { resultRevisions } from "./revisions";
 
 function escapeHtml(value: string): string {
   return value
@@ -88,11 +89,22 @@ export function buildReviewReport({
     )
     .join("");
 
-  const revision = result.revision
-    ? `<h2>修订建议（协商草稿）</h2>
-       ${result.revision.targetExcerpt ? `<blockquote>“${escapeHtml(result.revision.targetExcerpt.text)}”</blockquote>` : ""}
-       <pre>${escapeHtml(result.revision.text)}</pre>`
-    : "";
+  const revisions = resultRevisions(result);
+  const revision =
+    revisions.length > 0
+      ? `<h2>修订清单（${revisions.length} 条）</h2>${revisions
+          .map(
+            (item) => `<article class="revision">
+        <p class="rev-head"><strong>${item.kind === "add" ? "新增条款" : `修改 ${escapeHtml(item.clauseLabel)}`}</strong>${
+          item.title ? ` · ${escapeHtml(item.title)}` : ""
+        }</p>
+        ${item.reason ? `<p class="rev-reason">${escapeHtml(item.reason)}</p>` : ""}
+        ${item.targetExcerpt ? `<blockquote>“${escapeHtml(item.targetExcerpt.text)}”</blockquote>` : ""}
+        <pre>${escapeHtml(item.text)}</pre>
+      </article>`,
+          )
+          .join("")}`
+      : "";
 
   const html = `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8" />
@@ -121,6 +133,9 @@ export function buildReviewReport({
   .uncertain { font-size: 11px; color: #6b7280; margin: 4px 0 0; padding-left: 18px; }
   .refs { font-size: 11px; color: #6b7280; margin: 4px 0 0; }
   pre { white-space: pre-wrap; background: #f7f7f8; padding: 10px; border-radius: 8px; font-size: 12px; }
+  .revision { border: 1px solid #e7e8ea; border-radius: 8px; padding: 8px 12px; margin: 8px 0; break-inside: avoid; }
+  .rev-head { margin: 0; font-size: 12px; }
+  .rev-reason { margin: 2px 0; font-size: 11px; color: #6b7280; }
   .qa { margin: 8px 0; font-size: 12px; }
   .qa .q { color: #4b5563; margin: 0; }
   .qa .a { margin: 2px 0 0; white-space: pre-wrap; }
@@ -173,7 +188,8 @@ export function buildReviewReport({
       answer: result.answer,
       findings: result.findings,
       references: result.references,
-      revision: result.revision,
+      revision: revisions[0] ?? null,
+      revisions,
       followUpQuestions: result.followUpQuestions,
       conversation: followUps.map((exchange) => ({
         question: exchange.question,

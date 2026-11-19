@@ -59,8 +59,12 @@ class Finding(_Base):
 
 
 class Revision(_Base):
+    kind: Literal["modify", "add"] = "modify"
+    clauseLabel: str = ""
+    title: str = ""
     text: str
     targetExcerpt: Excerpt | None = None
+    reason: str = ""
 
 
 class SourceRef(_Base):
@@ -81,6 +85,7 @@ class ContractResult(_Base):
     coverage: Coverage = "limited"
     findings: list[Finding] = Field(default_factory=list)
     revision: Revision | None = None
+    revisions: list[Revision] = Field(default_factory=list)
     followUpQuestions: list[str] = Field(default_factory=list)
     references: list[SourceRef] = Field(default_factory=list)
     retrieved: list[SourceRef] = Field(default_factory=list)

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Download, FileText, MoreHorizontal, PencilLine, Printer, ShieldCheck, Sparkles } from "lucide-react";
-import type { ContractIntent, Excerpt, Finding } from "@/shared/api";
+import type { ContractIntent, Excerpt } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ import { Composer } from "./Composer";
 import { ContractSheet } from "./ContractSheet";
 import { historyBus, useHistoryRequest } from "./historyBus";
 import { RevisionCopyPanel } from "./ResultCards";
+import { resultRevisions } from "./revisions";
 import { Thread } from "./Thread";
 import { buildReviewReport } from "./reviewReport";
 import { downloadBlob } from "../../evidence/exportPackage";
@@ -116,7 +117,9 @@ export function ContractAgent({
 
   const busy = exchanges.some((exchange) => exchange.loading);
   const empty = !doc && exchanges.length === 0;
-  const revisionExchangeIds = exchanges.filter((exchange) => exchange.result?.revision).map((exchange) => exchange.id);
+  const revisionExchangeIds = exchanges
+    .filter((exchange) => resultRevisions(exchange.result).length > 0)
+    .map((exchange) => exchange.id);
   const latestRevisionExchangeId = revisionExchangeIds.length
     ? revisionExchangeIds[revisionExchangeIds.length - 1]
     : null;
@@ -124,43 +127,12 @@ export function ContractAgent({
     ? exchanges.find((exchange) => exchange.id === revisionTargetId) ?? null
     : null;
   const revisionDraft = revisionTargetId ? revisionDrafts[revisionTargetId] ?? null : null;
-  const revisionSuggestions: RevisionSuggestion[] = revisionTarget?.result?.revision
-    ? [
-        {
-          id: revisionTarget.id,
-          text: revisionTarget.result.revision.text,
-          targetExcerpt: revisionTarget.result.revision.targetExcerpt,
-        },
-      ]
+  const revisionSuggestions: RevisionSuggestion[] = revisionTarget
+    ? resultRevisions(revisionTarget.result).map((item, index) => ({
+        id: `${revisionTarget.id}:${index}`,
+        ...item,
+      }))
     : [];
-  // 风险清单来自最近一次全文审查，用于「改这一条 / 处理下一条」。
-  const reviewFindings =
-    [...exchanges].reverse().find((exchange) => exchange.intent === "review" && exchange.result)?.result?.findings ??
-    [];
-  const handledKeys = new Set(
-    exchanges
-      .filter((exchange) => exchange.result?.revision)
-      .map((exchange) => exchange.targetKey ?? exchange.result?.revision?.targetExcerpt?.text)
-      .filter((key): key is string => !!key),
-  );
-  const currentRevisionKey =
-    revisionTarget?.targetKey ?? revisionTarget?.result?.revision?.targetExcerpt?.text ?? null;
-  const workingCopy =
-    revisionDraft?.copy ??
-    [...exchanges]
-      .reverse()
-      .map((exchange) => revisionDrafts[exchange.id])
-      .find((draft) => draft?.copy.trim())?.copy ??
-    doc?.text ??
-    "";
-  const nextFinding =
-    reviewFindings.find((finding) => {
-      const key = finding.excerpt?.text ?? finding.issue;
-      if (key === currentRevisionKey || handledKeys.has(key)) return false;
-      // 目标原文已不在当前副本里，说明这一条已经改过。
-      if (finding.excerpt && !workingCopy.includes(finding.excerpt.text)) return false;
-      return true;
-    }) ?? null;
 
   const patch = useCallback(
     (next: Partial<ContractSession> | ((current: ContractSession) => Partial<ContractSession>)) => {
@@ -245,7 +217,7 @@ export function ContractAgent({
     if (!autoOpenRevisionId) return;
     const exchange = exchanges.find((item) => item.id === autoOpenRevisionId);
     if (!exchange) return;
-    if (exchange.result?.revision) {
+    if (resultRevisions(exchange.result).length > 0) {
       setAutoOpenRevisionId(null);
       openRevision(exchange.id);
     } else if (!exchange.loading) {
@@ -334,8 +306,8 @@ export function ContractAgent({
           })),
         onResult: (data, meta) => {
           update({ loading: false, result: data, meta, docText: text, stage: null, partialAnswer: "" });
-          // 修订结果直接打开副本，避免用户还要再找入口。
-          if (data.revision) setAutoOpenRevisionId(id);
+          // 修订清单直接打开副本，避免用户还要再找入口。
+          if (data.revisions?.length || data.revision) setAutoOpenRevisionId(id);
         },
         onError: (error) => update({ loading: false, error, stage: null, partialAnswer: "" }),
       },
@@ -501,48 +473,9 @@ export function ContractAgent({
     void run(id, reviewQuestion, "review", context, doc.text);
   }
 
-  function reviseFinding(finding: Finding) {
-    if (busy || !doc || !aiAvailable) return;
-    const workingCopy =
-      [...exchanges]
-        .reverse()
-        .map((exchange) => revisionDrafts[exchange.id])
-        .find((draft) => draft?.copy.trim())?.copy ?? doc.text;
-    // 这条原文已经不在当前副本里，直接打开已有副本，避免生成无法应用的修订。
-    if (finding.excerpt && !workingCopy.includes(finding.excerpt.text) && latestRevisionExchangeId) {
-      openRevision(latestRevisionExchangeId);
-      return;
-    }
-    const id = newId();
-    const target = finding.excerpt ?? null;
-    const displayQuestion = target
-      ? `请只修改这一条：${finding.issue}`
-      : `请补充条款解决：${finding.issue}`;
-    setQuestion("");
-    setActiveExcerpt(null);
-    patch((current) => ({
-      exchanges: [
-        ...current.exchanges,
-        {
-          id,
-          question: displayQuestion,
-          intent: "draft_revision",
-          docText: doc.text,
-          targetExcerpt: target,
-          targetKey: target?.text ?? finding.issue,
-          result: null,
-          meta: null,
-          error: null,
-          loading: true,
-        },
-      ],
-    }));
-    void run(id, displayQuestion, "draft_revision", buildContext(exchanges), doc.text, signingDate, target);
-  }
-
   function openRevision(exchangeId: string) {
     const exchange = exchanges.find((item) => item.id === exchangeId);
-    if (!exchange?.result?.revision) return;
+    if (!exchange || resultRevisions(exchange.result).length === 0) return;
     const originalText = exchange.docText ?? doc?.text ?? "";
     patch((current) => {
       if (current.revisionDrafts[exchangeId]) return {};
@@ -923,7 +856,6 @@ export function ContractAgent({
               onOpenDoc={() => openDoc()}
               onOpenRevision={openRevision}
               onQuickAction={(intent) => submit(intent)}
-              onReviseFinding={reviseFinding}
             />
           </div>
         )}
@@ -1023,21 +955,12 @@ export function ContractAgent({
                 suggestions={revisionSuggestions}
                 aiAvailable={aiAvailable}
                 originalFindingCount={revisionTarget.result?.findings.length ?? null}
-                nextFindingLabel={nextFinding?.issue ?? null}
                 onDraftChange={(next) => {
                   if (revisionTargetId) updateRevisionDraft(revisionTargetId, next);
                 }}
                 onReReview={() => {
                   if (revisionTargetId) reReviewRevision(revisionTargetId);
                 }}
-                onNextFinding={
-                  nextFinding
-                    ? () => {
-                        setRevisionTargetId(null);
-                        reviseFinding(nextFinding);
-                      }
-                    : undefined
-                }
               />
             )}
           </div>

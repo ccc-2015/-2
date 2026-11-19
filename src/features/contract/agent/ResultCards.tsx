@@ -27,13 +27,9 @@ import type { RevisionDraft, RevisionSuggestion } from "./types";
 export function FindingCard({
   finding,
   onLocate,
-  onRevise,
-  reviseDisabled,
 }: {
   finding: Finding;
   onLocate: (excerpt: Excerpt) => void;
-  onRevise?: (finding: Finding) => void;
-  reviseDisabled?: boolean;
 }) {
   const tone =
     finding.priority === "confirm_first"
@@ -72,21 +68,7 @@ export function FindingCard({
           ))}
         </ul>
       )}
-      {onRevise && (
-        <div className="mt-2 flex justify-end">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 text-[11px]"
-            onClick={() => onRevise(finding)}
-            disabled={reviseDisabled}
-          >
-            <PencilLine className="size-3" />
-            {finding.excerpt ? "改这一条" : "补充条款"}
-          </Button>
-        </div>
-      )}
-    </div>
+      </div>
   );
 }
 
@@ -105,10 +87,8 @@ export function RevisionCopyPanel({
   suggestions,
   aiAvailable,
   originalFindingCount,
-  nextFindingLabel,
   onDraftChange,
   onReReview,
-  onNextFinding,
 }: {
   draft: RevisionDraft;
   sourceName: string;
@@ -116,38 +96,54 @@ export function RevisionCopyPanel({
   suggestions: RevisionSuggestion[];
   aiAvailable: boolean;
   originalFindingCount: number | null;
-  nextFindingLabel?: string | null;
   onDraftChange: (patch: Partial<RevisionDraft>) => void;
   onReReview: () => void;
-  onNextFinding?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const applied = new Set(draft.applied);
+  const selected = new Set(draft.selected);
   const dirty = draft.copy !== draft.baseText;
   const carried = draft.baseText !== draft.originalText;
-  const appliedCurrent = suggestions.some((suggestion) => applied.has(suggestion.id));
 
-  function applyOne(suggestion: RevisionSuggestion) {
-    if (applied.has(suggestion.id)) return;
-    let next: string;
-    if (suggestion.targetExcerpt) {
-      const target = suggestion.targetExcerpt.text;
-      const index = draft.copy.indexOf(target);
-      if (index === -1) {
-        onDraftChange({
-          notice: `未找到目标原文「${target.slice(0, 18)}${target.length > 18 ? "…" : ""}」，可能已被修改，请手动编辑副本。`,
-        });
-        return;
+  function toggleSelect(id: string) {
+    if (applied.has(id)) return;
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onDraftChange({ selected: [...next] });
+  }
+
+  function applySelected() {
+    const items = suggestions.filter((suggestion) => selected.has(suggestion.id) && !applied.has(suggestion.id));
+    if (items.length === 0) return;
+    let next = draft.copy;
+    const done: string[] = [];
+    let skipped = 0;
+    for (const suggestion of items) {
+      if (suggestion.targetExcerpt) {
+        const target = suggestion.targetExcerpt.text;
+        const index = next.indexOf(target);
+        if (index === -1) {
+          skipped++;
+          continue;
+        }
+        next = replaceRevisionText(next, index, target, suggestion.text);
+      } else {
+        next = `${next}\n\n${suggestion.text}`;
       }
-      next = replaceRevisionText(draft.copy, index, target, suggestion.text);
-    } else {
-      next = `${draft.copy}\n\n${suggestion.text}`;
+      done.push(suggestion.id);
+    }
+    if (done.length === 0) {
+      onDraftChange({
+        notice: "所选条款在副本里已找不到原文，可能已经改过，请直接在副本中手动调整。",
+      });
+      return;
     }
     onDraftChange({
       copy: next,
-      applied: [...draft.applied, suggestion.id],
-      selected: draft.selected.filter((id) => id !== suggestion.id),
-      notice: "已应用这条修改，其他条款保持不变。",
+      applied: [...draft.applied, ...done],
+      selected: [],
+      notice: `已应用 ${done.length} 条，未选条款保持原文${skipped ? `；${skipped} 条因原文已变化被跳过` : ""}。`,
       result: null,
     });
   }
@@ -220,38 +216,72 @@ export function RevisionCopyPanel({
       </Alert>
 
       <div className="mb-3 space-y-2">
-        <div>
-          <h4 className="text-sm font-semibold">本次修订（{suggestions.length} 条）</h4>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">一次只应用一条，其他条款保持原文。</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h4 className="text-sm font-semibold">修订清单（{suggestions.length} 条）</h4>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              默认不选；勾选要改的条款后一次应用，未勾选保持原文。
+            </p>
+          </div>
+          <Button size="sm" onClick={applySelected} disabled={selected.size === 0}>
+            应用已选（{selected.size}）
+          </Button>
         </div>
         {suggestions.length === 0 ? (
-          <p className="text-xs text-muted-foreground">本条暂未返回修订建议，可在对话中重试。</p>
+          <p className="text-xs text-muted-foreground">本次未返回修订条款，可在对话中重试。</p>
         ) : (
-          suggestions.map((suggestion) => (
-            <div key={suggestion.id} className="rounded-md border bg-secondary/30 p-2">
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  {suggestion.targetExcerpt && (
-                    <p className="mb-1 font-mono text-[11px] text-muted-foreground">
-                      目标原文：「{suggestion.targetExcerpt.text}」
-                    </p>
-                  )}
-                  <p className="whitespace-pre-wrap font-mono text-xs">{suggestion.text}</p>
-                </div>
-                <div className="shrink-0">
-                  {applied.has(suggestion.id) ? (
-                    <Badge variant="secondary">
-                      <Check className="size-3" /> 已应用
-                    </Badge>
-                  ) : (
-                    <Button size="sm" onClick={() => applyOne(suggestion)}>
-                      应用这条
-                    </Button>
-                  )}
+          suggestions.map((suggestion) => {
+            const isApplied = applied.has(suggestion.id);
+            const isSelected = selected.has(suggestion.id);
+            return (
+              <div
+                key={suggestion.id}
+                className={cn(
+                  "rounded-lg border p-2.5 transition-colors",
+                  isApplied
+                    ? "border-border/50 bg-secondary/20"
+                    : isSelected
+                      ? "border-primary/40 bg-primary/[0.03]"
+                      : "border-border/70 bg-background",
+                )}
+              >
+                <div className="flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    className="mt-1 size-4 shrink-0 accent-primary"
+                    checked={isApplied || isSelected}
+                    disabled={isApplied}
+                    onChange={() => toggleSelect(suggestion.id)}
+                    aria-label={`${suggestion.kind === "add" ? "新增" : "修改"} ${suggestion.clauseLabel} ${
+                      suggestion.title || ""
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant={suggestion.kind === "add" ? "outline" : "secondary"}>
+                        {suggestion.kind === "add" ? "新增条款" : `修改 ${suggestion.clauseLabel}`}
+                      </Badge>
+                      {suggestion.title && <span className="text-[12px] font-medium">{suggestion.title}</span>}
+                      {isApplied && (
+                        <Badge variant="secondary">
+                          <Check className="size-3" /> 已应用
+                        </Badge>
+                      )}
+                    </div>
+                    {suggestion.reason && (
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{suggestion.reason}</p>
+                    )}
+                    {suggestion.targetExcerpt && (
+                      <p className="mt-1.5 line-clamp-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                        原文：{suggestion.targetExcerpt.text}
+                      </p>
+                    )}
+                    <p className="mt-1 whitespace-pre-wrap font-mono text-xs leading-relaxed">{suggestion.text}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -285,18 +315,6 @@ export function RevisionCopyPanel({
           <Undo2 className="size-4" />
           放弃修改
         </Button>
-        {onNextFinding && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onNextFinding}
-            disabled={draft.loading || (!appliedCurrent && !dirty)}
-            title={nextFindingLabel ? `下一条：${nextFindingLabel}` : "处理下一条风险"}
-          >
-            <PencilLine className="size-4" />
-            下一条风险
-          </Button>
-        )}
         <Button
           size="sm"
           onClick={onReReview}
@@ -306,14 +324,6 @@ export function RevisionCopyPanel({
           {draft.loading ? "复查中…" : "复查副本"}
         </Button>
       </div>
-
-      {onNextFinding && (!appliedCurrent && !dirty ? (
-        <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-          应用本条修改后，可继续处理下一条{nextFindingLabel ? `：${nextFindingLabel}` : "风险"}。
-        </p>
-      ) : nextFindingLabel ? (
-        <p className="mt-1.5 line-clamp-1 text-[11px] leading-relaxed text-muted-foreground">下一条：{nextFindingLabel}</p>
-      ) : null)}
 
       {draft.archiveNotice && <p className="mt-2 text-xs text-primary">{draft.archiveNotice}</p>}
 
