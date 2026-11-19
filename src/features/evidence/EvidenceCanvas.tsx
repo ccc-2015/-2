@@ -13,6 +13,7 @@ import {
   ImagePlus,
   Download,
   Loader2,
+  MoreHorizontal,
   Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HelpTip } from "@/components/HelpTip";
+import { ModuleHeader } from "@/components/ModuleHeader";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EVIDENCE_STATUS_LABELS, type EvidenceStatus } from "@/shared/api";
 import { cn } from "@/lib/utils";
 import type { ViewId } from "../../components/AppShell";
@@ -239,43 +247,68 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-8 md:pt-8">
-      <header className="border-b border-border/60 pb-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <p className="max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
-            按时间记录租住过程中的事件与材料，退租或发生争议时可直接选用。
-          </p>
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
-            <Button size="sm" variant="outline" onClick={() => exportPackage("zip")} disabled={exporting || allRecords.length === 0}>
-              {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-              {exporting ? "打包中…" : "导出证据包"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => exportPackage("print")} disabled={exporting || allRecords.length === 0}>
-              <Printer className="size-3.5" />
-              打印 / 存为 PDF
-            </Button>
-            <Button size="sm" variant="outline" onClick={openUtility}>
-              <Droplets className="size-3.5" />
-              添加费用
-            </Button>
+    <div className="w-full pb-8">
+      <ModuleHeader
+        icon={CalendarClock}
+        purpose="记录证据：按时间整理材料，退租或争议时直接选用"
+        tone="text-stage-move-in"
+        actions={
+          <>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => {
-                const sample = loadEvidenceSample();
-                setFlash(`示例证据已就绪，共 ${sample.recordIds.length} 条演示记录`);
-              }}
+              className="hidden sm:inline-flex"
+              onClick={() => exportPackage("zip")}
+              disabled={exporting || allRecords.length === 0}
             >
-              试用示例证据
+              {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+              {exporting ? "打包中…" : "导出证据包"}
             </Button>
             <Button size="sm" onClick={() => openRecord()}>
               <Plus className="size-3.5" />
               添加记录
             </Button>
-          </div>
-        </div>
-      </header>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8" aria-label="更多操作">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onSelect={() => exportPackage("zip")}
+                  disabled={exporting || allRecords.length === 0}
+                  className="sm:hidden"
+                >
+                  <Download className="size-3.5" />
+                  导出证据包
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => exportPackage("print")}
+                  disabled={exporting || allRecords.length === 0}
+                >
+                  <Printer className="size-3.5" />
+                  打印 / 存为 PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={openUtility}>
+                  <Droplets className="size-3.5" />
+                  添加费用
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    const sample = loadEvidenceSample();
+                    setFlash(`示例证据已就绪，共 ${sample.recordIds.length} 条演示记录`);
+                  }}
+                >
+                  试用示例证据
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
+      <div className="mx-auto w-full max-w-[1024px] px-4 pt-5 md:px-8">
       <EvidenceOverview
         records={allRecords}
         startDate={rentalProfile.startDate}
@@ -513,6 +546,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
           </Button>
         </div>
       )}
+      </div>
     </div>
   );
 }

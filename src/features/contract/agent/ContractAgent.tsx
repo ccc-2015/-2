@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Download, FileText, MoreHorizontal, Printer, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, Download, FileSearch, FileText, MoreHorizontal, Printer, ShieldCheck, Sparkles } from "lucide-react";
 import type { ContractIntent, ContractResult, Excerpt, Finding, ResponseMeta } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RegionSelect } from "../../../components/RegionSelect";
+import { ModuleHeader } from "@/components/ModuleHeader";
 import { analyzeContractStream, api, ApiError, errorMessage } from "../../../lib/api";
 import { extractLocally, LOCAL_SITE } from "../../../lib/extractLocal";
 import { useConfig } from "../../../lib/config-context";
@@ -683,68 +683,65 @@ export function ContractAgent({
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
     >
-      <header className="shrink-0 border-b border-border/60">
-        <div className="mx-auto flex w-full max-w-[960px] flex-wrap items-center justify-between gap-2 px-4 pb-4 pt-5 md:px-8 md:pt-6">
-        <div className="flex min-w-0 items-center gap-2">
-          <RegionSelect compact />
-          <p className="hidden truncate text-[13px] leading-relaxed text-muted-foreground sm:block">
-            对照法规审查合同，标出风险与依据。
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          {doc && (
-            <Button variant="ghost" size="sm" onClick={() => openDoc()} className="hidden sm:inline-flex">
-              <FileText className="size-3.5" />
-              合同文本
-            </Button>
-          )}
-          {sessionHasContent(session) && (
-            <Button variant="ghost" size="sm" onClick={newChat}>
-              新对话
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8" aria-label="更多操作">
-                <MoreHorizontal className="size-4" />
+      <ModuleHeader
+        icon={FileSearch}
+        purpose="审查合同：对照法规标出风险与依据"
+        tone="text-stage-living"
+        actions={
+          <>
+            {doc && (
+              <Button variant="ghost" size="sm" onClick={() => openDoc()} className="hidden sm:inline-flex">
+                <FileText className="size-3.5" />
+                合同文本
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              {doc && (
-                <DropdownMenuItem onSelect={() => openDoc()} className="sm:hidden">
-                  <FileText className="size-3.5" />
-                  合同文本
-                </DropdownMenuItem>
-              )}
-              {onNavigate && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => onNavigate("evidence")}>去证据画布</DropdownMenuItem>
-                </>
-              )}
-              {exchanges.some((exchange) => exchange.result) && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => exportReport("html")}>
-                    <Download className="size-3.5" />
-                    导出审查报告
+            )}
+            {sessionHasContent(session) && (
+              <Button variant="ghost" size="sm" onClick={newChat}>
+                新对话
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8" aria-label="更多操作">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                {doc && (
+                  <DropdownMenuItem onSelect={() => openDoc()} className="sm:hidden">
+                    <FileText className="size-3.5" />
+                    合同文本
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => exportReport("print")}>
-                    <Printer className="size-3.5" />
-                    打印 / 存为 PDF
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        </div>
-      </header>
+                )}
+                {onNavigate && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => onNavigate("evidence")}>去证据画布</DropdownMenuItem>
+                  </>
+                )}
+                {exchanges.some((exchange) => exchange.result) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => exportReport("html")}>
+                      <Download className="size-3.5" />
+                      导出审查报告
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => exportReport("print")}>
+                      <Printer className="size-3.5" />
+                      打印 / 存为 PDF
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         {empty ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-thin">
-            <div className="mx-auto flex w-full max-w-[960px] flex-1 flex-col px-4 pb-44 pt-6 text-center md:px-8">
+            <div className="mx-auto flex w-full max-w-[1024px] flex-1 flex-col px-4 pb-44 pt-6 text-center md:px-8">
             <div className="my-auto flex w-full flex-col items-center">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-foreground text-background shadow-sm">
               <ShieldCheck className="size-5" />
@@ -796,21 +793,23 @@ export function ContractAgent({
           </div>
         ) : (
           <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none">
-            <div className="mx-auto w-full max-w-[960px] px-4 pb-44 pt-5 md:px-8">
-              <Thread
-                exchanges={exchanges}
-                doc={doc}
-                busy={busy}
-                aiAvailable={aiAvailable}
-                signingDate={signingDate}
-                onRetry={retry}
-                onLocate={openDoc}
-                onFollowUp={(next) => {
-                  setQuestion(next);
-                  textareaRef.current?.focus();
-                }}
-                onOpenDoc={() => openDoc()}
-              />
+            <div className="mx-auto w-full max-w-[1024px] px-4 pb-44 pt-5 md:px-8">
+              <div className="mx-auto w-full max-w-[880px]">
+                <Thread
+                  exchanges={exchanges}
+                  doc={doc}
+                  busy={busy}
+                  aiAvailable={aiAvailable}
+                  signingDate={signingDate}
+                  onRetry={retry}
+                  onLocate={openDoc}
+                  onFollowUp={(next) => {
+                    setQuestion(next);
+                    textareaRef.current?.focus();
+                  }}
+                  onOpenDoc={() => openDoc()}
+                />
+              </div>
             </div>
           </div>
         )}

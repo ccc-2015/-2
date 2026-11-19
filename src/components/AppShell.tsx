@@ -5,6 +5,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useConfig } from "../lib/config-context";
 import { HistoryList } from "../features/contract/agent/HistoryList";
 import { Onboarding, openOnboarding } from "./Onboarding";
+import { RegionSelect } from "./RegionSelect";
 
 export type ViewId = "contract" | "evidence" | "dispute";
 
@@ -114,6 +115,10 @@ export function AppShell({
           <Brand />
         </div>
 
+        <div className="px-5 pb-3">
+          <RegionSelect compact />
+        </div>
+
         <NavList active={active} onNavigate={onNavigate} />
 
         <div className="mt-4 flex min-h-0 flex-1 flex-col border-t border-black/[0.06] pt-3">
@@ -142,8 +147,8 @@ export function AppShell({
         <header className="glass sticky top-0 z-20 shrink-0 border-b border-black/[0.06] md:hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-2">
             <Brand />
-            <div className="flex items-center gap-1">
-              <ModelStatus />
+            <div className="flex items-center gap-1.5">
+              <RegionSelect compact />
               <button
                 type="button"
                 onClick={() => setMobileHistory((open) => !open)}

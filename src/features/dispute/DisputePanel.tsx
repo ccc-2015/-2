@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { HelpTip } from "@/components/HelpTip";
+import { ModuleHeader } from "@/components/ModuleHeader";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SourceList } from "@/components/SourceList";
-import { RegionSelect } from "../../components/RegionSelect";
 import { EVIDENCE_STATUS_LABELS, type DisputeResult, type ResponseMeta } from "@/shared/api";
 import { disputePrefill, useDisputePrefill } from "../evidence/disputePrefill";
 import { loadEvidenceSample } from "../evidence/sample";
@@ -357,24 +357,20 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8">
-      <header className="border-b border-border/60 pb-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <p className="max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
-            选择争议与证据，补充必要事实，匹配处理方向；选定方向后生成可编辑话术。话术为辅助草稿，未知项保留待补，系统不代你提交。
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0"
-            onClick={loadSample}
-          >
+    <div className="w-full pb-8">
+      <ModuleHeader
+        icon={Scale}
+        purpose="处理争议：整理事实与证据，匹配处理方向"
+        tone="text-stage-dispute"
+        actions={
+          <Button size="sm" variant="outline" onClick={loadSample}>
             <Sparkles className="size-3.5" />
             试用示例争议
           </Button>
-        </div>
-      </header>
+        }
+      />
 
+      <div className="mx-auto w-full max-w-[1024px] px-4 pt-5 md:px-8">
       {notice && (
         <p className="mt-3 rounded-lg bg-primary/5 px-3 py-2 text-[11px] leading-relaxed text-primary">{notice}</p>
       )}
@@ -404,10 +400,6 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                 <Textarea id="dp-issue" value={issue} onChange={(e) => setIssue(e.target.value)} className="min-h-20 text-sm" placeholder="例如：退租后房东以墙面损坏为由扣除全部押金，协商无果。" />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor="dp-city" className="text-xs">城市 / 地区</Label>
-                  <RegionSelect id="dp-city" />
-                </div>
                 <div className="space-y-1">
                   <Label htmlFor="dp-date" className="text-xs">事件日期（可选）</Label>
                   <Input id="dp-date" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
@@ -582,10 +574,10 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                 <>
                   <Scale className="size-8 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium">
-                    {step === 2 ? "点「整理事实并匹配方向」开始" : "按步骤填写，右侧会出现处理方向"}
+                    {step === 2 ? "点「整理事实并匹配方向」开始" : "先写争议事项，再补证据，最后生成话术"}
                   </p>
                   <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                    系统先整理已确认事实、提示关键缺项，并给出一个优先方向与少量可考虑项；选定方向后才生成对应话术。
+                    第 1 步写清发生了什么；第 2 步选证据、补事实；第 3 步选一个方向生成可编辑话术。系统不代你提交。
                   </p>
                   <Button size="sm" variant="outline" className="mt-3" onClick={loadSample}>
                     <Sparkles className="size-3.5" />
@@ -821,6 +813,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
             </div>
           )}
         </div>
+      </div>
       </div>
 
     </div>
