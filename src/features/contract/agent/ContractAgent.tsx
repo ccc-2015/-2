@@ -690,10 +690,12 @@ export function ContractAgent({
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
     >
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
-        <div className="flex items-center gap-2">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-4">
+        <div className="flex min-w-0 items-center gap-2">
           <RegionSelect compact />
-          <h1 className="text-[12px] font-medium text-muted-foreground">合同审查</h1>
+          <p className="hidden truncate text-[13px] leading-relaxed text-muted-foreground sm:block">
+            对照法规审查合同，标出风险与依据。
+          </p>
         </div>
         <div className="flex items-center gap-1">
           {doc && (
@@ -750,9 +752,9 @@ export function ContractAgent({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         {empty ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-6 text-center">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-44 pt-6 text-center">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-foreground text-background shadow-sm">
               <ShieldCheck className="size-5" />
             </span>
@@ -800,7 +802,7 @@ export function ContractAgent({
             </div>
           </div>
         ) : (
-          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-5">
+          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-44 pt-5">
             <Thread
               exchanges={exchanges}
               doc={doc}
@@ -820,8 +822,8 @@ export function ContractAgent({
           </div>
         )}
 
-        <div className="z-10 mt-3 shrink-0 -mx-4 border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-xl md:-mx-6 md:px-6">
-          <div className="mx-auto w-full max-w-[880px]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
+          <div className="pointer-events-auto relative mx-auto w-full max-w-[880px] px-0 pb-4">
             {uploadError && (
               <Alert variant="destructive" className="mb-2 py-2">
                 <AlertTriangle className="size-4" />
@@ -857,7 +859,7 @@ export function ContractAgent({
               onFiles={handleFiles}
               textareaRef={textareaRef}
             />
-            <p className="mt-1.5 text-center text-[10px] leading-relaxed text-muted-foreground">
+            <p className="mt-1.5 text-center text-[10px] leading-relaxed text-muted-foreground [text-shadow:0_1px_6px_rgba(251,251,253,0.95),0_0_12px_rgba(251,251,253,0.9)]">
               {!aiAvailable ? (
                 "服务端未配置模型密钥，审查暂不可用。"
               ) : consent === "on" ? (

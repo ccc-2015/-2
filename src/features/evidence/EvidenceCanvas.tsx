@@ -242,12 +242,9 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     <div className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-8 md:pt-8">
       <header className="border-b border-border/60 pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-[26px] font-semibold leading-tight tracking-tight">证据画布</h1>
-            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-              按时间记录租住过程中的事件与材料，退租或发生争议时可直接选用。
-            </p>
-          </div>
+          <p className="max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+            按时间记录租住过程中的事件与材料，退租或发生争议时可直接选用。
+          </p>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
             <Button size="sm" variant="outline" onClick={() => exportPackage("zip")} disabled={exporting || allRecords.length === 0}>
               {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}

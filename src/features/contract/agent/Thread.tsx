@@ -5,6 +5,7 @@ import { HelpTip } from "@/components/HelpTip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AnswerBody } from "./AnswerBody";
 import { FindingCard } from "./ResultCards";
 import type { ContractDoc, Exchange } from "./types";
 
@@ -110,10 +111,7 @@ export function Thread({
             )}
 
             {exchange.partialAnswer ? (
-              <p className="whitespace-pre-wrap text-[15px] leading-7">
-                {exchange.partialAnswer}
-                {exchange.loading && <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-foreground/60 align-middle" />}
-              </p>
+              <AnswerBody text={exchange.partialAnswer} streaming={!!exchange.loading} />
             ) : null}
 
             {exchange.error && (
@@ -205,7 +203,7 @@ function ResultBlock({
         </HelpTip>
       </div>
 
-      {result.answer && <p className="whitespace-pre-wrap text-[15px] leading-7">{result.answer}</p>}
+      {result.answer && <AnswerBody text={result.answer} />}
 
       {result.references.length === 0 && warnings.length > 0 && (
         <p className="text-[11px] leading-relaxed text-muted-foreground">{warnings.join(" ")}</p>

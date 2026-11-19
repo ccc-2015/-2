@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { copyText } from "../../../lib/clipboard";
 import { newId, saveRecordChecked, type EvidenceRecord } from "../../evidence/store";
+import { AnswerBody } from "./AnswerBody";
 import type { RevisionDraft, RevisionSuggestion } from "./types";
 
 export function FindingCard({
@@ -345,7 +346,7 @@ export function RevisionCopyPanel({
             )}
           </div>
           <p className="text-xs text-muted-foreground">AI 辅助意见，仅供协商参考；请对比修改前后发现。</p>
-          {draft.result.answer && <p className="whitespace-pre-wrap text-sm">{draft.result.answer}</p>}
+          {draft.result.answer && <AnswerBody text={draft.result.answer} />}
           {draft.result.findings.length > 0 ? (
             <ul className="space-y-1">
               {draft.result.findings.map((finding, i) => (

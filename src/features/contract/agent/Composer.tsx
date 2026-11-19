@@ -36,8 +36,8 @@ export function Composer({
   return (
     <div
       className={cn(
-        "rounded-[24px] border border-border/80 bg-white/90 p-2 shadow-[0_10px_36px_-24px_rgba(16,24,40,0.45)] backdrop-blur-xl transition-shadow",
-        dragOver && "ring-2 ring-primary/30",
+        "rounded-[26px] border border-white/70 bg-white/65 p-2 shadow-[0_24px_60px_-28px_rgba(16,24,40,0.45),0_2px_8px_rgba(16,24,40,0.05),inset_0_1px_0_rgba(255,255,255,0.95)] ring-1 ring-black/[0.04] backdrop-blur-2xl backdrop-saturate-150 transition-[background-color,box-shadow] duration-200",
+        dragOver && "bg-white/80 ring-2 ring-primary/30",
       )}
     >
       {uploading && (

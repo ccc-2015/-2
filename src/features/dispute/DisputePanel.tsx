@@ -358,14 +358,11 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8">
-      <header className="border-b border-border/60 pb-5">
+      <header className="border-b border-border/60 pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-[26px] font-semibold leading-tight tracking-tight">争议处理</h1>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-              选择争议与证据，补充必要事实，匹配处理方向；选定方向后生成可编辑话术。话术为辅助草稿，未知项保留待补，系统不代你提交。
-            </p>
-          </div>
+          <p className="max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+            选择争议与证据，补充必要事实，匹配处理方向；选定方向后生成可编辑话术。话术为辅助草稿，未知项保留待补，系统不代你提交。
+          </p>
           <Button
             size="sm"
             variant="outline"

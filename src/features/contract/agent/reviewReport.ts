@@ -123,7 +123,8 @@ export function buildReviewReport({
   pre { white-space: pre-wrap; background: #f7f7f8; padding: 10px; border-radius: 8px; font-size: 12px; }
   .qa { margin: 8px 0; font-size: 12px; }
   .qa .q { color: #4b5563; margin: 0; }
-  .qa .a { margin: 2px 0 0; }
+  .qa .a { margin: 2px 0 0; white-space: pre-wrap; }
+  .answer { white-space: pre-wrap; }
   @media print { body { padding: 0; } h2 { break-after: avoid; } }
 </style></head>
 <body>
@@ -144,7 +145,7 @@ export function buildReviewReport({
   </table>` : ""}
 
   <h2>审查结论</h2>
-  <p>${escapeHtml(result.answer)}</p>
+  <p class="answer">${escapeHtml(result.answer)}</p>
 
   ${result.findings.length > 0 ? `<h2>风险提示（${result.findings.length}）</h2>${findings}` : ""}
 
