@@ -261,6 +261,12 @@ export function ContractAgent({
       });
 
     // 逐条展示风险卡：即使多条事件同时到达，也按队列一条一条出现。
+    const finishPending = (pending: { data: ContractResult; meta: ResponseMeta; text: string }) => {
+      // 给最后一张卡的逐字展示留出完成时间，避免结果一到就整块替换。
+      const delay = pending.data.findings.length > 0 ? 900 : 0;
+      window.setTimeout(() => applyResult(pending.data, pending.meta, pending.text), delay);
+    };
+
     const revealNext = () => {
       if (findingTimers.current.has(id)) return;
       const tick = () => {
@@ -284,12 +290,13 @@ export function ContractAgent({
         const pending = pendingResults.current.get(id);
         if (pending) {
           pendingResults.current.delete(id);
-          applyResult(pending.data, pending.meta, pending.text);
+          finishPending(pending);
         }
       };
       findingTimers.current.set(id, window.setTimeout(tick, 150));
     };
 
+    let receivedFindings = 0;
     await analyzeContractStream(
       {
         text,
@@ -312,17 +319,23 @@ export function ContractAgent({
             ),
           })),
         onFinding: (finding) => {
+          receivedFindings += 1;
           const queue = findingQueues.current.get(id) ?? [];
           queue.push(finding);
           findingQueues.current.set(id, queue);
           revealNext();
         },
         onResult: (data, meta) => {
+          // 兜底：若逐条事件丢失，仍按结果里的风险卡逐条展示。
+          if (data.findings.length > 0 && receivedFindings === 0) {
+            findingQueues.current.set(id, [...data.findings]);
+            revealNext();
+          }
           pendingResults.current.set(id, { data, meta, text });
           const queue = findingQueues.current.get(id);
           if (!findingTimers.current.has(id) && (!queue || queue.length === 0)) {
             pendingResults.current.delete(id);
-            applyResult(data, meta, text);
+            finishPending({ data, meta, text });
           } else {
             revealNext();
           }
@@ -649,7 +662,7 @@ export function ContractAgent({
 
   return (
     <div
-      className="mx-auto flex h-full min-h-0 w-full max-w-[960px] flex-col overflow-hidden px-4 pt-5 md:px-8 md:pt-6"
+      className="flex h-full min-h-0 w-full flex-col overflow-hidden"
       onDragOver={(event) => {
         event.preventDefault();
         if (!uploading) setDragOver(true);
@@ -657,7 +670,8 @@ export function ContractAgent({
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
     >
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-4">
+      <header className="shrink-0 border-b border-border/60">
+        <div className="mx-auto flex w-full max-w-[960px] flex-wrap items-center justify-between gap-2 px-4 pb-4 pt-5 md:px-8 md:pt-6">
         <div className="flex min-w-0 items-center gap-2">
           <RegionSelect compact />
           <p className="hidden truncate text-[13px] leading-relaxed text-muted-foreground sm:block">
@@ -711,11 +725,13 @@ export function ContractAgent({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        </div>
       </header>
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         {empty ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-none px-4 pb-44 pt-6 text-center">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-thin">
+            <div className="mx-auto flex w-full max-w-[960px] flex-1 flex-col px-4 pb-44 pt-6 text-center md:px-8">
             <div className="my-auto flex w-full flex-col items-center">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-foreground text-background shadow-sm">
               <ShieldCheck className="size-5" />
@@ -764,27 +780,30 @@ export function ContractAgent({
             </div>
             </div>
           </div>
+          </div>
         ) : (
-          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none pb-44 pt-5">
-            <Thread
-              exchanges={exchanges}
-              doc={doc}
-              busy={busy}
-              aiAvailable={aiAvailable}
-              signingDate={signingDate}
-              onRetry={retry}
-              onLocate={openDoc}
-              onFollowUp={(next) => {
-                setQuestion(next);
-                textareaRef.current?.focus();
-              }}
-              onOpenDoc={() => openDoc()}
-            />
+          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin">
+            <div className="mx-auto w-full max-w-[960px] px-4 pb-44 pt-5 md:px-8">
+              <Thread
+                exchanges={exchanges}
+                doc={doc}
+                busy={busy}
+                aiAvailable={aiAvailable}
+                signingDate={signingDate}
+                onRetry={retry}
+                onLocate={openDoc}
+                onFollowUp={(next) => {
+                  setQuestion(next);
+                  textareaRef.current?.focus();
+                }}
+                onOpenDoc={() => openDoc()}
+              />
+            </div>
           </div>
         )}
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
-          <div className="pointer-events-auto relative mx-auto w-full max-w-[880px] px-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="pointer-events-auto relative mx-auto w-full max-w-[912px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:max-w-[944px] md:px-8">
             {uploadError && (
               <Alert variant="destructive" className="mb-2 py-2">
                 <AlertTriangle className="size-4" />

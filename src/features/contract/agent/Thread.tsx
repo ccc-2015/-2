@@ -114,7 +114,7 @@ export function Thread({
               <div className="space-y-2">
                 <h3 className="text-[12px] font-medium text-muted-foreground">风险提示</h3>
                 {exchange.streamFindings!.map((finding, index) => (
-                  <FindingCard key={index} finding={finding} onLocate={onLocate} />
+                  <FindingCard key={index} finding={finding} onLocate={onLocate} typing />
                 ))}
               </div>
             )}
