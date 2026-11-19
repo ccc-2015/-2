@@ -30,6 +30,7 @@ import { useRentalProfile } from "../../rental/profile";
 import { Composer } from "./Composer";
 import { ContractSheet } from "./ContractSheet";
 import { historyBus, useHistoryRequest } from "./historyBus";
+import { ScrollRail } from "./ScrollRail";
 import { Thread } from "./Thread";
 import { buildReviewReport } from "./reviewReport";
 import { downloadBlob } from "../../evidence/exportPackage";
@@ -97,6 +98,8 @@ export function ContractAgent({
   const findingQueues = useRef(new Map<string, Finding[]>());
   const findingTimers = useRef(new Map<string, number>());
   const pendingResults = useRef(new Map<string, { data: ContractResult; meta: ResponseMeta; text: string }>());
+  const composerRef = useRef<HTMLDivElement>(null);
+  const [composerHeight, setComposerHeight] = useState(0);
 
   const busy = exchanges.some((exchange) => exchange.loading);
   const empty = !doc && exchanges.length === 0;
@@ -188,6 +191,16 @@ export function ContractAgent({
     },
     [],
   );
+
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    const sync = () => setComposerHeight(el.offsetHeight);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (consent !== "on" || !supported || !sessionHasContent(session)) return;
@@ -782,7 +795,7 @@ export function ContractAgent({
           </div>
           </div>
         ) : (
-          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin">
+          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none">
             <div className="mx-auto w-full max-w-[960px] px-4 pb-44 pt-5 md:px-8">
               <Thread
                 exchanges={exchanges}
@@ -802,8 +815,13 @@ export function ContractAgent({
           </div>
         )}
 
+        {!empty && <ScrollRail targetRef={threadRef} bottomOffset={composerHeight + 8} />}
+
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
-          <div className="pointer-events-auto relative mx-auto w-full max-w-[912px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:max-w-[944px] md:px-8">
+          <div
+            ref={composerRef}
+            className="pointer-events-auto relative mx-auto w-full max-w-[912px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:max-w-[944px] md:px-8"
+          >
             {uploadError && (
               <Alert variant="destructive" className="mb-2 py-2">
                 <AlertTriangle className="size-4" />
