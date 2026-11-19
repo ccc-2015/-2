@@ -4,6 +4,7 @@ import type {
   ContractResult,
   Excerpt,
   ExtractPage,
+  Finding,
   ResponseMeta,
 } from "@/shared/api";
 
@@ -43,6 +44,8 @@ export interface Exchange {
   stage?: "reading" | "retrieving" | "generating" | null;
   /** 已流式返回的回答正文，结束后由 result.answer 覆盖。 */
   partialAnswer?: string;
+  /** 已流式推送的风险卡，结束后由 result.findings 覆盖。 */
+  streamFindings?: Finding[];
 }
 
 /** 修订副本状态按消息 id 保存在页面级，关闭抽屉不丢。 */

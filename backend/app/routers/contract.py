@@ -112,6 +112,10 @@ async def analyze_stream(inp: AnalyzeContractInput):
             elif streamed and not model_answer.strip():
                 raw["answer"] = streamed
             analysis = materialize(inp, sources, raw)
+            # 风险卡逐条推送，避免最后一次性全部出现。
+            for finding in analysis.result.findings:
+                yield _event({"type": "finding", "finding": finding.model_dump()})
+                await asyncio.sleep(0.12)
             payload = {
                 "type": "result",
                 "data": analysis.result.model_dump(),

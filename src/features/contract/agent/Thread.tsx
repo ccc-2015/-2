@@ -110,6 +110,15 @@ export function Thread({
               <AnswerBody text={exchange.partialAnswer} streaming={!!exchange.loading} />
             ) : null}
 
+            {exchange.loading && (exchange.streamFindings?.length ?? 0) > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-[12px] font-medium text-muted-foreground">风险提示</h3>
+                {exchange.streamFindings!.map((finding, index) => (
+                  <FindingCard key={index} finding={finding} onLocate={onLocate} />
+                ))}
+              </div>
+            )}
+
             {exchange.error && (
               <Alert variant="destructive">
                 <ShieldAlert className="size-4" />

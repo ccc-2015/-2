@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Download, FileText, MoreHorizontal, Printer, ShieldCheck, Sparkles } from "lucide-react";
-import type { ContractIntent, Excerpt } from "@/shared/api";
+import type { ContractIntent, ContractResult, Excerpt, Finding, ResponseMeta } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -34,14 +34,7 @@ import { Thread } from "./Thread";
 import { buildReviewReport } from "./reviewReport";
 import { downloadBlob } from "../../evidence/exportPackage";
 import { printHtml } from "../../../lib/print";
-import {
-  formatSessionTime,
-  getConsent,
-  historySupported,
-  listSessions,
-  loadSession,
-  saveSession,
-} from "./history";
+import { getConsent, historySupported, listSessions, loadSession, saveSession } from "./history";
 import { buildContext } from "./memory";
 import {
   emptySession,
@@ -97,11 +90,13 @@ export function ContractAgent({
   const [historyNotice, setHistoryNotice] = useState("");
   const [consent, setConsentState] = useState(() => getConsent());
   const [supported] = useState(() => historySupported());
-  const [savedAt, setSavedAt] = useState<string | null>(null);
   const historyRequest = useHistoryRequest();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+  const findingQueues = useRef(new Map<string, Finding[]>());
+  const findingTimers = useRef(new Map<string, number>());
+  const pendingResults = useRef(new Map<string, { data: ContractResult; meta: ResponseMeta; text: string }>());
 
   const busy = exchanges.some((exchange) => exchange.loading);
   const empty = !doc && exchanges.length === 0;
@@ -134,8 +129,7 @@ export function ContractAgent({
         const loaded = await loadSession(items[0].id);
         if (!loaded) return;
         setSession((current) => (sessionHasContent(current) ? current : loaded));
-        setSavedAt(loaded.updatedAt);
-        void historyBus.refresh();
+                void historyBus.refresh();
       })
       .catch(() => undefined);
   }, []);
@@ -185,13 +179,22 @@ export function ContractAgent({
     if (thread) thread.scrollTop = thread.scrollHeight;
   }, [exchanges.length, busy]);
 
+  useEffect(
+    () => () => {
+      findingTimers.current.forEach((timer) => window.clearTimeout(timer));
+      findingTimers.current.clear();
+      findingQueues.current.clear();
+      pendingResults.current.clear();
+    },
+    [],
+  );
+
   useEffect(() => {
     if (consent !== "on" || !supported || !sessionHasContent(session)) return;
     const timer = window.setTimeout(() => {
       void saveSession(session)
         .then(() => {
-          setSavedAt(session.updatedAt);
-          void refreshHistory();
+                    void refreshHistory();
         })
         .catch(() => setHistoryNotice("本机历史保存失败，可能是浏览器存储受限或被禁用。"));
     }, 600);
@@ -208,11 +211,18 @@ export function ContractAgent({
     setSession({ ...emptySession(), doc: nextDoc, signingDate: profile.startDate });
     resetUi();
     setDocOpen(false);
-    setSavedAt(null);
-  }
+      }
 
   function askConfirm(title: string, description: string, action: () => void) {
     setPendingConfirm({ title, description, action });
+  }
+
+  function clearFindingStream(id: string) {
+    const timer = findingTimers.current.get(id);
+    if (timer) window.clearTimeout(timer);
+    findingTimers.current.delete(id);
+    findingQueues.current.delete(id);
+    pendingResults.current.delete(id);
   }
 
   async function run(
@@ -223,10 +233,11 @@ export function ContractAgent({
     text: string,
     eventDate: string = signingDate,
   ) {
+    clearFindingStream(id);
     patch((current) => ({
       exchanges: current.exchanges.map((exchange) =>
         exchange.id === id
-          ? { ...exchange, loading: true, error: null, stage: "reading", partialAnswer: "" }
+          ? { ...exchange, loading: true, error: null, stage: "reading", partialAnswer: "", streamFindings: [] }
           : exchange,
       ),
     }));
@@ -237,6 +248,47 @@ export function ContractAgent({
           exchange.id === id ? { ...exchange, ...next } : exchange,
         ),
       }));
+
+    const applyResult = (data: ContractResult, meta: ResponseMeta, resultText: string) =>
+      update({
+        loading: false,
+        result: data,
+        meta,
+        docText: resultText,
+        stage: null,
+        partialAnswer: "",
+        streamFindings: [],
+      });
+
+    // 逐条展示风险卡：即使多条事件同时到达，也按队列一条一条出现。
+    const revealNext = () => {
+      if (findingTimers.current.has(id)) return;
+      const tick = () => {
+        const queue = findingQueues.current.get(id) ?? [];
+        const next = queue.shift();
+        if (next) {
+          patch((current) => ({
+            exchanges: current.exchanges.map((exchange) =>
+              exchange.id === id
+                ? { ...exchange, streamFindings: [...(exchange.streamFindings ?? []), next] }
+                : exchange,
+            ),
+          }));
+        }
+        if (queue.length > 0) {
+          findingTimers.current.set(id, window.setTimeout(tick, 150));
+          return;
+        }
+        findingTimers.current.delete(id);
+        findingQueues.current.delete(id);
+        const pending = pendingResults.current.get(id);
+        if (pending) {
+          pendingResults.current.delete(id);
+          applyResult(pending.data, pending.meta, pending.text);
+        }
+      };
+      findingTimers.current.set(id, window.setTimeout(tick, 150));
+    };
 
     await analyzeContractStream(
       {
@@ -259,9 +311,26 @@ export function ContractAgent({
                 : exchange,
             ),
           })),
-        onResult: (data, meta) =>
-          update({ loading: false, result: data, meta, docText: text, stage: null, partialAnswer: "" }),
-        onError: (error) => update({ loading: false, error, stage: null, partialAnswer: "" }),
+        onFinding: (finding) => {
+          const queue = findingQueues.current.get(id) ?? [];
+          queue.push(finding);
+          findingQueues.current.set(id, queue);
+          revealNext();
+        },
+        onResult: (data, meta) => {
+          pendingResults.current.set(id, { data, meta, text });
+          const queue = findingQueues.current.get(id);
+          if (!findingTimers.current.has(id) && (!queue || queue.length === 0)) {
+            pendingResults.current.delete(id);
+            applyResult(data, meta, text);
+          } else {
+            revealNext();
+          }
+        },
+        onError: (error) => {
+          clearFindingStream(id);
+          update({ loading: false, error, stage: null, partialAnswer: "" });
+        },
       },
     );
   }
@@ -492,8 +561,7 @@ export function ContractAgent({
     setSession(emptySession());
     setDocOpen(false);
     resetUi();
-    setSavedAt(null);
-  }
+      }
 
   function newChat() {
     if (!sessionHasContent(session)) return;
@@ -513,8 +581,7 @@ export function ContractAgent({
     if (sessionHasContent(session)) {
       void saveSession(session)
         .then(() => {
-          setSavedAt(session.updatedAt);
-          void refreshHistory();
+                    void refreshHistory();
         })
         .catch(() => setHistoryNotice("本机历史保存失败，可能是浏览器存储受限或被禁用。"));
     }
@@ -533,8 +600,7 @@ export function ContractAgent({
       if (sessionHasContent(session)) {
         void saveSession(session)
           .then(() => {
-            setSavedAt(session.updatedAt);
-            void refreshHistory();
+                        void refreshHistory();
           })
           .catch(() => setHistoryNotice("本机历史保存失败，可能是浏览器存储受限或被禁用。"));
       }
@@ -558,8 +624,7 @@ export function ContractAgent({
         setSession(loaded);
         resetUi();
         setDocOpen(false);
-        setSavedAt(loaded.updatedAt);
-        void historyBus.refresh();
+                void historyBus.refresh();
       } catch {
         setHistoryNotice("读取本机历史失败，请稍后重试。");
       }
@@ -584,7 +649,7 @@ export function ContractAgent({
 
   return (
     <div
-      className="mx-auto flex h-full min-h-0 w-full max-w-[960px] flex-col overflow-hidden px-4 pb-4 pt-5 md:px-8 md:pt-6"
+      className="mx-auto flex h-full min-h-0 w-full max-w-[960px] flex-col overflow-hidden px-4 pt-5 md:px-8 md:pt-6"
       onDragOver={(event) => {
         event.preventDefault();
         if (!uploading) setDragOver(true);
@@ -650,7 +715,8 @@ export function ContractAgent({
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         {empty ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-44 pt-6 text-center">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-none px-4 pb-44 pt-6 text-center">
+            <div className="my-auto flex w-full flex-col items-center">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-foreground text-background shadow-sm">
               <ShieldCheck className="size-5" />
             </span>
@@ -696,9 +762,10 @@ export function ContractAgent({
                 示例包含押金不退、单方涨租、保洁折旧等常见问题，点一下就能看完整审查结果。
               </p>
             </div>
+            </div>
           </div>
         ) : (
-          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-44 pt-5">
+          <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none pb-44 pt-5">
             <Thread
               exchanges={exchanges}
               doc={doc}
@@ -717,7 +784,7 @@ export function ContractAgent({
         )}
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
-          <div className="pointer-events-auto relative mx-auto w-full max-w-[880px] px-0 pb-4">
+          <div className="pointer-events-auto relative mx-auto w-full max-w-[880px] px-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {uploadError && (
               <Alert variant="destructive" className="mb-2 py-2">
                 <AlertTriangle className="size-4" />
@@ -753,29 +820,7 @@ export function ContractAgent({
               onFiles={handleFiles}
               textareaRef={textareaRef}
             />
-            <p className="mt-1.5 text-center text-[10px] leading-relaxed text-muted-foreground [text-shadow:0_1px_6px_rgba(251,251,253,0.95),0_0_12px_rgba(251,251,253,0.9)]">
-              {!aiAvailable ? (
-                "服务端未配置模型密钥，审查暂不可用。"
-              ) : consent === "on" ? (
-                `AI 辅助意见，不构成法律结论；请核对原文。合同与对话仅保存在本浏览器，可随时删除。${
-                  savedAt ? ` 已保存 ${formatSessionTime(savedAt)}` : ""
-                }`
-              ) : (
-                <>
-                  AI 辅助意见，不构成法律结论；请核对原文。合同全文不自动保存。
-                  {supported && (
-                    <button
-                      type="button"
-                      onClick={acceptHistory}
-                      className="ml-1 font-medium text-foreground underline underline-offset-2"
-                    >
-                      开启本机保存
-                    </button>
-                  )}
-                </>
-              )}
-            </p>
-          </div>
+            </div>
         </div>
       </div>
 

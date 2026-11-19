@@ -7,6 +7,7 @@ import type {
   DiagnoseDisputeInput,
   DisputeResult,
   ExtractResult,
+  Finding,
 } from "@/shared/api";
 export class ApiError extends Error {
   constructor(
@@ -72,6 +73,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
 export interface StreamHandlers {
   onStage?: (payload: { stage: "reading" | "retrieving" | "generating"; sources?: number }) => void;
   onDelta?: (text: string) => void;
+  onFinding?: (finding: Finding) => void;
   onResult?: (data: ContractResult, meta: ResponseMeta) => void;
   onError?: (error: ApiError) => void;
 }
@@ -127,6 +129,8 @@ export async function analyzeContractStream(
       const text = String(payload.text ?? "");
       streamed.push(text);
       handlers.onDelta?.(text);
+    } else if (payload.type === "finding") {
+      handlers.onFinding?.(payload.finding as Finding);
     } else if (payload.type === "result") {
       finished = true;
       handlers.onResult?.(payload.data as ContractResult, payload.meta as ResponseMeta);
