@@ -114,8 +114,10 @@ export interface EvidenceRecord {
   amountCents: number | null; // 金额整数分，null 不等于零
   reading: string | null; // 表读数等，保留用户原始格式
   attachments?: EvidenceAttachment[]; // 本机压缩存储的图片材料
-  content?: string; // 材料全文（如已确认合同原文、修订副本、话术）
-  originalText?: string; // 仅修订副本：对应原文，供事后对比
+  content?: string; // 材料全文（如合同原文、协商副本、话术）
+  originalText?: string; // 仅协商副本：对应原文，供事后对比
+  contractVersionId?: string; // 关联的合同版本
+  contractVersionLabel?: string; // 例如 v1、v2
 }
 
 export interface UtilityAccount {
@@ -150,12 +152,14 @@ function readArray<T extends { id: string }>(key: string): T[] {
   }
 }
 
-function writeArray(key: string, value: unknown): void {
-  if (!hasStorage()) return;
+function writeArray(key: string, value: unknown): boolean {
+  if (!hasStorage()) return false;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    // 存储已满或被禁用：保留内存态，界面仍可用，不静默崩溃。
+    // 存储已满或被禁用：返回 false，由调用方决定是否保留输入并提示用户。
+    return false;
   }
 }
 
@@ -163,10 +167,10 @@ interface Collection<T extends { id: string }> {
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => T[];
   getAll: () => T[];
-  add: (item: T) => void;
-  update: (id: string, patch: Partial<T>) => void;
-  remove: (id: string) => void;
-  clear: () => void;
+  add: (item: T) => boolean;
+  update: (id: string, patch: Partial<T>) => boolean;
+  remove: (id: string) => boolean;
+  clear: () => boolean;
 }
 
 function createCollection<T extends { id: string }>(key: string): Collection<T> {
@@ -176,10 +180,11 @@ function createCollection<T extends { id: string }>(key: string): Collection<T> 
   function emit() {
     listeners.forEach((l) => l());
   }
-  function persist(next: T[]) {
+  function persist(next: T[]): boolean {
+    if (!writeArray(key, next)) return false;
     cache = next;
-    writeArray(key, next);
     emit();
+    return true;
   }
   if (hasStorage()) {
     window.addEventListener("storage", (e) => {
@@ -198,16 +203,16 @@ function createCollection<T extends { id: string }>(key: string): Collection<T> 
     getSnapshot: () => cache,
     getAll: () => cache,
     add(item) {
-      persist([...cache, item]);
+      return persist([...cache, item]);
     },
     update(id, patch) {
-      persist(cache.map((x) => (x.id === id ? { ...x, ...patch, id } : x)));
+      return persist(cache.map((x) => (x.id === id ? { ...x, ...patch, id } : x)));
     },
     remove(id) {
-      persist(cache.filter((x) => x.id !== id));
+      return persist(cache.filter((x) => x.id !== id));
     },
     clear() {
-      persist([]);
+      return persist([]);
     },
   };
 }
@@ -481,12 +486,10 @@ export function storeSizeChars(recordList: EvidenceRecord[], utilityList: Utilit
   return JSON.stringify({ r: recordList, u: utilityList }).length;
 }
 
-/** 带容量检查地写入一条证据；返回 false 表示超出本机存储上限，未写入。 */
+/** 带容量检查地写入一条证据；只有真正写入本机存储后才返回 true。 */
 export function saveRecordChecked(record: EvidenceRecord, existing = false): boolean {
   const list = records.getAll();
   const next = existing ? list.map((r) => (r.id === record.id ? record : r)) : [...list, record];
   if (storeSizeChars(next, utilities.getAll()) > MAX_STORE_CHARS) return false;
-  if (existing) records.update(record.id, record);
-  else records.add(record);
-  return true;
+  return existing ? records.update(record.id, record) : records.add(record);
 }

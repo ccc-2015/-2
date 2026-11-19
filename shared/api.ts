@@ -139,6 +139,8 @@ export interface Revision {
   targetExcerpt: Excerpt | null;
   /** 为什么这样改，便于用户判断是否勾选。 */
   reason: string;
+  /** 需要与对方确认或补填的事项（金额、期限等）。 */
+  uncertainties: string[];
 }
 
 export interface SourceRef {

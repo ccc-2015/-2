@@ -22,6 +22,9 @@ export function ContractSheet({
   onSaveEvidence,
   saveNotice,
   saved,
+  historical = false,
+  dirty = false,
+  versionLabel,
   busy,
   activeExcerpt,
   maxText,
@@ -36,6 +39,9 @@ export function ContractSheet({
   onSaveEvidence: () => void;
   saveNotice: string;
   saved: boolean;
+  historical?: boolean;
+  dirty?: boolean;
+  versionLabel?: string | null;
   busy: boolean;
   activeExcerpt: Excerpt | null;
   maxText: number;
@@ -45,11 +51,12 @@ export function ContractSheet({
 
   const ocrUsed = !!doc && doc.meta.ocrUsed;
   const over = !!doc && doc.text.length > maxText;
+  const editing = !historical && mode === "edit";
 
   useEffect(() => {
     if (!open) return;
     setMode("view");
-  }, [open, activeExcerpt]);
+  }, [open, activeExcerpt, historical]);
 
   useEffect(() => {
     if (open && mode === "view" && activeExcerpt) {
@@ -73,13 +80,20 @@ export function ContractSheet({
         <SheetHeader className="border-b px-5 py-4 pr-12">
           <div className="flex flex-wrap items-center gap-2">
             <FileText className="size-4 text-muted-foreground" />
-            <SheetTitle className="text-sm">合同文本</SheetTitle>
+            <SheetTitle className="text-sm">合同原文</SheetTitle>
+            {versionLabel && <Badge variant="outline">{versionLabel}</Badge>}
+            {historical && <Badge variant="secondary">历史版本（只读）</Badge>}
             <Badge variant="secondary">{doc.sourceName}</Badge>
             <Badge variant="outline">{doc.meta.method === "ocr" ? "OCR 识别" : "文本提取"}</Badge>
             {doc.meta.pageCount != null && <Badge variant="outline">{doc.meta.pageCount} 页</Badge>}
           </div>
           <SheetDescription className="text-[11px]">
-            {doc.text.length} 字符 · {ocrUsed ? "OCR 识别文本，可核对后重新审查" : "文本提取"}
+            {doc.text.length} 字符 ·{" "}
+            {historical
+              ? "仅用于核对当时的审查，不随当前文本变化"
+              : ocrUsed
+                ? "OCR 识别文本，可核对后重新审查"
+                : "文本提取"}
           </SheetDescription>
         </SheetHeader>
 
@@ -98,7 +112,24 @@ export function ContractSheet({
             </Alert>
           )}
 
-          {ocrUsed && (
+          {historical && (
+            <Alert>
+              <AlertTitle>历史版本</AlertTitle>
+              <AlertDescription>
+                这里显示的是该次审查绑定的原文快照。当前合同可能已经更新，编辑与重新审查请在当前版本进行。
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!historical && dirty && (
+            <Alert className="border-amber-500/50 bg-amber-500/10">
+              <AlertTriangle className="size-4 text-amber-600" />
+              <AlertTitle>文本有未生成版本的修改</AlertTitle>
+              <AlertDescription>保存或重新审查会生成新版本；旧版本和旧审查仍会保留。</AlertDescription>
+            </Alert>
+          )}
+
+          {ocrUsed && !historical && (
             <Alert className="border-amber-500/50 bg-amber-500/10">
               <AlertTriangle className="size-4 text-amber-600" />
               <AlertTitle>OCR 识别提示</AlertTitle>
@@ -109,6 +140,7 @@ export function ContractSheet({
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-2">
+            {!historical && (
             <div className="inline-flex rounded-full bg-secondary p-0.5" role="group" aria-label="文本模式">
               <button
                 type="button"
@@ -132,12 +164,13 @@ export function ContractSheet({
                 编辑
               </button>
             </div>
+            )}
             <span className={cn("text-[11px] text-muted-foreground", over && "text-destructive")}>
               {doc.text.length} / {maxText} 字符
             </span>
           </div>
 
-          {mode === "view" ? (
+          {!editing ? (
             <pre className="whitespace-pre-wrap rounded-lg bg-secondary/60 p-3 font-mono text-[12px] leading-relaxed">
               {validExcerpt ? (
                 <>
@@ -160,9 +193,9 @@ export function ContractSheet({
             />
           )}
 
-          {mode === "edit" && (
+          {editing && (
             <p className="text-[11px] text-muted-foreground">
-              修改后点「重新审查」使用新文本；已完成的审查不会自动重跑。
+              修改后点「重新审查」使用新文本并生成新版本；已完成的审查不会自动重跑。
             </p>
           )}
 
@@ -195,35 +228,41 @@ export function ContractSheet({
         </div>
 
         <SheetFooter className="border-t px-5 py-3">
+          {!historical && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Label htmlFor="signing-date" className="text-[11px] text-muted-foreground">
+                签约 / 起租日期
+              </Label>
+              <Input
+                id="signing-date"
+                type="date"
+                value={signingDate}
+                onChange={(event) => onSigningDateChange(event.target.value)}
+                className="h-8 w-auto text-xs"
+              />
+              <span className="text-[11px] text-muted-foreground">可选，用于证据日期</span>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
-            <Label htmlFor="signing-date" className="text-[11px] text-muted-foreground">
-              签约 / 起租日期
-            </Label>
-            <Input
-              id="signing-date"
-              type="date"
-              value={signingDate}
-              onChange={(event) => onSigningDateChange(event.target.value)}
-              className="h-8 w-auto text-xs"
-            />
-            <span className="text-[11px] text-muted-foreground">可选，用于证据日期</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onSaveEvidence} disabled={!doc.text.trim() || over}>
-              <Save className="size-3.5" />
-              {saved ? "更新证据" : "存为证据"}
-            </Button>
-            {saveNotice && <p className="text-[11px] text-primary">{saveNotice}</p>}
-            <div className="ml-auto flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onReReview}
-                disabled={!doc.text.trim() || over || busy}
-              >
-                <RefreshCw className="size-3.5" />
-                重新审查
+            {!historical && (
+              <Button size="sm" variant="outline" onClick={onSaveEvidence} disabled={!doc.text.trim() || over}>
+                <Save className="size-3.5" />
+                {dirty ? "存为新版本原文" : saved ? "更新合同原文" : "存为合同原文"}
               </Button>
+            )}
+            {saveNotice && !historical && <p className="text-[11px] text-primary">{saveNotice}</p>}
+            <div className="ml-auto flex flex-wrap gap-2">
+              {!historical && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onReReview}
+                  disabled={!doc.text.trim() || over || busy}
+                >
+                  <RefreshCw className="size-3.5" />
+                  重新审查
+                </Button>
+              )}
               <Button size="sm" onClick={() => onOpenChange(false)}>
                 完成
               </Button>

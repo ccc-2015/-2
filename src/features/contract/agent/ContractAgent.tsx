@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Download, FileSearch, FileText, MoreHorizontal, Printer, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, Download, FileSearch, FileText, MoreHorizontal, PencilLine, Printer, ShieldCheck, Sparkles } from "lucide-react";
 import type { ContractIntent, ContractResult, Excerpt, Finding, ResponseMeta } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModuleHeader } from "@/components/ModuleHeader";
+import { PRIORITY_LABELS } from "@/shared/api";
 import { analyzeContractStream, api, ApiError, errorMessage } from "../../../lib/api";
 import { extractLocally, LOCAL_SITE } from "../../../lib/extractLocal";
 import { useConfig } from "../../../lib/config-context";
@@ -30,6 +32,8 @@ import { useRentalProfile } from "../../rental/profile";
 import { Composer } from "./Composer";
 import { ContractSheet } from "./ContractSheet";
 import { historyBus, useHistoryRequest } from "./historyBus";
+import { buildNegotiationDraft } from "./negotiationDraft";
+import { RevisionPanel } from "./RevisionPanel";
 import { ScrollRail } from "./ScrollRail";
 import { Thread } from "./Thread";
 import { buildReviewReport } from "./reviewReport";
@@ -43,7 +47,15 @@ import {
   type ContractSession,
   type SessionSummary,
 } from "./session";
-import { PASTE_META, type ContractDoc, type Exchange } from "./types";
+import {
+  PASTE_META,
+  type ContractDoc,
+  type ContractDraft,
+  type ContractVersion,
+  type Exchange,
+  type RevisionDraft,
+  type RevisionSuggestion,
+} from "./types";
 
 const SAMPLE_CONTRACT = [
   "房屋租赁合同",
@@ -64,6 +76,25 @@ interface PendingConfirm {
   action: () => void;
 }
 
+function revisionListOf(exchange: Exchange | null): RevisionSuggestion[] {
+  if (!exchange?.result) return [];
+  const list = exchange.result.revisions?.length
+    ? exchange.result.revisions
+    : exchange.result.revision
+      ? [exchange.result.revision]
+      : [];
+  return list.map((item, index) => ({
+    id: `${exchange.id}:${index}`,
+    kind: item.kind === "add" || item.kind === "modify" ? item.kind : item.targetExcerpt ? "modify" : "add",
+    clauseLabel: item.clauseLabel?.trim() || (item.targetExcerpt ? "相关条款" : "新增条款"),
+    title: item.title?.trim() || "",
+    text: item.text,
+    targetExcerpt: item.targetExcerpt ?? null,
+    reason: item.reason?.trim() || "",
+    uncertainties: item.uncertainties ?? [],
+  }));
+}
+
 export function ContractAgent({
   onNavigate,
   onSessionChange,
@@ -78,7 +109,7 @@ export function ContractAgent({
   const maxText = config?.limits.maxTextLength ?? 50000;
 
   const [session, setSession] = useState<ContractSession>(() => emptySession());
-  const { doc, exchanges, signingDate, textRecordId, saveNotice } = session;
+  const { doc, versions, exchanges, signingDate, versionRecordIds, saveNotice } = session;
 
   const [question, setQuestion] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -86,6 +117,9 @@ export function ContractAgent({
   const [dragOver, setDragOver] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [activeExcerpt, setActiveExcerpt] = useState<Excerpt | null>(null);
+  const [docView, setDocView] = useState<{ text: string; versionId: string | null } | null>(null);
+  const [revisionTargetId, setRevisionTargetId] = useState<string | null>(null);
+  const [autoOpenRevisionId, setAutoOpenRevisionId] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const [historyNotice, setHistoryNotice] = useState("");
@@ -103,6 +137,38 @@ export function ContractAgent({
 
   const busy = exchanges.some((exchange) => exchange.loading);
   const empty = !doc && exchanges.length === 0;
+  const currentVersion = doc ? versions.find((version) => version.id === doc.versionId) ?? null : null;
+  const docDirty = !!doc && (!currentVersion || currentVersion.text !== doc.text);
+  const sheetVersion = docView
+    ? versions.find((version) => version.id === docView.versionId) ?? null
+    : currentVersion;
+  const sheetHistorical = !!doc && !!docView;
+  const sheetDoc = doc
+    ? docView
+      ? {
+          ...doc,
+          text: docView.text,
+          versionId: docView.versionId ?? doc.versionId,
+          sourceName: sheetVersion?.sourceName ?? doc.sourceName,
+          meta: sheetVersion?.meta ?? doc.meta,
+        }
+      : doc
+    : null;
+  const sheetSaved = !!sheetVersion && !!versionRecordIds[sheetVersion.id];
+  const revisionExchangeIds = exchanges
+    .filter((exchange) => revisionListOf(exchange).length > 0)
+    .map((exchange) => exchange.id);
+  const latestRevisionExchangeId = revisionExchangeIds.length
+    ? revisionExchangeIds[revisionExchangeIds.length - 1]
+    : null;
+  const revisionTarget = revisionTargetId
+    ? exchanges.find((exchange) => exchange.id === revisionTargetId) ?? null
+    : null;
+  const revisionDraft = revisionTargetId ? session.revisionDrafts[revisionTargetId] ?? null : null;
+  const revisionSuggestions = revisionListOf(revisionTarget);
+  const revisionSourceFindings = revisionDraft
+    ? exchanges.find((exchange) => exchange.id === revisionDraft.sourceExchangeId)?.result?.findings ?? []
+    : [];
 
   const patch = useCallback(
     (next: Partial<ContractSession> | ((current: ContractSession) => Partial<ContractSession>)) => {
@@ -161,10 +227,10 @@ export function ContractAgent({
   useEffect(() => {
     const handler = () => {
       if (busy || uploading || !aiAvailable) return;
-      const nextDoc: ContractDoc = { text: SAMPLE_CONTRACT, sourceName: "示例合同", meta: PASTE_META };
+      const nextDoc: ContractDraft = { text: SAMPLE_CONTRACT, sourceName: "示例合同", meta: PASTE_META };
       const load = () => {
-        startNewSession(nextDoc);
-        startReview(nextDoc);
+        const bound = startNewSession(nextDoc);
+        if (bound) startReview(bound);
       };
       if (sessionHasContent(session)) {
         askConfirm("载入示例合同？", "当前合同与对话会被替换；已开启本机保存时会先存入历史。", load);
@@ -203,11 +269,26 @@ export function ContractAgent({
   }, []);
 
   useEffect(() => {
+    if (!autoOpenRevisionId) return;
+    const exchange = exchanges.find((item) => item.id === autoOpenRevisionId);
+    if (!exchange) return;
+    if (revisionListOf(exchange).length > 0) {
+      setAutoOpenRevisionId(null);
+      openRevision(exchange.id);
+    } else if (!exchange.loading) {
+      setAutoOpenRevisionId(null);
+    }
+    // 只在新修订清单落库后打开一次。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenRevisionId, exchanges]);
+
+  useEffect(() => {
     if (consent !== "on" || !supported || !sessionHasContent(session)) return;
     const timer = window.setTimeout(() => {
       void saveSession(session)
         .then(() => {
-                    void refreshHistory();
+          setHistoryNotice("");
+          void refreshHistory();
         })
         .catch(() => setHistoryNotice("本机历史保存失败，可能是浏览器存储受限或被禁用。"));
     }, 600);
@@ -220,11 +301,56 @@ export function ContractAgent({
     setUploadError(null);
   }
 
-  function startNewSession(nextDoc: ContractDoc | null) {
-    setSession({ ...emptySession(), doc: nextDoc, signingDate: profile.startDate });
+  function startNewSession(nextDoc: ContractDraft | null): ContractDoc | null {
+    if (!nextDoc) {
+      setSession({ ...emptySession(), signingDate: profile.startDate });
+      resetUi();
+      setDocOpen(false);
+      return null;
+    }
+    const createdAt = new Date().toISOString();
+    const versionId = newId();
+    const version: ContractVersion = {
+      id: versionId,
+      text: nextDoc.text,
+      sourceName: nextDoc.sourceName,
+      meta: nextDoc.meta,
+      createdAt,
+      label: "v1",
+    };
+    const boundDoc: ContractDoc = { ...nextDoc, versionId };
+    setSession({
+      ...emptySession(),
+      doc: boundDoc,
+      versions: [version],
+      signingDate: profile.startDate,
+    });
     resetUi();
     setDocOpen(false);
-      }
+    return boundDoc;
+  }
+
+  /** 当前文本若与已有版本不同，先固化为新版本；审查、保存都以版本为准。 */
+  function ensureCurrentVersion(): { version: ContractVersion; text: string } | null {
+    if (!doc) return null;
+    const current = versions.find((version) => version.id === doc.versionId);
+    if (current && current.text === doc.text) return { version: current, text: doc.text };
+    const versionId = newId();
+    const createdAt = new Date().toISOString();
+    const version: ContractVersion = {
+      id: versionId,
+      text: doc.text,
+      sourceName: doc.sourceName,
+      meta: doc.meta,
+      createdAt,
+      label: `v${versions.length + 1}`,
+    };
+    patch((currentSession) => ({
+      versions: [...currentSession.versions, version],
+      doc: currentSession.doc ? { ...currentSession.doc, versionId } : null,
+    }));
+    return { version, text: doc.text };
+  }
 
   function askConfirm(title: string, description: string, action: () => void) {
     setPendingConfirm({ title, description, action });
@@ -245,6 +371,7 @@ export function ContractAgent({
     context: ReturnType<typeof buildContext>,
     text: string,
     eventDate: string = signingDate,
+    modelPrompt?: string,
   ) {
     clearFindingStream(id);
     patch((current) => ({
@@ -314,7 +441,7 @@ export function ContractAgent({
       {
         text,
         textScope: "full",
-        question: displayQuestion,
+        question: modelPrompt ?? displayQuestion,
         conversation: context.conversation,
         memory: context.memory,
         intent,
@@ -345,6 +472,7 @@ export function ContractAgent({
             revealNext();
           }
           pendingResults.current.set(id, { data, meta, text });
+          if ((data.revisions?.length ?? 0) > 0) setAutoOpenRevisionId(id);
           const queue = findingQueues.current.get(id);
           if (!findingTimers.current.has(id) && (!queue || queue.length === 0)) {
             pendingResults.current.delete(id);
@@ -373,13 +501,13 @@ export function ContractAgent({
           intent: "review",
           auto: true,
           docText: nextDoc.text,
+          docVersionId: nextDoc.versionId,
           result: null,
           meta: null,
           error: null,
           loading: true,
         },
       ],
-      textRecordId: null,
       saveNotice: "",
     });
     void run(id, reviewQuestion, "review", { conversation: [], memory: null }, nextDoc.text, profile.startDate);
@@ -404,7 +532,7 @@ export function ContractAgent({
     try {
       // 公网版没有 Python 后端，文件在本机浏览器解析；本地开发仍可走 /api 的后端抽取。
       const data = LOCAL_SITE ? await extractLocally(files) : (await api.extractMany(files)).data;
-      const nextDoc: ContractDoc = {
+      const nextDoc: ContractDraft = {
         text: data.text,
         sourceName: data.sourceName,
         meta: {
@@ -415,18 +543,18 @@ export function ContractAgent({
           pages: data.pages,
         },
       };
-      startNewSession(nextDoc);
-      // 图片走多模态转写，可能有错字漏字；先打开文本面板让用户核对，确认后再点「重新审查」，不自动分析。
-      const ocrConfirm = LOCAL_SITE && data.ocrUsed;
-      if (ocrConfirm) setDocOpen(true);
       if (!nextDoc.text.trim()) {
         setUploadError(
           new ApiError("invalid_input", "未识别到合同文本，请换一张更清晰的文件，或在合同文本中手动补充。", false),
         );
         return;
       }
+      const bound = startNewSession(nextDoc);
+      // 图片走多模态转写，可能有错字漏字；先打开文本面板让用户核对，确认后再点「重新审查」，不自动分析。
+      const ocrConfirm = LOCAL_SITE && data.ocrUsed;
+      if (ocrConfirm) setDocOpen(true);
       if (ocrConfirm) return;
-      startReview(nextDoc);
+      if (bound) startReview(bound);
     } catch (err) {
       setUploadError(err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false));
     } finally {
@@ -457,13 +585,15 @@ export function ContractAgent({
         );
         return;
       }
-      const nextDoc: ContractDoc = { text: trimmed, sourceName: "粘贴文本", meta: PASTE_META };
-      startNewSession(nextDoc);
-      startReview(nextDoc);
+      const nextDoc: ContractDraft = { text: trimmed, sourceName: "粘贴文本", meta: PASTE_META };
+      const bound = startNewSession(nextDoc);
+      if (bound) startReview(bound);
       return;
     }
 
     if (!trimmed) return;
+    const bound = ensureCurrentVersion();
+    if (!bound) return;
 
     const id = newId();
     const context = buildContext(exchanges);
@@ -471,21 +601,41 @@ export function ContractAgent({
     patch((current) => ({
       exchanges: [
         ...current.exchanges,
-        { id, question: trimmed, intent: "ask", docText: doc.text, result: null, meta: null, error: null, loading: true },
+        {
+          id,
+          question: trimmed,
+          intent: "ask",
+          docText: bound.text,
+          docVersionId: bound.version.id,
+          result: null,
+          meta: null,
+          error: null,
+          loading: true,
+        },
       ],
     }));
-    void run(id, trimmed, "ask", context, doc.text);
+    void run(id, trimmed, "ask", context, bound.text);
   }
 
   function retry(id: string) {
     const index = exchanges.findIndex((exchange) => exchange.id === id);
     if (index === -1 || busy || !doc) return;
     const exchange = exchanges[index];
-    void run(id, exchange.question, exchange.intent, buildContext(exchanges.slice(0, index)), doc.text);
+    void run(
+      id,
+      exchange.question,
+      exchange.intent,
+      buildContext(exchanges.slice(0, index)),
+      exchange.docText ?? doc.text,
+      signingDate,
+      exchange.prompt,
+    );
   }
 
   function reReview() {
     if (!doc || busy || !aiAvailable) return;
+    const bound = ensureCurrentVersion();
+    if (!bound) return;
     setDocOpen(false);
     setActiveExcerpt(null);
     const id = newId();
@@ -498,7 +648,8 @@ export function ContractAgent({
           id,
           question: reviewQuestion,
           intent: "review",
-          docText: doc.text,
+          docText: bound.text,
+          docVersionId: bound.version.id,
           result: null,
           meta: null,
           error: null,
@@ -506,17 +657,221 @@ export function ContractAgent({
         },
       ],
     }));
-    void run(id, reviewQuestion, "review", context, doc.text);
+    void run(id, reviewQuestion, "review", context, bound.text);
   }
 
-  function openDoc(excerpt: Excerpt | null = null) {
+  function requestRevision(sourceExchangeId: string) {
+    if (busy || !aiAvailable) return;
+    const source = exchanges.find((exchange) => exchange.id === sourceExchangeId);
+    if (!source?.result || source.result.findings.length === 0) return;
+    const sourceVersion = versions.find((item) => item.id === source.docVersionId);
+    const text = source.docText ?? sourceVersion?.text ?? doc?.text ?? "";
+    if (!text.trim()) return;
+    const versionId = source.docVersionId ?? doc?.versionId ?? "";
+    const issueLines = source.result.findings
+      .map((finding, index) => {
+        const priority = PRIORITY_LABELS[finding.priority] ?? finding.priority;
+        return `${index + 1}. [${priority}] ${finding.issue}${finding.excerpt ? `｜原文：${finding.excerpt.text}` : ""}`;
+      })
+      .join("\n");
+    const displayQuestion = "请根据审查结果生成条款修改建议。";
+    const modelPrompt = `请基于以下已发现的问题，给出可逐条采纳的条款修改建议：\n${issueLines}`;
+    const id = newId();
+    setQuestion("");
+    patch((current) => ({
+      exchanges: [
+        ...current.exchanges,
+        {
+          id,
+          question: displayQuestion,
+          prompt: modelPrompt,
+          intent: "suggest_revision",
+          docText: text,
+          docVersionId: versionId,
+          sourceExchangeId,
+          result: null,
+          meta: null,
+          error: null,
+          loading: true,
+        },
+      ],
+    }));
+    void run(id, displayQuestion, "suggest_revision", buildContext(exchanges), text, signingDate, modelPrompt);
+  }
+
+  function openRevision(exchangeId: string) {
+    const exchange = exchanges.find((item) => item.id === exchangeId);
+    if (!exchange || revisionListOf(exchange).length === 0) return;
+    const originalText = exchange.docText ?? doc?.text ?? "";
+    const version = versions.find((item) => item.id === exchange.docVersionId);
+    const index = exchanges.findIndex((item) => item.id === exchangeId);
+    const sourceExchangeId =
+      exchange.sourceExchangeId ??
+      [...exchanges.slice(0, Math.max(0, index))].reverse().find((item) => item.intent === "review")?.id ??
+      exchangeId;
+    patch((current) => {
+      if (current.revisionDrafts[exchangeId]) return {};
+      const draft: RevisionDraft = {
+        exchangeId,
+        versionId: exchange.docVersionId ?? version?.id ?? doc?.versionId ?? "",
+        versionLabel: version?.label ?? "历史快照",
+        sourceExchangeId,
+        originalText,
+        baseText: originalText,
+        copy: originalText,
+        applied: [],
+        appliedTexts: {},
+        selected: [],
+        notice: "",
+        archiveNotice: "",
+        archivedId: null,
+        signedNotice: "",
+        signedRecordId: null,
+        result: null,
+        error: null,
+        loading: false,
+      };
+      return { revisionDrafts: { ...current.revisionDrafts, [exchangeId]: draft } };
+    });
+    setRevisionTargetId(exchangeId);
+  }
+
+  function updateRevisionDraft(exchangeId: string, next: Partial<RevisionDraft>) {
+    patch((current) => {
+      const draft = current.revisionDrafts[exchangeId];
+      if (!draft) return {};
+      return { revisionDrafts: { ...current.revisionDrafts, [exchangeId]: { ...draft, ...next } } };
+    });
+  }
+
+  function reReviewRevision(exchangeId: string) {
+    const draft = session.revisionDrafts[exchangeId];
+    if (!draft || draft.loading || !aiAvailable || !draft.copy.trim()) return;
+    updateRevisionDraft(exchangeId, { loading: true, error: null, result: null });
+    void api
+      .analyzeContract({
+        text: draft.copy,
+        textScope: "full",
+        question: "请复查这份协商副本，指出仍存在的问题和需要确认的事项。",
+        conversation: [],
+        intent: "review",
+        cityCode,
+        eventDate: signingDate || null,
+      })
+      .then(({ data }) => {
+        updateRevisionDraft(exchangeId, { loading: false, result: data });
+      })
+      .catch((err) => {
+        const error = err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false);
+        updateRevisionDraft(exchangeId, { loading: false, error });
+      });
+  }
+
+  function exportNegotiationDraft(exchangeId: string) {
+    const draft = session.revisionDrafts[exchangeId];
+    const exchange = exchanges.find((item) => item.id === exchangeId);
+    if (!draft || !exchange) return;
+    const { html, fileName } = buildNegotiationDraft({
+      draft,
+      suggestions: revisionListOf(exchange),
+      sourceName: doc?.sourceName ?? "合同",
+      signingDate,
+    });
+    downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), fileName);
+  }
+
+  function saveNegotiationCopy(exchangeId: string) {
+    const draft = session.revisionDrafts[exchangeId];
+    if (!draft || !draft.copy.trim()) return;
+    const existingId = draft.archivedId;
+    const record: EvidenceRecord = {
+      id: existingId ?? newId(),
+      stage: "signing",
+      occurredAt: signingDate || null,
+      recordedAt: new Date().toISOString(),
+      description: `合同协商副本 ${draft.versionLabel}（未签署，${draft.copy.length} 字符，已采纳 ${draft.applied.length} 条）`,
+      contractClause: "",
+      materialName: `${doc?.sourceName ?? "合同"} · 协商副本 ${draft.versionLabel}`,
+      materialType: "合同协商副本",
+      materialStatus: "to_confirm",
+      amountCents: null,
+      reading: null,
+      content: draft.copy,
+      originalText: draft.baseText,
+      contractVersionId: draft.versionId,
+      contractVersionLabel: draft.versionLabel,
+    };
+    if (!saveRecordChecked(record, existingId != null)) {
+      updateRevisionDraft(exchangeId, {
+        archiveNotice: "未能写入本机存储，协商副本未保存。请清理浏览器空间或允许本站使用存储后重试。",
+      });
+      return;
+    }
+    updateRevisionDraft(exchangeId, {
+      archivedId: record.id,
+      archiveNotice: existingId
+        ? "已更新协商副本（未签署）。原合同与签署版本不受影响。"
+        : "已留存协商副本（未签署），可在证据画布查看。",
+    });
+  }
+
+  function saveSignedVersion(exchangeId: string) {
+    const draft = session.revisionDrafts[exchangeId];
+    if (!draft || !draft.copy.trim()) return;
+    if (draft.copy.includes("待补")) {
+      updateRevisionDraft(exchangeId, {
+        signedNotice: "副本中仍有〔待补〕项，请填写或删除占位后再存为签署版本。",
+      });
+      return;
+    }
+    const existingId = draft.signedRecordId;
+    const record: EvidenceRecord = {
+      id: existingId ?? newId(),
+      stage: "signing",
+      occurredAt: signingDate || null,
+      recordedAt: new Date().toISOString(),
+      description: `签署版本 ${draft.versionLabel}（我方确认，不代表对方同意，${draft.copy.length} 字符）`,
+      contractClause: "",
+      materialName: `${doc?.sourceName ?? "合同"} · 签署版本`,
+      materialType: "签署版本",
+      materialStatus: "present",
+      amountCents: null,
+      reading: null,
+      content: draft.copy,
+      originalText: draft.baseText,
+      contractVersionId: draft.versionId,
+      contractVersionLabel: draft.versionLabel,
+    };
+    if (!saveRecordChecked(record, existingId != null)) {
+      updateRevisionDraft(exchangeId, {
+        signedNotice: "未能写入本机存储，签署版本未保存。请清理浏览器空间或允许本站使用存储后重试。",
+      });
+      return;
+    }
+    updateRevisionDraft(exchangeId, {
+      signedRecordId: record.id,
+      signedNotice: "已留存签署版本，仅代表我方确认，不代表对方已同意。",
+    });
+  }
+
+  function openDoc(excerpt: Excerpt | null = null, sourceText?: string, sourceVersionId?: string) {
     setActiveExcerpt(excerpt);
+    const versionText = sourceVersionId
+      ? versions.find((version) => version.id === sourceVersionId)?.text
+      : undefined;
+    const text = sourceText ?? versionText;
+    setDocView(
+      text && (!doc || text !== doc.text) ? { text, versionId: sourceVersionId ?? null } : null,
+    );
     setDocOpen(true);
   }
 
   function handleDocOpenChange(open: boolean) {
     setDocOpen(open);
-    if (!open) setActiveExcerpt(null);
+    if (!open) {
+      setActiveExcerpt(null);
+      setDocView(null);
+    }
   }
 
   function updateDocText(text: string) {
@@ -528,33 +883,39 @@ export function ContractAgent({
 
   function saveDocEvidence() {
     if (!doc || !doc.text.trim()) return;
-    const existing = textRecordId != null;
+    const bound = ensureCurrentVersion();
+    if (!bound) return;
+    const existingId = versionRecordIds[bound.version.id] ?? null;
     const record: EvidenceRecord = {
-      id: textRecordId ?? newId(),
+      id: existingId ?? newId(),
       stage: "signing",
       occurredAt: signingDate || null,
       recordedAt: new Date().toISOString(),
-      description: `合同原文（已确认，${doc.text.length} 字符）`,
+      description: `合同原文 ${bound.version.label}（我方留存，${bound.text.length} 字符）`,
       contractClause: "",
-      materialName: doc.sourceName,
-      materialType: "合同文本",
+      materialName: `${doc.sourceName} · ${bound.version.label}`,
+      materialType: "合同原文",
       materialStatus: "present",
       amountCents: null,
       reading: null,
-      content: doc.text,
+      content: bound.text,
+      contractVersionId: bound.version.id,
+      contractVersionLabel: bound.version.label,
     };
-    if (!saveRecordChecked(record, existing)) {
-      patch({ saveNotice: "本地存储空间不足，未能保存。" });
+    if (!saveRecordChecked(record, existingId != null)) {
+      patch({ saveNotice: "未能写入本机存储，合同原文未保存。请清理浏览器空间或允许本站使用存储后重试。" });
       return;
     }
-    patch({
-      textRecordId: record.id,
-      saveNotice: existing ? "已更新证据画布中的合同原文。" : "已存为签约证据，可在证据画布查看。",
-    });
+    patch((current) => ({
+      versionRecordIds: { ...current.versionRecordIds, [bound.version.id]: record.id },
+      saveNotice: existingId
+        ? `已更新合同原文 ${bound.version.label}（其他版本记录不受影响）。`
+        : `已留存合同原文 ${bound.version.label}，可在证据画布查看。`,
+    }));
   }
 
   function exportReport(mode: "html" | "print" = "html") {
-    const latest = [...exchanges].reverse().find((exchange) => exchange.result);
+    const latest = [...exchanges].reverse().find((exchange) => exchange.intent === "review" && exchange.result);
     if (!latest?.result) return;
     const { html, json, fileName } = buildReviewReport({
       result: latest.result,
@@ -607,7 +968,8 @@ export function ContractAgent({
     if (sessionHasContent(session)) {
       void saveSession(session)
         .then(() => {
-                    void refreshHistory();
+          setHistoryNotice("");
+          void refreshHistory();
         })
         .catch(() => setHistoryNotice("本机历史保存失败，可能是浏览器存储受限或被禁用。"));
     }
@@ -695,7 +1057,19 @@ export function ContractAgent({
                 合同文本
               </Button>
             )}
-            {sessionHasContent(session) && (
+            {latestRevisionExchangeId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openRevision(latestRevisionExchangeId)}
+                className="px-2 sm:px-3"
+                aria-label="协商副本"
+              >
+                <PencilLine className="size-3.5" />
+                <span className="hidden sm:inline">协商副本</span>
+              </Button>
+            )}
+            {!latestRevisionExchangeId && sessionHasContent(session) && (
               <Button variant="ghost" size="sm" onClick={newChat}>
                 新对话
               </Button>
@@ -707,6 +1081,9 @@ export function ContractAgent({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
+                {latestRevisionExchangeId && sessionHasContent(session) && (
+                  <DropdownMenuItem onSelect={newChat}>新对话</DropdownMenuItem>
+                )}
                 {doc && (
                   <DropdownMenuItem onSelect={() => openDoc()} className="sm:hidden">
                     <FileText className="size-3.5" />
@@ -776,9 +1153,9 @@ export function ContractAgent({
                 size="sm"
                 className="mt-2"
                 onClick={() => {
-                  const nextDoc: ContractDoc = { text: SAMPLE_CONTRACT, sourceName: "示例合同", meta: PASTE_META };
-                  startNewSession(nextDoc);
-                  startReview(nextDoc);
+                  const nextDoc: ContractDraft = { text: SAMPLE_CONTRACT, sourceName: "示例合同", meta: PASTE_META };
+                  const bound = startNewSession(nextDoc);
+                  if (bound) startReview(bound);
                 }}
                 disabled={busy || uploading || !aiAvailable}
               >
@@ -797,6 +1174,7 @@ export function ContractAgent({
               <div className="mx-auto w-full max-w-[880px]">
                 <Thread
                   exchanges={exchanges}
+                  versions={versions}
                   doc={doc}
                   busy={busy}
                   aiAvailable={aiAvailable}
@@ -808,6 +1186,9 @@ export function ContractAgent({
                     textareaRef.current?.focus();
                   }}
                   onOpenDoc={() => openDoc()}
+                  onRequestRevision={requestRevision}
+                  onOpenRevision={openRevision}
+                  revisionAvailable={!busy && aiAvailable}
                 />
               </div>
             </div>
@@ -821,6 +1202,15 @@ export function ContractAgent({
             ref={composerRef}
             className="pointer-events-auto relative mx-auto w-full max-w-[912px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:max-w-[944px] md:px-8"
           >
+            {historyNotice && (
+              <div
+                role="alert"
+                className="mb-2 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] leading-relaxed text-amber-700"
+              >
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                {historyNotice}
+              </div>
+            )}
             {uploadError && (
               <Alert variant="destructive" className="mb-2 py-2">
                 <AlertTriangle className="size-4" />
@@ -863,18 +1253,56 @@ export function ContractAgent({
       <ContractSheet
         open={docOpen}
         onOpenChange={handleDocOpenChange}
-        doc={doc}
+        doc={sheetDoc}
         signingDate={signingDate}
         onSigningDateChange={(value) => patch({ signingDate: value })}
         onTextChange={updateDocText}
         onReReview={reReview}
         onSaveEvidence={saveDocEvidence}
         saveNotice={saveNotice}
-        saved={textRecordId != null}
+        saved={sheetSaved}
+        historical={sheetHistorical}
+        dirty={docDirty && !sheetHistorical}
+        versionLabel={sheetVersion?.label ?? (sheetHistorical ? "历史快照" : null)}
         busy={busy}
         activeExcerpt={activeExcerpt}
         maxText={maxText}
       />
+
+      <Sheet
+        open={revisionTargetId != null}
+        onOpenChange={(open) => {
+          if (!open) setRevisionTargetId(null);
+        }}
+      >
+        <SheetContent className="w-full sm:max-w-2xl">
+          <div className="h-full overflow-y-auto p-4 pt-10">
+            {revisionTarget && revisionDraft && (
+              <RevisionPanel
+                draft={revisionDraft}
+                suggestions={revisionSuggestions}
+                sourceFindings={revisionSourceFindings}
+                aiAvailable={aiAvailable}
+                onDraftChange={(next) => {
+                  if (revisionTargetId) updateRevisionDraft(revisionTargetId, next);
+                }}
+                onReReview={() => {
+                  if (revisionTargetId) reReviewRevision(revisionTargetId);
+                }}
+                onExport={() => {
+                  if (revisionTargetId) exportNegotiationDraft(revisionTargetId);
+                }}
+                onSaveNegotiation={() => {
+                  if (revisionTargetId) saveNegotiationCopy(revisionTargetId);
+                }}
+                onSaveSigned={() => {
+                  if (revisionTargetId) saveSignedVersion(revisionTargetId);
+                }}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog
         open={pendingConfirm != null}

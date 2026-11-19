@@ -217,6 +217,7 @@ def _normalize_revision_item(raw, inp: AnalyzeContractInput, allow_input_target:
     clause = _str(raw.get("clauseLabel")).strip()[:20] or ("新增条款" if kind == "add" else "相关条款")
     title = _str(raw.get("title")).strip()[:40]
     reason = _str(raw.get("reason")).strip()[:100]
+    uncertainties = _str_array(raw.get("uncertainties"), 3)
     return Revision(
         kind=kind,
         clauseLabel=clause,
@@ -224,6 +225,7 @@ def _normalize_revision_item(raw, inp: AnalyzeContractInput, allow_input_target:
         text=text,
         targetExcerpt=target,
         reason=reason,
+        uncertainties=uncertainties,
     )
 
 

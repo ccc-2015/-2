@@ -65,6 +65,7 @@ class Revision(_Base):
     text: str
     targetExcerpt: Excerpt | None = None
     reason: str = ""
+    uncertainties: list[str] = Field(default_factory=list)
 
 
 class SourceRef(_Base):

@@ -1,4 +1,4 @@
-import { FileText, Loader2, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { FileText, Loader2, PencilLine, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { ContractResult, Excerpt, Finding } from "@/shared/api";
 import { SourceList } from "@/components/SourceList";
 import { HelpTip } from "@/components/HelpTip";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AnswerBody } from "./AnswerBody";
 import { FindingCard } from "./ResultCards";
-import type { ContractDoc, Exchange } from "./types";
+import type { ContractDoc, ContractVersion, Exchange } from "./types";
 
 function StageProgress({
   stage,
@@ -36,6 +36,7 @@ function StageProgress({
 
 export function Thread({
   exchanges,
+  versions,
   doc,
   busy,
   aiAvailable,
@@ -44,20 +45,29 @@ export function Thread({
   onLocate,
   onFollowUp,
   onOpenDoc,
+  onRequestRevision,
+  onOpenRevision,
+  revisionAvailable,
 }: {
   exchanges: Exchange[];
+  versions: ContractVersion[];
   doc: ContractDoc | null;
   busy: boolean;
   aiAvailable: boolean;
   signingDate: string;
   onRetry: (id: string) => void;
-  onLocate: (excerpt: Excerpt) => void;
+  onLocate: (excerpt: Excerpt, docText?: string, docVersionId?: string) => void;
   onFollowUp: (question: string) => void;
   onOpenDoc: () => void;
+  onRequestRevision: (exchangeId: string) => void;
+  onOpenRevision: (exchangeId: string) => void;
+  revisionAvailable: boolean;
 }) {
   return (
     <div className="space-y-7">
-      {exchanges.map((exchange, index) => (
+      {exchanges.map((exchange, index) => {
+        const version = versions.find((item) => item.id === exchange.docVersionId);
+        return (
         <div key={exchange.id} className="space-y-3">
           <div className="flex justify-end">
             {exchange.auto && doc ? (
@@ -76,6 +86,7 @@ export function Thread({
                     </span>
                     <span className="block text-[11px] text-muted-foreground">
                       {doc.text.length} 字符
+                      {version?.label ? ` · ${version.label}` : ""}
                       {doc.meta.pageCount != null ? ` · ${doc.meta.pageCount} 页` : ""}
                       {doc.meta.ocrUsed ? " · OCR" : ""}
                     </span>
@@ -96,6 +107,11 @@ export function Thread({
               </span>
               <span className="text-[12px] font-medium">租住有据</span>
               <span className="text-[10px] text-muted-foreground">AI 辅助</span>
+              {version?.label && (
+                <span className="rounded-full border border-border/70 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  合同 {version.label}
+                </span>
+              )}
             </div>
 
             {exchange.loading && (
@@ -144,36 +160,54 @@ export function Thread({
 
             {exchange.result && (
               <ResultBlock
+                exchangeId={exchange.id}
                 result={exchange.result}
                 signingDate={signingDate}
                 knowledgeVersion={exchange.meta?.knowledgeVersion ?? null}
                 warnings={exchange.meta?.warnings ?? []}
-                onLocate={onLocate}
+                onLocate={(excerpt) => onLocate(excerpt, exchange.docText, exchange.docVersionId)}
                 onFollowUp={onFollowUp}
+                onRequestRevision={onRequestRevision}
+                onOpenRevision={onOpenRevision}
+                revisionAvailable={revisionAvailable}
               />
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
 function ResultBlock({
+  exchangeId,
   result,
   signingDate,
   knowledgeVersion,
   warnings,
   onLocate,
   onFollowUp,
+  onRequestRevision,
+  onOpenRevision,
+  revisionAvailable,
 }: {
+  exchangeId: string;
   result: ContractResult;
   signingDate: string;
   knowledgeVersion: string | null;
   warnings: string[];
   onLocate: (excerpt: Excerpt) => void;
   onFollowUp: (question: string) => void;
+  onRequestRevision: (exchangeId: string) => void;
+  onOpenRevision: (exchangeId: string) => void;
+  revisionAvailable: boolean;
 }) {
+  const revisionItems = result.revisions?.length
+    ? result.revisions
+    : result.revision
+      ? [result.revision]
+      : [];
 
   return (
     <div className="space-y-4">
@@ -209,6 +243,55 @@ function ResultBlock({
           {result.findings.map((finding, index) => (
             <FindingCard key={index} finding={finding} onLocate={onLocate} />
           ))}
+          <div className="flex justify-end pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!revisionAvailable}
+              onClick={() => onRequestRevision(exchangeId)}
+            >
+              <PencilLine className="size-3.5" />
+              生成条款修改建议
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {revisionItems.length > 0 && (
+        <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <PencilLine className="size-3.5 shrink-0 text-primary" />
+              <span className="text-[12px] font-medium">修改建议已生成（{revisionItems.length} 条）</span>
+              <span className="truncate text-[11px] text-muted-foreground">逐条采纳，原合同不被修改。</span>
+            </div>
+            <Button size="sm" className="h-7 px-2.5 text-[11px]" onClick={() => onOpenRevision(exchangeId)}>
+              打开逐条采纳
+            </Button>
+          </div>
+          <ul className="space-y-1">
+            {revisionItems.slice(0, 3).map((item, index) => (
+              <li key={index} className="flex items-baseline gap-2 text-[11px]">
+                <span
+                  className={cn(
+                    "shrink-0 rounded px-1.5 py-0.5 text-[10px]",
+                    item.kind === "add" ? "bg-amber-500/10 text-amber-700" : "bg-primary/10 text-primary",
+                  )}
+                >
+                  {item.kind === "add" ? "新增" : "修改"}
+                </span>
+                <span className="font-medium">
+                  {item.kind === "add" ? item.title || item.clauseLabel || "新增条款" : item.clauseLabel || "相关条款"}
+                </span>
+                {item.kind !== "add" && item.title && (
+                  <span className="text-muted-foreground">· {item.title}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          {revisionItems.length > 3 && (
+            <p className="mt-1.5 text-[11px] text-muted-foreground">还有 {revisionItems.length - 3} 条，打开逐条采纳查看。</p>
+          )}
         </div>
       )}
 

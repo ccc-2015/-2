@@ -159,6 +159,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     initial: null,
   });
   const [flash, setFlash] = useState("");
+  const [writeError, setWriteError] = useState("");
 
   const stats = overviewStats(allRecords, allUtilities);
   const selectedSet = new Set(selectedIds);
@@ -212,8 +213,12 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     setUtilityForm({ open: true, initial: null });
   }
   function saveRecord(record: EvidenceRecord) {
-    if (recordForm.initial) records.update(record.id, record);
-    else records.add(record);
+    const ok = recordForm.initial ? records.update(record.id, record) : records.add(record);
+    if (!ok) {
+      setWriteError("未能写入本机存储，记录未保存。请清理浏览器空间或允许本站使用存储后重试。");
+      return;
+    }
+    setWriteError("");
     rememberStage(record.stage);
     closeForms();
     setFlash(recordForm.initial ? "记录已更新" : "记录已保存到本机");
@@ -240,8 +245,12 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
   }
 
   function saveUtility(u: UtilityAccount) {
-    if (utilityForm.initial) utilities.update(u.id, u);
-    else utilities.add(u);
+    const ok = utilityForm.initial ? utilities.update(u.id, u) : utilities.add(u);
+    if (!ok) {
+      setWriteError("未能写入本机存储，费用未保存。请清理浏览器空间或允许本站使用存储后重试。");
+      return;
+    }
+    setWriteError("");
     closeForms();
     setFlash(utilityForm.initial ? "费用已更新" : "费用已保存到本机");
   }
@@ -316,6 +325,16 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         missing={stats.missing}
         toConfirm={stats.toConfirm}
       />
+
+      {writeError && (
+        <div
+          role="alert"
+          className="fixed bottom-5 left-1/2 z-[60] flex w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 items-start gap-2 rounded-xl border border-destructive/30 bg-white/95 px-3.5 py-2 text-[12px] leading-relaxed text-destructive shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw+248px)/2)]"
+        >
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          {writeError}
+        </div>
+      )}
 
       {flash && (
         <div
