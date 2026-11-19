@@ -62,7 +62,8 @@ def _messages(inp: AnalyzeContractInput, sources: list[KnowledgeEntry]) -> list[
 
 def prepare_sources(inp: AnalyzeContractInput) -> list[KnowledgeEntry]:
     city = inp.cityCode or "CN"
-    query = "\n".join(part for part in (inp.text, inp.question, inp.intent) if part)
+    target = inp.targetExcerpt.text if inp.targetExcerpt else ""
+    query = "\n".join(part for part in (target, inp.text, inp.question, inp.intent) if part)
     return knowledge_store.retrieve(city, inp.eventDate, query, top_k=4, scenario="contract_review")
 
 

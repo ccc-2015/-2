@@ -35,6 +35,8 @@ export interface Exchange {
   intent: ContractIntent;
   auto?: boolean; // 上传/粘贴后自动发起的首轮审查，界面只显示合同卡片
   docText?: string; // 本次请求使用的合同文本快照，供修订副本使用
+  targetExcerpt?: Excerpt | null; // 本条修订针对的原文，用于判断哪些风险已处理
+  targetKey?: string; // 风险去重键：原文片段，或没有原文时的风险标题
   result: ContractResult | null;
   meta: ResponseMeta | null; // 二期知识库版本与警告从这里取
   error: ApiError | null;
@@ -49,6 +51,8 @@ export interface Exchange {
 export interface RevisionDraft {
   exchangeId: string;
   originalText: string;
+  /** 本次修订的起点：可能已包含前面应用的修改。 */
+  baseText: string;
   copy: string;
   applied: string[];
   selected: string[];

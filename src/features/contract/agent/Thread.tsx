@@ -1,4 +1,4 @@
-import { Check, FileText, Loader2, MapPin, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Check, FileText, Loader2, MapPin, PencilLine, RotateCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { ContractIntent, ContractResult, Excerpt, Finding } from "@/shared/api";
 import { SourceList } from "@/components/SourceList";
 import { HelpTip } from "@/components/HelpTip";
@@ -46,6 +46,7 @@ export function Thread({
   onOpenDoc,
   onOpenRevision,
   onQuickAction,
+  onReviseFinding,
 }: {
   exchanges: Exchange[];
   doc: ContractDoc | null;
@@ -58,6 +59,7 @@ export function Thread({
   onOpenDoc: () => void;
   onOpenRevision: (exchangeId: string) => void;
   onQuickAction: (intent: ContractIntent) => void;
+  onReviseFinding: (finding: Finding) => void;
 }) {
   return (
     <div className="space-y-7">
@@ -145,10 +147,13 @@ export function Thread({
                 knowledgeVersion={exchange.meta?.knowledgeVersion ?? null}
                 warnings={exchange.meta?.warnings ?? []}
                 isLast={index === exchanges.length - 1}
+                busy={busy}
+                aiAvailable={aiAvailable}
                 onLocate={onLocate}
                 onFollowUp={onFollowUp}
                 onOpenRevision={onOpenRevision}
                 onQuickAction={onQuickAction}
+                onReviseFinding={onReviseFinding}
               />
             )}
           </div>
@@ -165,10 +170,13 @@ function ResultBlock({
   knowledgeVersion,
   warnings,
   isLast,
+  busy,
+  aiAvailable,
   onLocate,
   onFollowUp,
   onOpenRevision,
   onQuickAction,
+  onReviseFinding,
 }: {
   exchangeId: string;
   result: ContractResult;
@@ -176,10 +184,13 @@ function ResultBlock({
   knowledgeVersion: string | null;
   warnings: string[];
   isLast: boolean;
+  busy: boolean;
+  aiAvailable: boolean;
   onLocate: (excerpt: Excerpt) => void;
   onFollowUp: (question: string) => void;
   onOpenRevision: (exchangeId: string) => void;
   onQuickAction: (intent: ContractIntent) => void;
+  onReviseFinding: (finding: Finding) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -213,38 +224,42 @@ function ResultBlock({
         <div className="space-y-2">
           <h3 className="text-[12px] font-medium text-muted-foreground">风险提示</h3>
           {result.findings.map((finding, index) => (
-            <FindingCard key={index} finding={finding} onLocate={onLocate} />
+            <FindingCard
+              key={index}
+              finding={finding}
+              onLocate={onLocate}
+              onRevise={onReviseFinding}
+              reviseDisabled={!aiAvailable || busy}
+            />
           ))}
         </div>
       )}
 
       {result.revision && (
-        <div className="rounded-xl border border-border/70 bg-secondary/40 p-3">
-          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <span className="text-[11px] font-medium">修订草稿</span>
-              <span className="text-[11px] text-muted-foreground">协商用，须自行检查。</span>
+        <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <PencilLine className="size-3.5 shrink-0 text-primary" />
+              <span className="text-[12px] font-medium">修订副本已生成</span>
+              <span className="truncate text-[11px] text-muted-foreground">本次只改这一条，其他条款保持原文。</span>
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-[11px]"
-              onClick={() => onOpenRevision(exchangeId)}
-            >
+            <Button size="sm" className="h-7 px-2.5 text-[11px]" onClick={() => onOpenRevision(exchangeId)}>
               打开修订副本
             </Button>
           </div>
-          {result.revision.targetExcerpt && (
+          {result.revision.targetExcerpt ? (
             <button
               type="button"
-              className="mb-2 flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
+              className="mb-2 flex w-full items-start gap-1 text-left text-[11px] text-muted-foreground hover:text-foreground"
               onClick={() => onLocate(result.revision!.targetExcerpt!)}
             >
-              <MapPin className="size-3" />
-              定位目标原文
+              <MapPin className="mt-0.5 size-3 shrink-0" />
+              <span className="line-clamp-2">目标原文：{result.revision.targetExcerpt.text}</span>
             </button>
+          ) : (
+            <p className="mb-2 text-[11px] text-muted-foreground">原文没有对应条款，本次为新增条款建议。</p>
           )}
-          <p className="max-h-48 overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed">
+          <p className="max-h-36 overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed">
             {result.revision.text}
           </p>
         </div>

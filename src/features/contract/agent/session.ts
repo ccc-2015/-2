@@ -96,7 +96,12 @@ export function normalizeLoaded(session: ContractSession): ContractSession {
       loading: false,
       error: null,
     })),
-    revisionDrafts: session.revisionDrafts ?? {},
+    revisionDrafts: Object.fromEntries(
+      Object.entries(session.revisionDrafts ?? {}).map(([id, draft]) => [
+        id,
+        { ...draft, baseText: draft.baseText ?? draft.originalText },
+      ]),
+    ),
     saveNotice: "",
   };
 }

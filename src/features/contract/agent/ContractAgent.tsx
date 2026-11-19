@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Download, FileText, MoreHorizontal, Printer, ShieldCheck, Sparkles } from "lucide-react";
-import type { ContractIntent, Excerpt } from "@/shared/api";
+import { AlertTriangle, Download, FileText, MoreHorizontal, PencilLine, Printer, ShieldCheck, Sparkles } from "lucide-react";
+import type { ContractIntent, Excerpt, Finding } from "@/shared/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -102,6 +102,7 @@ export function ContractAgent({
   const [docOpen, setDocOpen] = useState(false);
   const [activeExcerpt, setActiveExcerpt] = useState<Excerpt | null>(null);
   const [revisionTargetId, setRevisionTargetId] = useState<string | null>(null);
+  const [autoOpenRevisionId, setAutoOpenRevisionId] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const [historyNotice, setHistoryNotice] = useState("");
@@ -132,6 +133,34 @@ export function ContractAgent({
         },
       ]
     : [];
+  // 风险清单来自最近一次全文审查，用于「改这一条 / 处理下一条」。
+  const reviewFindings =
+    [...exchanges].reverse().find((exchange) => exchange.intent === "review" && exchange.result)?.result?.findings ??
+    [];
+  const handledKeys = new Set(
+    exchanges
+      .filter((exchange) => exchange.result?.revision)
+      .map((exchange) => exchange.targetKey ?? exchange.result?.revision?.targetExcerpt?.text)
+      .filter((key): key is string => !!key),
+  );
+  const currentRevisionKey =
+    revisionTarget?.targetKey ?? revisionTarget?.result?.revision?.targetExcerpt?.text ?? null;
+  const workingCopy =
+    revisionDraft?.copy ??
+    [...exchanges]
+      .reverse()
+      .map((exchange) => revisionDrafts[exchange.id])
+      .find((draft) => draft?.copy.trim())?.copy ??
+    doc?.text ??
+    "";
+  const nextFinding =
+    reviewFindings.find((finding) => {
+      const key = finding.excerpt?.text ?? finding.issue;
+      if (key === currentRevisionKey || handledKeys.has(key)) return false;
+      // 目标原文已不在当前副本里，说明这一条已经改过。
+      if (finding.excerpt && !workingCopy.includes(finding.excerpt.text)) return false;
+      return true;
+    }) ?? null;
 
   const patch = useCallback(
     (next: Partial<ContractSession> | ((current: ContractSession) => Partial<ContractSession>)) => {
@@ -213,6 +242,20 @@ export function ContractAgent({
   }, [exchanges.length, busy]);
 
   useEffect(() => {
+    if (!autoOpenRevisionId) return;
+    const exchange = exchanges.find((item) => item.id === autoOpenRevisionId);
+    if (!exchange) return;
+    if (exchange.result?.revision) {
+      setAutoOpenRevisionId(null);
+      openRevision(exchange.id);
+    } else if (!exchange.loading) {
+      setAutoOpenRevisionId(null);
+    }
+    // 只在新修订结果落库后打开一次。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenRevisionId, exchanges]);
+
+  useEffect(() => {
     if (consent !== "on" || !supported || !sessionHasContent(session)) return;
     const timer = window.setTimeout(() => {
       void saveSession(session)
@@ -250,6 +293,7 @@ export function ContractAgent({
     context: ReturnType<typeof buildContext>,
     text: string,
     eventDate: string = signingDate,
+    targetExcerpt: Excerpt | null = null,
   ) {
     patch((current) => ({
       exchanges: current.exchanges.map((exchange) =>
@@ -276,6 +320,7 @@ export function ContractAgent({
         intent,
         cityCode,
         eventDate: eventDate || null,
+        targetExcerpt: targetExcerpt ?? null,
       },
       {
         onStage: ({ stage }) => update({ stage }),
@@ -287,8 +332,11 @@ export function ContractAgent({
                 : exchange,
             ),
           })),
-        onResult: (data, meta) =>
-          update({ loading: false, result: data, meta, docText: text, stage: null, partialAnswer: "" }),
+        onResult: (data, meta) => {
+          update({ loading: false, result: data, meta, docText: text, stage: null, partialAnswer: "" });
+          // 修订结果直接打开副本，避免用户还要再找入口。
+          if (data.revision) setAutoOpenRevisionId(id);
+        },
         onError: (error) => update({ loading: false, error, stage: null, partialAnswer: "" }),
       },
     );
@@ -453,19 +501,65 @@ export function ContractAgent({
     void run(id, reviewQuestion, "review", context, doc.text);
   }
 
+  function reviseFinding(finding: Finding) {
+    if (busy || !doc || !aiAvailable) return;
+    const workingCopy =
+      [...exchanges]
+        .reverse()
+        .map((exchange) => revisionDrafts[exchange.id])
+        .find((draft) => draft?.copy.trim())?.copy ?? doc.text;
+    // 这条原文已经不在当前副本里，直接打开已有副本，避免生成无法应用的修订。
+    if (finding.excerpt && !workingCopy.includes(finding.excerpt.text) && latestRevisionExchangeId) {
+      openRevision(latestRevisionExchangeId);
+      return;
+    }
+    const id = newId();
+    const target = finding.excerpt ?? null;
+    const displayQuestion = target
+      ? `请只修改这一条：${finding.issue}`
+      : `请补充条款解决：${finding.issue}`;
+    setQuestion("");
+    setActiveExcerpt(null);
+    patch((current) => ({
+      exchanges: [
+        ...current.exchanges,
+        {
+          id,
+          question: displayQuestion,
+          intent: "draft_revision",
+          docText: doc.text,
+          targetExcerpt: target,
+          targetKey: target?.text ?? finding.issue,
+          result: null,
+          meta: null,
+          error: null,
+          loading: true,
+        },
+      ],
+    }));
+    void run(id, displayQuestion, "draft_revision", buildContext(exchanges), doc.text, signingDate, target);
+  }
+
   function openRevision(exchangeId: string) {
     const exchange = exchanges.find((item) => item.id === exchangeId);
     if (!exchange?.result?.revision) return;
     const originalText = exchange.docText ?? doc?.text ?? "";
     patch((current) => {
       if (current.revisionDrafts[exchangeId]) return {};
+      // 新副本从最近一份已存副本继续，避免每次修订都从原文重来。
+      const previous = [...current.exchanges]
+        .reverse()
+        .map((item) => current.revisionDrafts[item.id])
+        .find((draft) => draft && draft.copy.trim());
+      const baseText = previous?.copy ?? originalText;
       return {
         revisionDrafts: {
           ...current.revisionDrafts,
           [exchangeId]: {
             exchangeId,
             originalText,
-            copy: originalText,
+            baseText,
+            copy: baseText,
             applied: [],
             selected: [],
             notice: "",
@@ -698,6 +792,18 @@ export function ContractAgent({
           </p>
         </div>
         <div className="flex items-center gap-1">
+          {latestRevisionExchangeId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openRevision(latestRevisionExchangeId)}
+              className="px-2 sm:px-3"
+              aria-label="修订副本"
+            >
+              <PencilLine className="size-3.5" />
+              <span className="hidden sm:inline">修订副本</span>
+            </Button>
+          )}
           {doc && (
             <Button variant="ghost" size="sm" onClick={() => openDoc()} className="hidden sm:inline-flex">
               <FileText className="size-3.5" />
@@ -725,7 +831,6 @@ export function ContractAgent({
               {latestRevisionExchangeId && (
                 <DropdownMenuItem onSelect={() => openRevision(latestRevisionExchangeId)}>
                   修订副本
-                  <span className="ml-auto text-[11px] text-muted-foreground">{revisionExchangeIds.length}</span>
                 </DropdownMenuItem>
               )}
               {onNavigate && (
@@ -818,6 +923,7 @@ export function ContractAgent({
               onOpenDoc={() => openDoc()}
               onOpenRevision={openRevision}
               onQuickAction={(intent) => submit(intent)}
+              onReviseFinding={reviseFinding}
             />
           </div>
         )}
@@ -917,12 +1023,21 @@ export function ContractAgent({
                 suggestions={revisionSuggestions}
                 aiAvailable={aiAvailable}
                 originalFindingCount={revisionTarget.result?.findings.length ?? null}
+                nextFindingLabel={nextFinding?.issue ?? null}
                 onDraftChange={(next) => {
                   if (revisionTargetId) updateRevisionDraft(revisionTargetId, next);
                 }}
                 onReReview={() => {
                   if (revisionTargetId) reReviewRevision(revisionTargetId);
                 }}
+                onNextFinding={
+                  nextFinding
+                    ? () => {
+                        setRevisionTargetId(null);
+                        reviseFinding(nextFinding);
+                      }
+                    : undefined
+                }
               />
             )}
           </div>

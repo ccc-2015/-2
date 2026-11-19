@@ -4,6 +4,7 @@ import {
   ClipboardCopy,
   Loader2,
   MapPin,
+  PencilLine,
   RefreshCw,
   Save,
   Scale,
@@ -26,9 +27,13 @@ import type { RevisionDraft, RevisionSuggestion } from "./types";
 export function FindingCard({
   finding,
   onLocate,
+  onRevise,
+  reviseDisabled,
 }: {
   finding: Finding;
   onLocate: (excerpt: Excerpt) => void;
+  onRevise?: (finding: Finding) => void;
+  reviseDisabled?: boolean;
 }) {
   const tone =
     finding.priority === "confirm_first"
@@ -67,6 +72,20 @@ export function FindingCard({
           ))}
         </ul>
       )}
+      {onRevise && (
+        <div className="mt-2 flex justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-[11px]"
+            onClick={() => onRevise(finding)}
+            disabled={reviseDisabled}
+          >
+            <PencilLine className="size-3" />
+            {finding.excerpt ? "改这一条" : "补充条款"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -86,8 +105,10 @@ export function RevisionCopyPanel({
   suggestions,
   aiAvailable,
   originalFindingCount,
+  nextFindingLabel,
   onDraftChange,
   onReReview,
+  onNextFinding,
 }: {
   draft: RevisionDraft;
   sourceName: string;
@@ -95,21 +116,16 @@ export function RevisionCopyPanel({
   suggestions: RevisionSuggestion[];
   aiAvailable: boolean;
   originalFindingCount: number | null;
+  nextFindingLabel?: string | null;
   onDraftChange: (patch: Partial<RevisionDraft>) => void;
   onReReview: () => void;
+  onNextFinding?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const applied = new Set(draft.applied);
-  const selected = new Set(draft.selected);
-  const dirty = draft.copy !== draft.originalText;
-  const pendingCount = suggestions.filter((suggestion) => !applied.has(suggestion.id)).length;
-
-  function toggleSelect(id: string) {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    onDraftChange({ selected: [...next] });
-  }
+  const dirty = draft.copy !== draft.baseText;
+  const carried = draft.baseText !== draft.originalText;
+  const appliedCurrent = suggestions.some((suggestion) => applied.has(suggestion.id));
 
   function applyOne(suggestion: RevisionSuggestion) {
     if (applied.has(suggestion.id)) return;
@@ -131,48 +147,19 @@ export function RevisionCopyPanel({
       copy: next,
       applied: [...draft.applied, suggestion.id],
       selected: draft.selected.filter((id) => id !== suggestion.id),
-      notice: "已应用 1 条建议到副本（原文不变）。",
-      result: null,
-    });
-  }
-
-  function applySelected() {
-    const items = suggestions.filter((suggestion) => selected.has(suggestion.id) && !applied.has(suggestion.id));
-    if (items.length === 0) return;
-    let next = draft.copy;
-    const done: string[] = [];
-    let skipped = 0;
-    for (const suggestion of items) {
-      if (suggestion.targetExcerpt) {
-        const target = suggestion.targetExcerpt.text;
-        const index = next.indexOf(target);
-        if (index === -1) {
-          skipped++;
-          continue;
-        }
-        next = replaceRevisionText(next, index, target, suggestion.text);
-      } else {
-        next = `${next}\n\n${suggestion.text}`;
-      }
-      done.push(suggestion.id);
-    }
-    onDraftChange({
-      copy: next,
-      applied: [...draft.applied, ...done],
-      selected: [],
-      notice: `已应用 ${done.length} 条建议到副本${skipped ? `；${skipped} 条未找到目标原文，请手动编辑` : ""}（原文不变）。`,
+      notice: "已应用这条修改，其他条款保持不变。",
       result: null,
     });
   }
 
   function discard() {
     onDraftChange({
-      copy: draft.originalText,
+      copy: draft.baseText,
       applied: [],
       selected: [],
       result: null,
       error: null,
-      notice: "已放弃修改，副本恢复为原文。",
+      notice: "已撤销本副本内的改动。",
     });
   }
 
@@ -217,11 +204,14 @@ export function RevisionCopyPanel({
   return (
     <div className="panel p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <span className="text-[13px]">修订副本</span>
-          <span className="text-[11px] text-muted-foreground">{dirty ? "已修改" : "与原文一致"}</span>
+        <div className="flex items-center gap-2">
+          <PencilLine className="size-4 text-primary" />
+          <span className="text-[13px] font-medium">修订副本</span>
+          <span className="text-[11px] text-muted-foreground">
+            {dirty ? "已修改" : carried ? "含此前修改" : "与原文一致"}
+          </span>
         </div>
-        <span className="text-[11px] text-muted-foreground">原文只读保留，所有修改仅发生在副本。</span>
+        <span className="text-[11px] text-muted-foreground">原文只读，修改只发生在副本。</span>
       </div>
 
       <Alert className="mb-3">
@@ -230,31 +220,16 @@ export function RevisionCopyPanel({
       </Alert>
 
       <div className="mb-3 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-sm font-semibold">修订建议（{suggestions.length}）</h4>
-          {pendingCount > 0 && (
-            <Button size="sm" variant="outline" onClick={applySelected} disabled={selected.size === 0}>
-              <Check className="size-4" />
-              批量应用已选（{selected.size}）
-            </Button>
-          )}
+        <div>
+          <h4 className="text-sm font-semibold">本次修订（{suggestions.length} 条）</h4>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">一次只应用一条，其他条款保持原文。</p>
         </div>
         {suggestions.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            暂无修订建议。请用「修改建议」或「起草修订」生成后，在此逐条或批量应用。
-          </p>
+          <p className="text-xs text-muted-foreground">本条暂未返回修订建议，可在对话中重试。</p>
         ) : (
           suggestions.map((suggestion) => (
             <div key={suggestion.id} className="rounded-md border bg-secondary/30 p-2">
               <div className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  className="mt-1 size-4 accent-primary"
-                  checked={selected.has(suggestion.id)}
-                  disabled={applied.has(suggestion.id)}
-                  onChange={() => toggleSelect(suggestion.id)}
-                  aria-label="选择此建议"
-                />
                 <div className="min-w-0 flex-1">
                   {suggestion.targetExcerpt && (
                     <p className="mb-1 font-mono text-[11px] text-muted-foreground">
@@ -269,8 +244,8 @@ export function RevisionCopyPanel({
                       <Check className="size-3" /> 已应用
                     </Badge>
                   ) : (
-                    <Button size="sm" variant="ghost" onClick={() => applyOne(suggestion)}>
-                      应用
+                    <Button size="sm" onClick={() => applyOne(suggestion)}>
+                      应用这条
                     </Button>
                   )}
                 </div>
@@ -310,6 +285,18 @@ export function RevisionCopyPanel({
           <Undo2 className="size-4" />
           放弃修改
         </Button>
+        {onNextFinding && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onNextFinding}
+            disabled={draft.loading || (!appliedCurrent && !dirty)}
+            title={nextFindingLabel ? `下一条：${nextFindingLabel}` : "处理下一条风险"}
+          >
+            <PencilLine className="size-4" />
+            下一条风险
+          </Button>
+        )}
         <Button
           size="sm"
           onClick={onReReview}
@@ -319,6 +306,14 @@ export function RevisionCopyPanel({
           {draft.loading ? "复查中…" : "复查副本"}
         </Button>
       </div>
+
+      {onNextFinding && (!appliedCurrent && !dirty ? (
+        <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+          应用本条修改后，可继续处理下一条{nextFindingLabel ? `：${nextFindingLabel}` : "风险"}。
+        </p>
+      ) : nextFindingLabel ? (
+        <p className="mt-1.5 line-clamp-1 text-[11px] leading-relaxed text-muted-foreground">下一条：{nextFindingLabel}</p>
+      ) : null)}
 
       {draft.archiveNotice && <p className="mt-2 text-xs text-primary">{draft.archiveNotice}</p>}
 
