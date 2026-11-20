@@ -197,7 +197,7 @@ def _build_user_prompt(
             if ev.contractClause:
                 lines.append(f"  关联条款：{ev.contractClause}")
             if ev.content:
-                lines.append(f"  材料全文（可引用，不得改写金额与日期）：{ev.content}")
+                lines.append(f"  材料选取内容（可能是节选；可引用其中的金额与日期，不得臆测未包含内容）：{ev.content}")
         parts.append("\n".join(lines))
     else:
         parts.append("【相关证据】用户尚未选择证据。")

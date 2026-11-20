@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Scale,
   ArrowUp,
@@ -13,9 +13,18 @@ import {
   Check,
   BookmarkPlus,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { HelpTip } from "@/components/HelpTip";
 import { ModuleHeader } from "@/components/ModuleHeader";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +37,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SourceList } from "@/components/SourceList";
 import { EVIDENCE_STATUS_LABELS, type DisputeResult, type ResponseMeta } from "@/shared/api";
 import { disputePrefill, useDisputePrefill } from "../evidence/disputePrefill";
+import {
+  clearDraft,
+  formatDraftTime,
+  getDraftConsent,
+  loadDraft,
+  saveDraft,
+  setDraftConsent,
+  type DisputeDraft,
+  type DraftConsent,
+} from "./draft";
 import { loadEvidenceSample } from "../evidence/sample";
 import { useConfig } from "../../lib/config-context";
 import { useRegionCode } from "../../lib/region";
@@ -39,6 +58,10 @@ import {
   useSelectedIds,
   selection,
   toSelectedEvidence,
+  defaultSentContent,
+  EVIDENCE_DEFAULT_SENT_CHARS,
+  EVIDENCE_SENT_LIMIT,
+  EVIDENCE_SENT_TOTAL_LIMIT,
   yuanToCents,
   newId,
   saveRecordChecked,
@@ -134,8 +157,19 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
   const allRecords = useEvidenceRecords();
   const selectedIds = useSelectedIds();
-  const selectedEvidence = toSelectedEvidence(allRecords, selectedIds);
+  const [sentContents, setSentContents] = useState<Record<string, string>>({});
+  const [contentEditor, setContentEditor] = useState<{
+    recordId: string;
+    name: string;
+    value: string;
+    total: number;
+    defaultText: string;
+    error: string;
+  } | null>(null);
+  const selectedEvidence = toSelectedEvidence(allRecords, selectedIds, sentContents);
   const overEvidenceLimit = selectedEvidence.length > maxEvidence;
+  const totalSentChars = selectedEvidence.reduce((sum, item) => sum + (item.content ?? "").length, 0);
+  const overSentLimit = totalSentChars > EVIDENCE_SENT_TOTAL_LIMIT;
 
   const cityCode = useRegionCode();
   const [issue, setIssue] = useState("");
@@ -162,7 +196,164 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   const [archivedScripts, setArchivedScripts] = useState<Record<string, string>>({});
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [maxStep, setMaxStep] = useState<0 | 1 | 2>(0);
+  const lastChannelRef = useRef<string | null>(null);
+  const [draftConsentState, setDraftConsentState] = useState<DraftConsent>(() => getDraftConsent());
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState("");
+  const [draftNotice, setDraftNotice] = useState("");
+  const skipFirstSave = useRef(true);
   const prefill = useDisputePrefill();
+
+  function buildDraft(): DisputeDraft {
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      issue,
+      eventDate,
+      counterparty,
+      goal,
+      amountYuan,
+      facts,
+      priorAction,
+      selectedIds,
+      sentContents,
+      selectedChannelId,
+      scriptDraft,
+      status,
+      archivedScripts,
+      tab,
+      step,
+      maxStep,
+      result,
+      resultMeta,
+    };
+  }
+
+  function persistDraft(): { ok: boolean; savedAt: string; error: string; notice: string } {
+    const draft = buildDraft();
+    if (saveDraft(draft)) return { ok: true, savedAt: draft.savedAt, error: "", notice: "" };
+    const lean = { ...draft, result: null, resultMeta: null };
+    if (saveDraft(lean)) {
+      return {
+        ok: true,
+        savedAt: draft.savedAt,
+        error: "",
+        notice: "草稿已保存，但分析结果较大未写入；事实、材料与话术已保存。",
+      };
+    }
+    return {
+      ok: false,
+      savedAt: "",
+      error: "草稿未能写入本机存储，页面内容仍保留。请清理浏览器空间后重试。",
+      notice: "",
+    };
+  }
+
+  function acceptDraftConsent() {
+    const persisted = setDraftConsent("on");
+    setDraftConsentState("on");
+    const saved = persistDraft();
+    if (saved.ok) {
+      setDraftSavedAt(saved.savedAt);
+      setDraftError(persisted ? "" : "浏览器不允许写入，草稿只在本页有效。");
+      setDraftNotice(saved.notice);
+    } else {
+      setDraftSavedAt(null);
+      setDraftError(saved.error);
+      setDraftNotice("");
+    }
+  }
+
+  function declineDraftConsent() {
+    setDraftConsent("off");
+    setDraftConsentState("off");
+    clearDraft();
+    setDraftSavedAt(null);
+    setDraftError("");
+    setDraftNotice("");
+  }
+
+  function deleteStoredDraft() {
+    clearDraft();
+    setDraftConsent("off");
+    setDraftConsentState("off");
+    setDraftSavedAt(null);
+    setDraftError("");
+    setDraftNotice("");
+  }
+
+  useEffect(() => {
+    const consent = getDraftConsent();
+    setDraftConsentState(consent);
+    if (consent === "on") {
+      const draft = loadDraft();
+      if (draft) {
+        setIssue(draft.issue ?? "");
+        setEventDate(draft.eventDate ?? "");
+        setCounterparty(draft.counterparty || "个人房东");
+        setGoal(draft.goal ?? "");
+        setAmountYuan(draft.amountYuan ?? "");
+        setFacts(draft.facts ?? "");
+        setPriorAction(draft.priorAction ?? "");
+        selection.set(draft.selectedIds ?? []);
+        setSentContents(draft.sentContents ?? {});
+        setSelectedChannelId(draft.selectedChannelId ?? null);
+        setScriptDraft(draft.scriptDraft ?? "");
+        setStatus(draft.status || "not_contacted");
+        setArchivedScripts(draft.archivedScripts ?? {});
+        setTab(draft.tab === "script" || draft.tab === "progress" ? draft.tab : "analysis");
+        setStep(draft.step === 1 || draft.step === 2 ? draft.step : 0);
+        setMaxStep(draft.maxStep === 1 || draft.maxStep === 2 ? draft.maxStep : 0);
+        setResult(draft.result ?? null);
+        setResultMeta(draft.resultMeta ?? null);
+        setDraftSavedAt(draft.savedAt);
+        setNotice(`已恢复上次争议草稿（保存于 ${formatDraftTime(draft.savedAt)}）。`);
+      }
+    }
+    skipFirstSave.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (draftConsentState !== "on") return;
+    if (skipFirstSave.current) {
+      skipFirstSave.current = false;
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const saved = persistDraft();
+      if (saved.ok) {
+        setDraftSavedAt(saved.savedAt);
+        setDraftError("");
+        setDraftNotice(saved.notice);
+      } else {
+        setDraftSavedAt(null);
+        setDraftError(saved.error);
+        setDraftNotice("");
+      }
+    }, 600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    draftConsentState,
+    issue,
+    eventDate,
+    counterparty,
+    goal,
+    amountYuan,
+    facts,
+    priorAction,
+    selectedIds,
+    sentContents,
+    selectedChannelId,
+    scriptDraft,
+    status,
+    archivedScripts,
+    tab,
+    step,
+    maxStep,
+    result,
+    resultMeta,
+  ]);
   useEffect(() => {
     if (!prefill) return;
     const next = disputePrefill.take();
@@ -170,6 +361,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     setIssue(next.issue);
     if (next.facts) setFacts(next.facts);
     selection.set(next.evidenceIds);
+    setSentContents({});
     setResult(null);
     setResultMeta(null);
     setSelectedChannelId(null);
@@ -187,6 +379,32 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     setMaxStep((m) => (next > m ? next : m));
   }
 
+  function openContentEditor(record: EvidenceRecord) {
+    const fallback = defaultSentContent(record);
+    setContentEditor({
+      recordId: record.id,
+      name: record.materialName || record.description.slice(0, 24) || "证据材料",
+      value: sentContents[record.id] ?? fallback.text,
+      total: record.content?.length ?? 0,
+      defaultText: fallback.text,
+      error: "",
+    });
+  }
+
+  function saveContentEditor() {
+    if (!contentEditor) return;
+    const value = contentEditor.value.trim();
+    if (value.length > EVIDENCE_SENT_LIMIT) {
+      setContentEditor({
+        ...contentEditor,
+        error: `选取内容超过 ${EVIDENCE_SENT_LIMIT} 字符，请只保留与本次争议相关的条款。`,
+      });
+      return;
+    }
+    setSentContents((prev) => ({ ...prev, [contentEditor.recordId]: value }));
+    setContentEditor(null);
+  }
+
   const selectedChannelLabel = selectedChannelId
     ? result?.recommendations.find((rec) => rec.channelId === selectedChannelId)?.title ??
       CHANNEL_LABELS[selectedChannelId] ??
@@ -194,7 +412,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     : "未选择方向";
   const scriptArchiveId = archivedScripts[selectedChannelId ?? "unknown"];
   const busy = loading;
-  const canSubmit = aiAvailable && issue.trim().length > 0 && !overEvidenceLimit && !busy;
+  const canSubmit = aiAvailable && issue.trim().length > 0 && !overEvidenceLimit && !overSentLimit && !busy;
 
   useEffect(() => {
     if (!selectedChannelId || !result?.script) return;
@@ -221,7 +439,8 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
   }, [hasScript]);
 
   async function diagnose(channelId: string | null) {
-    if (!aiAvailable || !issue.trim() || overEvidenceLimit) return;
+    if (!aiAvailable || !issue.trim() || overEvidenceLimit || overSentLimit) return;
+    lastChannelRef.current = channelId;
     setLoading(true);
     setError(null);
     try {
@@ -330,6 +549,7 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
   function loadSample() {
     const sample = loadEvidenceSample();
+    setSentContents({});
     setIssue("退租后房东以墙面裂缝为由扣全部押金 4000 元，未提供维修票据");
     setEventDate("2026-11-10");
     setCounterparty("个人房东");
@@ -371,6 +591,39 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
       />
 
       <div className="mx-auto w-full max-w-[1024px] px-4 pt-5 md:px-8">
+      {draftConsentState === "unset" && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-secondary/40 px-3 py-2">
+          <ShieldCheck className="size-3.5 shrink-0 text-muted-foreground" />
+          <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-muted-foreground">
+            把争议草稿保存在本浏览器？不上传服务器，可随时删除。
+          </p>
+          <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={acceptDraftConsent}>
+            保存草稿
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={declineDraftConsent}>
+            不用了
+          </Button>
+        </div>
+      )}
+      {draftConsentState === "on" && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          {draftSavedAt ? <span>草稿已保存 {formatDraftTime(draftSavedAt)}</span> : <span>草稿自动保存已开启</span>}
+          {draftNotice && <span className="text-amber-700">{draftNotice}</span>}
+          {draftError && <span className="text-destructive">{draftError}</span>}
+          <button type="button" onClick={deleteStoredDraft} className="text-primary hover:underline">
+            删除本机草稿
+          </button>
+        </div>
+      )}
+      {draftConsentState === "off" && (
+        <div className="mt-2 text-[11px] text-muted-foreground">
+          未保存争议草稿；
+          <button type="button" onClick={acceptDraftConsent} className="ml-1 text-primary hover:underline">
+            开启保存
+          </button>
+        </div>
+      )}
+
       {notice && (
         <p className="mt-3 rounded-lg bg-primary/5 px-3 py-2 text-[11px] leading-relaxed text-primary">{notice}</p>
       )}
@@ -495,6 +748,59 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                   <p className="mt-2 text-xs text-destructive">已选超过 {maxEvidence} 条，请减少选择后再生成。</p>
                 )}
               </div>
+
+              {selectedEvidence.length > 0 && (
+                <div className="rounded-lg border border-border/70 bg-background p-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <h3 className="text-xs font-medium">AI 将读取的材料（{selectedEvidence.length}）</h3>
+                      <HelpTip label="发送内容说明">
+                        只发送这里列出的选取内容；长材料默认只带前 {EVIDENCE_DEFAULT_SENT_CHARS} 字并标注节选，可逐条改成相关条款。未包含的部分不会提供给 AI。
+                      </HelpTip>
+                    </div>
+                    <span className={totalSentChars > EVIDENCE_SENT_TOTAL_LIMIT ? "text-[11px] text-destructive" : "text-[11px] text-muted-foreground"}>
+                      合计 {totalSentChars} / {EVIDENCE_SENT_TOTAL_LIMIT} 字符
+                    </span>
+                    {overSentLimit && (
+                      <span className="text-[11px] text-destructive">选取内容过多，请缩短后再生成。</span>
+                    )}
+                  </div>
+                  <ul className="mt-1.5 space-y-1">
+                    {selectedEvidence.map((item) => {
+                      const record = allRecords.find((r) => r.id === item.evidenceId);
+                      const isOverride = sentContents[item.evidenceId] !== undefined;
+                      const totalChars = record?.content?.length ?? 0;
+                      const partial = !!record && !isOverride && totalChars > EVIDENCE_DEFAULT_SENT_CHARS;
+                      return (
+                        <li key={item.evidenceId} className="flex items-start gap-2 text-[11px]">
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">
+                              {record?.materialName || item.materialName || item.description.slice(0, 20)}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {item.content ? `发送 ${item.content.length} 字` : "无正文，只发送名称与描述"}
+                              {partial ? `（节选，共 ${totalChars} 字）` : record?.content ? "（全文）" : ""}
+                            </span>
+                          </span>
+                          {record?.content && (
+                            <button
+                              type="button"
+                              onClick={() => openContentEditor(record)}
+                              className="shrink-0 text-primary hover:underline"
+                            >
+                              查看/选取
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                    未列出的部分不会提供给 AI；〔节选〕不等于全文。
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-1">
                 <Label htmlFor="dp-facts" className="text-xs">补充事实（可选）</Label>
                 <Textarea id="dp-facts" value={facts} onChange={(e) => setFacts(e.target.value)} className="min-h-16 text-sm" placeholder="补充已确认的事实；未知项可不填，系统会提示缺项。" />
@@ -556,6 +862,16 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
               <AlertTitle>未完成</AlertTitle>
               <AlertDescription>
                 {error.message}{error.retryable && " 可稍后手动重试。"}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => diagnose(lastChannelRef.current)}
+                  disabled={busy || !aiAvailable || !issue.trim() || overEvidenceLimit}
+                >
+                  <RotateCw className="size-4" />
+                  重试分析
+                </Button>
               </AlertDescription>
             </Alert>
           )}
@@ -815,6 +1131,80 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
         </div>
       </div>
       </div>
+
+      {draftError && (
+        <div
+          role="alert"
+          className="fixed bottom-5 left-1/2 z-40 flex w-[min(34rem,calc(100vw-2rem))] -translate-x-1/2 items-start gap-2 rounded-xl border border-destructive/30 bg-white/95 px-3.5 py-2 text-[12px] leading-relaxed text-destructive shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw+248px)/2)]"
+        >
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          {draftError}
+        </div>
+      )}
+
+      <Dialog open={contentEditor != null} onOpenChange={(open) => { if (!open) setContentEditor(null); }}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>选取发送给 AI 的内容</DialogTitle>
+            <DialogDescription>
+              {contentEditor?.name} · 共 {contentEditor?.total ?? 0} 字。只发送文本框中的内容；可只保留与本次争议相关的条款。
+            </DialogDescription>
+          </DialogHeader>
+          {contentEditor && (
+            <>
+              <Textarea
+                value={contentEditor.value}
+                onChange={(event) =>
+                  setContentEditor({ ...contentEditor, value: event.target.value, error: "" })
+                }
+                className="min-h-64 font-mono text-sm"
+                aria-label="选取发送内容"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <span className={contentEditor.value.length > EVIDENCE_SENT_LIMIT ? "text-destructive" : "text-muted-foreground"}>
+                  {contentEditor.value.length} / {EVIDENCE_SENT_LIMIT} 字符
+                </span>
+                <div className="flex gap-1">
+                  {contentEditor.total > EVIDENCE_DEFAULT_SENT_CHARS && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setContentEditor({ ...contentEditor, value: contentEditor.defaultText, error: "" })}
+                    >
+                      用默认前 {EVIDENCE_DEFAULT_SENT_CHARS} 字
+                    </Button>
+                  )}
+                  {contentEditor.total > 0 && contentEditor.total <= EVIDENCE_SENT_LIMIT && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        const record = allRecords.find((item) => item.id === contentEditor.recordId);
+                        setContentEditor({ ...contentEditor, value: record?.content ?? "", error: "" });
+                      }}
+                    >
+                      用全文
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {contentEditor.error && <p className="text-[11px] text-destructive">{contentEditor.error}</p>}
+              <p className="text-[11px] text-muted-foreground">
+                未包含在此文本框中的证据内容不会发送给 AI；节选不会被当作全文。
+              </p>
+            </>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setContentEditor(null)}>取消</Button>
+            <Button
+              onClick={saveContentEditor}
+              disabled={!!contentEditor && contentEditor.value.length > EVIDENCE_SENT_LIMIT}
+            >
+              保存发送内容
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

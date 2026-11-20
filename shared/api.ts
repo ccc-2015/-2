@@ -69,6 +69,8 @@ export interface ExtractPage {
   page: number;
   text: string;
   method: ExtractMethod;
+  /** 多文件合并时的来源文件名。 */
+  sourceName?: string;
 }
 
 export interface ExtractResult {

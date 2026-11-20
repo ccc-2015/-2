@@ -73,11 +73,15 @@ def validate_dispute_limits(inp: DiagnoseDisputeInput) -> None:
         raise ApiError("payload_too_large", f"最多选择 {LIMITS['maxEvidenceSelected']} 条证据。", "selectedEvidence")
     for i, ev in enumerate(inp.selectedEvidence):
         validate_date(ev.occurredAt, f"selectedEvidence[{i}].occurredAt")
-        if utf16_length(ev.content) > 1200:
-            raise ApiError("payload_too_large", "证据材料全文过长，请缩短后再带入争议。", f"selectedEvidence[{i}].content")
+        if utf16_length(ev.content) > 6000:
+            raise ApiError(
+                "payload_too_large",
+                "单条证据的选取内容超过 6000 字符，请只保留相关条款后再带入争议。",
+                f"selectedEvidence[{i}].content",
+            )
     total_content = sum(utf16_length(ev.content) for ev in inp.selectedEvidence)
-    if total_content > 8000:
-        raise ApiError("payload_too_large", "所选证据材料过多，请减少选择后再生成。", "selectedEvidence")
+    if total_content > 12000:
+        raise ApiError("payload_too_large", "所选证据选取内容合计超过 12000 字符，请减少或缩短后再生成。", "selectedEvidence")
 
 
 def close_excerpt(raw, full_text: str) -> Excerpt | None:

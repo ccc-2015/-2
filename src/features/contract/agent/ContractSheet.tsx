@@ -211,11 +211,19 @@ export function ContractSheet({
               <div className="mt-2 space-y-2">
                 {doc.meta.pages.map((page) => (
                   <div key={page.page} className="rounded border bg-card p-2">
-                    <div className="mb-1 flex items-center gap-2">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">第 {page.page} 页</Badge>
+                      {page.sourceName && (
+                        <span className="max-w-40 truncate text-[10px] text-muted-foreground">{page.sourceName}</span>
+                      )}
                       <span className="text-muted-foreground">
                         {page.method === "ocr" ? "OCR" : "文本层"} · {page.text.length} 字符
                       </span>
+                      {!page.text.trim() && (
+                        <Badge variant="outline" className="text-amber-700">
+                          未提取到文本
+                        </Badge>
+                      )}
                     </div>
                     <pre className="max-h-40 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed">
                       {page.text || "（本页未提取到文本）"}

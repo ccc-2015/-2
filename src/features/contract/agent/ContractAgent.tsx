@@ -550,10 +550,13 @@ export function ContractAgent({
         return;
       }
       const bound = startNewSession(nextDoc);
-      // 图片走多模态转写，可能有错字漏字；先打开文本面板让用户核对，确认后再点「重新审查」，不自动分析。
-      const ocrConfirm = LOCAL_SITE && data.ocrUsed;
-      if (ocrConfirm) setDocOpen(true);
-      if (ocrConfirm) return;
+      // 图片 OCR、PDF 空页/只解析前 50 页等情况先打开原文核对，避免基于不完整文本直接审查。
+      const pageIssue =
+        data.pages.some((page) => !page.text.trim()) ||
+        data.warnings.some((warning) => warning.includes("仅解析前 50 页"));
+      const needsTextCheck = (LOCAL_SITE && data.ocrUsed) || pageIssue;
+      if (needsTextCheck) setDocOpen(true);
+      if (needsTextCheck) return;
       if (bound) startReview(bound);
     } catch (err) {
       setUploadError(err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false));

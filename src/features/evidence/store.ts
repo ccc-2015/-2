@@ -287,19 +287,43 @@ export function sortRecords(list: EvidenceRecord[]): EvidenceRecord[] {
   });
 }
 
-export function toSelectedEvidence(list: EvidenceRecord[], ids: string[]): SelectedEvidence[] {
+export const EVIDENCE_DEFAULT_SENT_CHARS = 1200;
+export const EVIDENCE_SENT_LIMIT = 6000;
+export const EVIDENCE_SENT_TOTAL_LIMIT = 12000;
+
+/** 默认发送内容：长材料只取前 1200 字，并明确标注是节选，不冒充全文。 */
+export function defaultSentContent(record: EvidenceRecord): { text: string; total: number; partial: boolean } {
+  const raw = record.content ?? "";
+  if (raw.length <= EVIDENCE_DEFAULT_SENT_CHARS) {
+    return { text: raw, total: raw.length, partial: false };
+  }
+  return {
+    text: `${raw.slice(0, EVIDENCE_DEFAULT_SENT_CHARS)}\n\n（以上为节选：仅前 ${EVIDENCE_DEFAULT_SENT_CHARS} 字，共 ${raw.length} 字；其余未发送）`,
+    total: raw.length,
+    partial: true,
+  };
+}
+
+export function toSelectedEvidence(
+  list: EvidenceRecord[],
+  ids: string[],
+  sentContents: Record<string, string> = {},
+): SelectedEvidence[] {
   const set = new Set(ids);
-  return sortRecords(list.filter((r) => set.has(r.id))).map((r) => ({
-    evidenceId: r.id,
-    occurredAt: r.occurredAt,
-    description: r.description,
-    status: r.materialStatus,
-    materialName: r.materialName,
-    materialType: r.materialType,
-    amountCents: r.amountCents,
-    contractClause: r.contractClause,
-    content: r.content?.slice(0, 1200) ?? "",
-  }));
+  return sortRecords(list.filter((r) => set.has(r.id))).map((r) => {
+    const override = sentContents[r.id];
+    return {
+      evidenceId: r.id,
+      occurredAt: r.occurredAt,
+      description: r.description,
+      status: r.materialStatus,
+      materialName: r.materialName,
+      materialType: r.materialType,
+      amountCents: r.amountCents,
+      contractClause: r.contractClause,
+      content: override !== undefined ? override : defaultSentContent(r).text,
+    };
+  });
 }
 
 // ---- 时间轴（阶段泳道）辅助 ----

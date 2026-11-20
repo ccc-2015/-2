@@ -41,7 +41,7 @@ async function readPdf(file: File): Promise<{ text: string; pages: ExtractPage[]
   const doc = await pdfjs.getDocument({ data: buffer, isEvalSupported: false }).promise;
   const warnings: string[] = [];
   if (doc.numPages > 50) {
-    warnings.push(`PDF 共 ${doc.numPages} 页，超过 50 页，仅解析前 50 页。`);
+    warnings.push(`PDF 共 ${doc.numPages} 页，超过 50 页，仅解析前 50 页；后续页面可能未包含。`);
   }
   const pages: ExtractPage[] = [];
   const parts: string[] = [];
@@ -58,6 +58,13 @@ async function readPdf(file: File): Promise<{ text: string; pages: ExtractPage[]
     pages.push({ page: index, text, method: "text" });
   }
   const joined = parts.join("\n\n");
+  const emptyPages = pages.filter((page) => !page.text.trim()).map((page) => page.page);
+  if (emptyPages.length > 0) {
+    const list = emptyPages.slice(0, 10).join("、");
+    warnings.push(
+      `第 ${list}${emptyPages.length > 10 ? " 等" : ""} 页未提取到文本，可能是扫描页或空白页；请在合同文本中核对补充。`,
+    );
+  }
   if (!joined.trim()) {
     warnings.push("这份 PDF 没有可复制的文字，可能是扫描件。请直接粘贴合同文本后再审查。");
   }
@@ -108,7 +115,9 @@ export async function extractLocally(files: File[]): Promise<ExtractResult> {
     chunks.push(single.text);
     names.push(file.name);
     warnings.push(...single.warnings.map((warning) => `${file.name}：${warning}`));
-    single.pages.forEach((page) => pages.push({ ...page, page: pageOffset + page.page }));
+    single.pages.forEach((page) =>
+      pages.push({ ...page, page: pageOffset + page.page, sourceName: files.length > 1 ? file.name : undefined }),
+    );
   }
 
   const merged = chunks.join("\n\n");
