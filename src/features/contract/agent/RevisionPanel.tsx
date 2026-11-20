@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -57,8 +57,11 @@ export function RevisionPanel({
 }) {
   const [copied, setCopied] = useState(false);
   const [signedConfirmed, setSignedConfirmed] = useState(false);
+  const adoptAllLock = useRef(false);
   const applied = new Set(draft.applied);
   const dirty = draft.copy !== draft.baseText;
+  const pendingSuggestions = suggestions.filter((suggestion) => !applied.has(suggestion.id));
+  const signedSame = !!draft.signedRecordId && draft.copy === draft.signedText;
 
   function adopt(suggestion: RevisionSuggestion) {
     if (applied.has(suggestion.id)) return;
@@ -85,6 +88,43 @@ export function RevisionPanel({
       applied: [...draft.applied, suggestion.id],
       appliedTexts: { ...draft.appliedTexts, [suggestion.id]: inserted },
       notice: "已采纳这一条；原合同未被修改。",
+      result: null,
+    });
+  }
+
+  function adoptAll() {
+    if (adoptAllLock.current || pendingSuggestions.length === 0) return;
+    adoptAllLock.current = true;
+    window.setTimeout(() => {
+      adoptAllLock.current = false;
+    }, 400);
+    let next = draft.copy;
+    const done: string[] = [];
+    const texts = { ...draft.appliedTexts };
+    let skipped = 0;
+    for (const suggestion of suggestions) {
+      if (applied.has(suggestion.id)) continue;
+      if (suggestion.targetExcerpt) {
+        const target = suggestion.targetExcerpt.text;
+        const index = next.indexOf(target);
+        if (index === -1) {
+          skipped += 1;
+          continue;
+        }
+        const replaced = replaceText(next, index, target, suggestion.text);
+        next = replaced.next;
+        texts[suggestion.id] = replaced.inserted;
+      } else {
+        texts[suggestion.id] = suggestion.text;
+        next = `${next}\n\n${suggestion.text}`;
+      }
+      done.push(suggestion.id);
+    }
+    onDraftChange({
+      copy: next,
+      applied: [...draft.applied, ...done],
+      appliedTexts: texts,
+      notice: `已采纳 ${done.length} 条${skipped ? `；${skipped} 条目标原文已变化被跳过` : ""}；原合同未被修改。`,
       result: null,
     });
   }
@@ -178,9 +218,14 @@ export function RevisionPanel({
           <div>
             <h4 className="text-sm font-semibold">修改清单（{suggestions.length} 条）</h4>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              逐条采纳或撤销；所有改动只进入副本，原文保持不变。已采纳 {draft.applied.length} 条。
+              可先采纳全部，再逐条撤销或手动调整；所有改动只进入副本，原文保持不变。已采纳 {draft.applied.length} 条。
             </p>
           </div>
+          {pendingSuggestions.length > 0 && (
+            <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px]" onClick={adoptAll}>
+              采纳全部（{pendingSuggestions.length} 条）
+            </Button>
+          )}
         </div>
 
         {suggestions.length === 0 ? (
@@ -303,12 +348,32 @@ export function RevisionPanel({
           />
           我确认这份文本是我实际签署的版本；这只代表我方确认，不代表对方已同意。
         </label>
+        <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+          可带〔待补〕保存，系统会在记录中标注待补项，不会替你填写。
+        </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={onSaveSigned} disabled={!signedConfirmed || !draft.copy.trim()}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onSaveSigned}
+            disabled={!signedConfirmed || !draft.copy.trim() || signedSame}
+          >
             <Save className="size-4" />
-            {draft.signedRecordId ? "更新签署版本" : "存为签署版本"}
+            {signedSame
+              ? "已存签署版本"
+              : draft.signedRecordId
+                ? "另存签署版本快照"
+                : "存为签署版本"}
           </Button>
           {!signedConfirmed && <span className="text-[11px] text-muted-foreground">勾选上方确认后才能保存</span>}
+          {signedConfirmed && signedSame && (
+            <span className="text-[11px] text-muted-foreground">当前文本已存为签署版本；继续修改会另存新快照。</span>
+          )}
+          {signedConfirmed && !signedSame && draft.signedRecordId && (
+            <span className="text-[11px] text-muted-foreground">
+              当前文本与已签快照不同，保存会新增快照，不覆盖旧签署版本。
+            </span>
+          )}
         </div>
         {draft.signedNotice && (
           <p className={`mt-1 text-[11px] ${draft.signedNotice.includes("未能") ? "text-destructive" : "text-primary"}`}>

@@ -89,6 +89,8 @@ export interface RevisionDraft {
   archivedId: string | null;
   signedNotice: string;
   signedRecordId: string | null;
+  /** 已留存签署版本对应的文本，用于判断是否需要另存新快照。 */
+  signedText: string;
   result: ContractResult | null;
   error: ApiError | null;
   loading: boolean;

@@ -678,7 +678,16 @@ export function ContractAgent({
       })
       .join("\n");
     const displayQuestion = "请根据审查结果生成条款修改建议。";
-    const modelPrompt = `请基于以下已发现的问题，给出可逐条采纳的条款修改建议：\n${issueLines}`;
+    let modelPrompt = `请基于以下已发现的问题，给出可逐条采纳的条款修改建议：\n${issueLines}`;
+    const profileLines = [
+      profile.addressLabel ? `房屋地址：${profile.addressLabel}` : "",
+      profile.monthlyRentCents != null ? `月租：${(profile.monthlyRentCents / 100).toFixed(2)} 元` : "",
+      profile.depositCents != null ? `押金：${(profile.depositCents / 100).toFixed(2)} 元` : "",
+      signingDate || profile.startDate ? `签约/起租日期：${signingDate || profile.startDate}` : "",
+    ].filter(Boolean);
+    if (profileLines.length > 0) {
+      modelPrompt += `\n\n【已填租住信息（可直接使用，不要编造其他信息）】\n${profileLines.join("\n")}\n已知信息直接填入相关条款，不要留〔待补〕；姓名、通知天数等未知项仍保留〔待补〕。`;
+    }
     const id = newId();
     setQuestion("");
     patch((current) => ({
@@ -730,6 +739,7 @@ export function ContractAgent({
         archivedId: null,
         signedNotice: "",
         signedRecordId: null,
+        signedText: "",
         result: null,
         error: null,
         loading: false,
@@ -821,19 +831,19 @@ export function ContractAgent({
   function saveSignedVersion(exchangeId: string) {
     const draft = session.revisionDrafts[exchangeId];
     if (!draft || !draft.copy.trim()) return;
-    if (draft.copy.includes("待补")) {
-      updateRevisionDraft(exchangeId, {
-        signedNotice: "副本中仍有〔待补〕项，请填写或删除占位后再存为签署版本。",
-      });
-      return;
-    }
-    const existingId = draft.signedRecordId;
+    const pending = (draft.copy.match(/〔待补[^〕]*〕/g) ?? []).length;
+    const priorSigned = draft.signedRecordId;
+    const sameAsSigned = priorSigned != null && draft.signedText === draft.copy;
+    const existingId = sameAsSigned ? priorSigned : null;
     const record: EvidenceRecord = {
       id: existingId ?? newId(),
       stage: "signing",
       occurredAt: signingDate || null,
       recordedAt: new Date().toISOString(),
-      description: `签署版本 ${draft.versionLabel}（我方确认，不代表对方同意，${draft.copy.length} 字符）`,
+      description:
+        pending > 0
+          ? `签署版本 ${draft.versionLabel}（我方确认，不代表对方同意，含 ${pending} 处待补，${draft.copy.length} 字符）`
+          : `签署版本 ${draft.versionLabel}（我方确认，不代表对方同意，${draft.copy.length} 字符）`,
       contractClause: "",
       materialName: `${doc?.sourceName ?? "合同"} · 签署版本`,
       materialType: "签署版本",
@@ -851,9 +861,14 @@ export function ContractAgent({
       });
       return;
     }
+    const former = priorSigned && !sameAsSigned ? "已另存新的签署版本快照；旧签署版本仍保留。" : "已留存签署版本；";
     updateRevisionDraft(exchangeId, {
       signedRecordId: record.id,
-      signedNotice: "已留存签署版本，仅代表我方确认，不代表对方已同意。",
+      signedText: draft.copy,
+      signedNotice:
+        pending > 0
+          ? `${former}文本中仍有 ${pending} 处待补，已一并记录。仅代表我方确认。`
+          : `${former}仅代表我方确认，不代表对方已同意。`,
     });
   }
 

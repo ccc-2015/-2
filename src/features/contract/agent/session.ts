@@ -158,6 +158,7 @@ export function normalizeLoaded(session: ContractSession): ContractSession {
           appliedTexts: draft.appliedTexts ?? {},
           signedNotice: draft.signedNotice ?? "",
           signedRecordId: draft.signedRecordId ?? null,
+          signedText: draft.signedText ?? "",
         },
       ]),
     ),
