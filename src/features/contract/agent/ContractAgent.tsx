@@ -113,6 +113,7 @@ export function ContractAgent({
 
   const [question, setQuestion] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState<{ done: number; total: number } | null>(null);
   const [uploadError, setUploadError] = useState<ApiError | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
@@ -531,7 +532,9 @@ export function ContractAgent({
     setUploading(true);
     try {
       // 公网版没有 Python 后端，文件在本机浏览器解析；本地开发仍可走 /api 的后端抽取。
-      const data = LOCAL_SITE ? await extractLocally(files) : (await api.extractMany(files)).data;
+      const data = LOCAL_SITE
+        ? await extractLocally(files, (done, total) => setOcrProgress(done >= total ? null : { done, total }))
+        : (await api.extractMany(files)).data;
       const nextDoc: ContractDraft = {
         text: data.text,
         sourceName: data.sourceName,
@@ -561,6 +564,7 @@ export function ContractAgent({
     } catch (err) {
       setUploadError(err instanceof ApiError ? err : new ApiError("internal_error", errorMessage(err), false));
     } finally {
+      setOcrProgress(null);
       setUploading(false);
     }
   }
@@ -1255,6 +1259,7 @@ export function ContractAgent({
             <Composer
               hasDoc={!!doc}
               uploading={uploading}
+              progress={ocrProgress}
               busy={busy}
               aiAvailable={aiAvailable}
               dragOver={dragOver}

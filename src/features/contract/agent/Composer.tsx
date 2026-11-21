@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-/** 文本类在本机解析，图片走云端多模态转写；两种部署都开放图片格式。 */
+/** 文本类在本机解析，图片/扫描页走云端文字识别；两种部署都开放图片格式。 */
 const ACCEPT = ".txt,.md,.markdown,.docx,.pdf,.png,.jpg,.jpeg,.webp";
 
 export function Composer({
   hasDoc,
   uploading,
+  progress,
   busy,
   aiAvailable,
   dragOver,
@@ -21,6 +22,7 @@ export function Composer({
 }: {
   hasDoc: boolean;
   uploading: boolean;
+  progress: { done: number; total: number } | null;
   busy: boolean;
   aiAvailable: boolean;
   dragOver: boolean;
@@ -43,7 +45,7 @@ export function Composer({
       {uploading && (
         <div className="flex items-center gap-2 px-3 pb-1 pt-2 text-[12px] text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
-          正在读取 / 识别合同材料…
+          {progress ? `正在识别扫描页 ${progress.done}/${progress.total}…` : "正在读取 / 识别合同材料…"}
         </div>
       )}
 
