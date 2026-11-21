@@ -46,11 +46,14 @@ export const MOVE_IN_CHECKLIST: ChecklistItem[] = [
 
 export interface ChecklistProgress {
   item: ChecklistItem;
+  /** 是否已有对应记录（文字也算）。 */
   done: boolean;
+  /** 是否已有照片材料；「已拍」只认照片。 */
+  hasPhoto: boolean;
   recordId: string | null;
 }
 
-/** 入住清单完成度：按材料类型或描述关键词判断是否已录入。 */
+/** 入住清单完成度：按材料类型或描述关键词判断是否已录入，并区分是否附了照片。 */
 export function moveInChecklist(recordList: EvidenceRecord[]): ChecklistProgress[] {
   const inStage = recordList.filter((r) => r.stage === "move_in");
   return MOVE_IN_CHECKLIST.map((item) => {
@@ -60,7 +63,12 @@ export function moveInChecklist(recordList: EvidenceRecord[]): ChecklistProgress
         r.materialName.includes(item.label) ||
         r.description.includes(item.label),
     );
-    return { item, done: !!match, recordId: match?.id ?? null };
+    return {
+      item,
+      done: !!match,
+      hasPhoto: !!match && (match.attachments?.length ?? 0) > 0,
+      recordId: match?.id ?? null,
+    };
   });
 }
 

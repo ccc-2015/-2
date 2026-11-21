@@ -419,24 +419,18 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
     setTab("script");
   }, [selectedChannelId, result?.script]);
 
-  // 话术生成后，小屏自动滚到结果区，避免用户找不到草稿。
-  const hasScript = !!result?.script;
+  // 结果生成后，小屏自动滚到结果区，先看到建议行动，而不是停在表单处。
   useEffect(() => {
-    if (!hasScript) return;
+    if (!result) return;
     if (!window.matchMedia("(max-width: 1023px)").matches) return;
-    let tries = 0;
-    const timer = window.setInterval(() => {
-      tries += 1;
+    const timer = window.setTimeout(() => {
       const panel = document.getElementById("dispute-result");
-      if (panel) {
-        window.clearInterval(timer);
-        window.scrollTo({ top: panel.getBoundingClientRect().top + window.scrollY - 12, behavior: "smooth" });
-      } else if (tries > 20) {
-        window.clearInterval(timer);
-      }
-    }, 120);
-    return () => window.clearInterval(timer);
-  }, [hasScript]);
+      if (!panel) return;
+      const top = panel.getBoundingClientRect().top + window.scrollY - 12;
+      window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [result]);
 
   async function diagnose(channelId: string | null) {
     if (!aiAvailable || !issue.trim() || overEvidenceLimit || overSentLimit) return;
@@ -847,8 +841,8 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
               </div>
               {!aiAvailable && <p className="text-xs text-muted-foreground">服务端未配置模型密钥，争议分析暂不可用。</p>}
               {result && (
-                <p className="text-[11px] text-muted-foreground">
-                  右侧已给出 {result.recommendations.length} 个方向，选定一个即可生成话术。
+                <p className="text-[12px] leading-relaxed text-muted-foreground">
+                  已生成 {result.recommendations.length} 个处理方向，结果已定位到下方；先看「建议先做什么」，选定后再生成话术。
                 </p>
               )}
             </div>
@@ -962,8 +956,10 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                         <Badge variant="outline">{selectedChannelLabel}</Badge>
                         <span className="ml-auto text-[11px] text-muted-foreground">{scriptDraft.length} 字 · 可编辑</span>
                       </div>
-                      <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">
-                        已按选定方向生成，并自动引用所选证据中的金额、日期与材料名称；剩余待补项是证据里也没有的信息，请补全后自行提交。
+                      <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
+                        {selectedEvidence.length > 0
+                          ? `已按选定方向生成，并结合你选择的 ${selectedEvidence.length} 条证据引用金额、日期与材料名称；〔待补〕是材料里也没有的信息，请补全后自行提交。`
+                          : "已按选定方向生成，内容只依据你填写的争议事项与事实；未选择证据，因此没有引用具体材料名称。〔待补〕请补全后自行提交。"}
                       </p>
                       {result.script.placeholders.length > 0 && (
                         <div className="mb-2 rounded-lg bg-amber-500/10 px-3 py-2">
@@ -1018,10 +1014,87 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
 
                 {tab === "analysis" && (
                   <div className="space-y-3">
+                    {result.recommendations.length > 0 && (() => {
+                      const prepRecs = result.recommendations.filter((rec) => !rec.channelId || rec.channelId === "prepare_evidence");
+                      const channelRecs = result.recommendations.filter((rec) => !!rec.channelId && rec.channelId !== "prepare_evidence");
+                      return (
+                        <div className="space-y-3">
+                          {prepRecs.length > 0 && (
+                            <div>
+                              <h4 className="mb-1.5 text-[13px] font-semibold">建议先做什么（自己准备）</h4>
+                              <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
+                                这些是你自己完成的准备，不生成话术；准备好后再选择沟通对象。
+                              </p>
+                              <div className="space-y-2">
+                                {prepRecs.map((rec, i) => (
+                                  <div key={rec.channelId ?? `prep-${i}`} className="rounded-md border bg-secondary/30 p-3">
+                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                      <Badge variant="secondary">先准备</Badge>
+                                      <span className="text-[14px] font-medium">{rec.title || "整理材料"}</span>
+                                    </div>
+                                    {rec.reason && <p className="text-[13px] leading-relaxed text-muted-foreground">{rec.reason}</p>}
+                                    {rec.preparations.length > 0 && (
+                                      <ul className="mt-1 list-inside list-disc text-[12px] leading-relaxed text-muted-foreground">
+                                        {rec.preparations.map((p, j) => <li key={j}>{p}</li>)}
+                                      </ul>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {channelRecs.length > 0 && (
+                            <div>
+                              <h4 className="mb-1.5 text-[13px] font-semibold">
+                                {prepRecs.length > 0 ? "向谁沟通" : "建议先做什么"}
+                              </h4>
+                              <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
+                                选定一个方向即可生成话术。「本地已核验」表示该沟通对象来自官方资料。
+                              </p>
+                              <div className="space-y-2">
+                                {channelRecs.map((rec, i) => {
+                                  const id = rec.channelId ?? "";
+                                  const active = selectedChannelId === id;
+                                  return (
+                                    <div key={id} className={active ? "rounded-md border border-primary/50 bg-primary/5 p-3" : "rounded-md border bg-secondary/30 p-3"}>
+                                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                                        <Badge variant={i === 0 ? "default" : "secondary"}>{i === 0 ? "优先方向" : "可考虑"}</Badge>
+                                        <span className="text-[14px] font-medium">{rec.title || CHANNEL_LABELS[id] || id}</span>
+                                        {rec.eligibility === "local_verified" ? (
+                                          <Badge variant="secondary">本地已核验</Badge>
+                                        ) : (
+                                          <Badge variant="outline">一般建议</Badge>
+                                        )}
+                                        {rec.sourceRefs.length > 0 && <Badge variant="outline">有依据</Badge>}
+                                      </div>
+                                      {rec.reason && <p className="text-[13px] leading-relaxed text-muted-foreground">{rec.reason}</p>}
+                                      {rec.preparations.length > 0 && (
+                                        <div className="mt-1.5">
+                                          <p className="text-[12px] font-medium text-muted-foreground">需要自己准备</p>
+                                          <ul className="list-inside list-disc text-[12px] leading-relaxed text-muted-foreground">
+                                            {rec.preparations.map((p, j) => <li key={j}>{p}</li>)}
+                                          </ul>
+                                        </div>
+                                      )}
+                                      <Button size="sm" variant={active ? "secondary" : "outline"} className="mt-2" onClick={() => selectChannel(id)} disabled={busy || !id}>
+                                        {active ? <Check className="size-4" /> : <ArrowUp className="size-4" />}
+                                        {active ? "已选定 · 重新生成话术" : "用这个方向生成话术"}
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {result.factsSummary.length > 0 && (
                       <div>
-                        <h4 className="mb-1.5 text-xs font-medium">已整理的事实</h4>
-                        <ul className="list-inside list-disc space-y-1 text-[13px] text-muted-foreground">
+                        <h4 className="mb-1.5 text-[13px] font-semibold">已整理的事实</h4>
+                        <ul className="list-inside list-disc space-y-1 text-[13px] leading-relaxed text-muted-foreground">
                           {result.factsSummary.map((f, i) => <li key={i}>{f}</li>)}
                         </ul>
                       </div>
@@ -1039,50 +1112,13 @@ export function DisputePanel({ onNavigate }: { onNavigate: (view: ViewId) => voi
                       </Alert>
                     )}
 
-                    {result.recommendations.length > 0 && (
-                      <div>
-                        <h4 className="mb-2 text-xs font-medium">一般处理方向</h4>
-                        <p className="mb-2 text-[11px] text-muted-foreground">带「本地已核验」的方向来自官方资料；其余为一般建议。</p>
-                        <div className="space-y-2">
-                          {result.recommendations.map((rec, i) => {
-                            const id = rec.channelId ?? "";
-                            const active = selectedChannelId === id;
-                            return (
-                              <div key={id || i} className={active ? "rounded-md border border-primary/50 bg-primary/5 p-3" : "rounded-md border bg-secondary/30 p-3"}>
-                                <div className="mb-1 flex flex-wrap items-center gap-2">
-                                  {i === 0 && <Badge variant="secondary">优先方向</Badge>}
-                                  <span className="text-sm font-medium">{rec.title || CHANNEL_LABELS[id] || id}</span>
-                                  {rec.eligibility === "local_verified" ? (
-                                    <Badge variant="secondary">本地已核验</Badge>
-                                  ) : (
-                                    <Badge variant="outline">一般建议</Badge>
-                                  )}
-                                  {rec.sourceRefs.length > 0 && <Badge variant="outline">有依据</Badge>}
-                                </div>
-                                {rec.reason && <p className="text-xs text-muted-foreground">{rec.reason}</p>}
-                                {rec.preparations.length > 0 && (
-                                  <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
-                                    {rec.preparations.map((p, j) => <li key={j}>{p}</li>)}
-                                  </ul>
-                                )}
-                                <Button size="sm" variant={active ? "secondary" : "outline"} className="mt-2" onClick={() => selectChannel(id)} disabled={busy || !id}>
-                                  {active ? <Check className="size-4" /> : <ArrowUp className="size-4" />}
-                                  {active ? "已选定 · 重新生成话术" : "选择此方向生成话术"}
-                                </Button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
                     <SourceList
                       sources={result.references}
                       knowledgeVersion={resultMeta?.knowledgeVersion ?? null}
                       warnings={resultMeta?.warnings ?? []}
                     />
                     {result.references.length === 0 && (resultMeta?.warnings.length ?? 0) > 0 && (
-                      <p className="text-[11px] leading-relaxed text-muted-foreground">{resultMeta!.warnings.join(" ")}</p>
+                      <p className="text-[12px] leading-relaxed text-muted-foreground">{resultMeta!.warnings.join(" ")}</p>
                     )}
                   </div>
                 )}

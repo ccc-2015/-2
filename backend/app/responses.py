@@ -49,6 +49,7 @@ def _meta(
     warnings: list[str] | None = None,
     processing_mode: str = "ai",
     knowledge_version: str | None = None,
+    knowledge_snapshot: str | None = None,
 ) -> dict:
     return {
         "apiVersion": "1",
@@ -57,6 +58,7 @@ def _meta(
         "processingMode": processing_mode,
         "coverage": coverage,
         "knowledgeVersion": knowledge_version,
+        "knowledgeSnapshot": knowledge_snapshot,
         "warnings": warnings or [],
     }
 
@@ -67,13 +69,14 @@ def success(
     warnings: list[str] | None = None,
     processing_mode: str = "ai",
     knowledge_version: str | None = None,
+    knowledge_snapshot: str | None = None,
 ) -> JSONResponse:
     payload = data.model_dump() if hasattr(data, "model_dump") else data
     return JSONResponse(
         {
             "ok": True,
             "data": payload,
-            "meta": _meta(coverage, warnings, processing_mode, knowledge_version),
+            "meta": _meta(coverage, warnings, processing_mode, knowledge_version, knowledge_snapshot),
         },
         headers=_HEADERS,
     )

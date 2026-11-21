@@ -1,20 +1,23 @@
-import type { SourceRef } from "@/shared/api";
+import type { ResponseMeta, SourceRef } from "@/shared/api";
+import { APPLIES_TO_LABELS, DOC_TYPE_LABELS } from "@/shared/api";
 
 export function SourceList({
   sources,
   retrieved = [],
   knowledgeVersion,
+  knowledgeSnapshot,
   warnings,
 }: {
   sources: SourceRef[];
   /** 本次检索召回的全部资料；未传时退化为只显示引用项。 */
   retrieved?: SourceRef[];
   knowledgeVersion: string | null;
+  knowledgeSnapshot?: ResponseMeta["knowledgeSnapshot"];
   warnings: string[];
 }) {
   const citedIds = new Set(sources.map((source) => source.id));
   const all = retrieved.length > 0 ? retrieved : sources;
-  if (all.length === 0) return null;
+  if (all.length === 0 && !knowledgeSnapshot) return null;
   const citedCount = all.filter((source) => citedIds.has(source.id)).length;
 
   return (
@@ -22,8 +25,13 @@ export function SourceList({
       <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">
         依据（{all.length}）
         {all.length > 0 ? ` · 引用 ${citedCount}` : ""}
-        {knowledgeVersion ? ` · 资料包版本 ${knowledgeVersion}` : ""}
+        {knowledgeSnapshot ? " · 实际资料快照" : knowledgeVersion ? ` · 资料包版本 ${knowledgeVersion}` : ""}
       </summary>
+      {knowledgeSnapshot && (
+        <p className="mt-2 break-all text-[11px] leading-relaxed text-muted-foreground">
+          实际资料快照（全国 / 城市）：<span className="font-mono">{knowledgeSnapshot}</span>
+        </p>
+      )}
       <ul className="mt-2 space-y-2.5">
         {all.map((source) => {
           const cited = citedIds.has(source.id);
@@ -50,6 +58,8 @@ export function SourceList({
               </div>
               <div>
                 {source.publisher}
+                {source.docType ? ` · ${DOC_TYPE_LABELS[source.docType]}` : ""}
+                {source.appliesTo ? ` · ${APPLIES_TO_LABELS[source.appliesTo]}` : ""}
                 {source.effectiveFrom ? ` · 生效 ${source.effectiveFrom}` : ""}
                 {source.version ? ` · 版本 ${source.version}` : ""}
                 {source.checkedAt ? ` · 核验 ${source.checkedAt}` : ""}

@@ -7,7 +7,8 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const prefix = (process.env.VITE_API_PREFIX || env.VITE_API_PREFIX || "/api").replace(/\/+$/, "");
-  const target = prefix === "/api" ? "http://127.0.0.1:8000" : "http://127.0.0.1:8010";
+  const target = process.env.VITE_API_TARGET
+    || (prefix === "/api" ? "http://127.0.0.1:8000" : "http://127.0.0.1:8010");
   return {
     plugins: [react()],
     resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },

@@ -9,6 +9,7 @@ Coverage = Literal["supported", "limited", "unsupported"]
 FindingPriority = Literal["confirm_first", "needs_attention", "insufficient_info"]
 ContractIntent = Literal["ask", "review", "suggest_revision", "draft_revision"]
 EvidenceStatus = Literal["present", "missing", "to_confirm"]
+FindingEvidenceStatus = Literal["cited", "conditional", "insufficient"]
 
 
 class _Base(BaseModel):
@@ -48,6 +49,11 @@ class AnalyzeContractInput(_Base):
     targetExcerpt: Excerpt | None = None
 
 
+class EvidenceSnippet(_Base):
+    sourceId: str
+    text: str
+
+
 class Finding(_Base):
     priority: FindingPriority = "needs_attention"
     issue: str
@@ -56,6 +62,10 @@ class Finding(_Base):
     suggestedQuestion: str = ""
     uncertainties: list[str] = Field(default_factory=list)
     sourceRefs: list[str] = Field(default_factory=list)
+    topicId: str | None = None
+    topicLabel: str | None = None
+    evidenceStatus: FindingEvidenceStatus = "insufficient"
+    evidenceSnippets: list[EvidenceSnippet] = Field(default_factory=list)
 
 
 class Revision(_Base):
@@ -68,6 +78,42 @@ class Revision(_Base):
     uncertainties: list[str] = Field(default_factory=list)
 
 
+class ModelContractFinding(_Base):
+    model_config = ConfigDict(extra="ignore", strict=True)
+
+    priority: FindingPriority
+    issue: str
+    impact: str
+    excerpt: Excerpt | None
+    suggestedQuestion: str
+    uncertainties: list[str]
+    sourceRefs: list[str]
+    topicId: str | None = None
+    evidenceStatus: FindingEvidenceStatus | None = None
+
+
+class ModelContractRevision(_Base):
+    model_config = ConfigDict(extra="ignore", strict=True)
+
+    kind: Literal["modify", "add"]
+    clauseLabel: str
+    title: str
+    text: str
+    targetExcerpt: Excerpt | None
+    reason: str
+    uncertainties: list[str]
+
+
+class ModelContractOutput(_Base):
+    model_config = ConfigDict(extra="ignore", strict=True)
+
+    answer: str
+    sourceRefs: list[str]
+    findings: list[ModelContractFinding]
+    revisions: list[ModelContractRevision]
+    followUpQuestions: list[str]
+
+
 class SourceRef(_Base):
     id: str
     title: str
@@ -76,9 +122,12 @@ class SourceRef(_Base):
     cityCode: str | None = None
     effectiveFrom: str | None = None
     effectiveTo: str | None = None
+    textAvailableFrom: str | None = None
     version: str
     checkedAt: str
     excerpt: str
+    docType: Literal["regulation", "policy", "guide"] | None = None
+    appliesTo: Literal["all", "enterprise", "intermediary", "lessor", "unknown"] | None = None
 
 
 class ContractResult(_Base):

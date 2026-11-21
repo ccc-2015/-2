@@ -1,4 +1,5 @@
 import './check-node.mjs';
+import './check-knowledge-artifacts.mjs';
 
 // Qoder Sites 构建：前端走同源函数前缀，产物移到 site/web/ 供发布。
 process.env.NODE_ENV = 'production';

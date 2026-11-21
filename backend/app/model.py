@@ -57,7 +57,10 @@ async def chat(messages: list[dict], temperature: float = 0.2, max_tokens: int =
 
     try:
         payload = response.json()
-        content = payload["choices"][0]["message"]["content"]
+        choice = payload["choices"][0]
+        if choice.get("finish_reason") == "length":
+            raise ApiError("upstream_invalid", "模型输出达到长度上限，本次分析未完成，请手动重试。")
+        content = choice["message"]["content"]
     except (ValueError, KeyError, IndexError, TypeError):
         raise ApiError("upstream_invalid", "模型服务返回了无效结构。")
     if not isinstance(content, str) or not content.strip():
@@ -124,6 +127,7 @@ async def chat_stream(
                     raise ApiError("service_not_configured", "模型服务凭据无效，请检查服务端配置。")
                 if response.status_code >= 400:
                     raise ApiError("service_unavailable", "模型服务暂时不可用，请稍后手动重试。")
+                finish_reason: str | None = None
                 async for line in response.aiter_lines():
                     if not line or not line.startswith("data:"):
                         continue
@@ -137,10 +141,15 @@ async def chat_stream(
                     choices = chunk.get("choices") if isinstance(chunk, dict) else None
                     if not choices:
                         continue
+                    reason = choices[0].get("finish_reason")
+                    if isinstance(reason, str):
+                        finish_reason = reason
                     delta = choices[0].get("delta") or {}
                     content = delta.get("content")
                     if isinstance(content, str) and content:
                         yield content
+                if finish_reason == "length":
+                    raise ApiError("upstream_invalid", "模型输出达到长度上限，本次分析未完成，请手动重试。")
     except httpx.TimeoutException:
         raise ApiError("upstream_timeout", "模型服务响应超时，请保留输入稍后手动重试。")
     except httpx.HTTPError:

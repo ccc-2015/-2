@@ -1,8 +1,9 @@
 // 浏览器端文本抽取：发布到 Qoder Sites 后没有 Python 后端，PDF/DOCX/TXT 改在本地解析。
 // 图片交给云函数的多模态模型逐字转写，结果可能不准，须让用户核对后再分析。
 
+import type { PDFPageProxy } from "pdfjs-dist";
 import type { ExtractPage, ExtractResult } from "@/shared/api";
-import { api } from "./api";
+import { api, errorMessage } from "./api";
 
 /** 公网站点用 /functions/v1/app，没有 Python 后端，文件必须本地解析。 */
 export const LOCAL_SITE = (import.meta.env.VITE_API_PREFIX ?? "").includes("/functions/");
@@ -32,7 +33,28 @@ async function readPlainText(file: File): Promise<string> {
   return await file.text();
 }
 
-async function readPdf(file: File): Promise<{ text: string; pages: ExtractPage[]; pageCount: number; warnings: string[] }> {
+async function renderPageToJpeg(page: PDFPageProxy, fileName: string, pageNumber: number): Promise<File> {
+  const base = page.getViewport({ scale: 1 });
+  const scale = Math.min(2, 1800 / Math.max(base.width, base.height));
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("浏览器无法创建画布");
+  await page.render({ canvasContext: context, viewport }).promise;
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!blob) throw new Error("页面图像生成失败");
+  return new File([blob], `${fileName}-p${pageNumber}.jpg`, { type: "image/jpeg" });
+}
+
+async function readPdf(file: File): Promise<{
+  text: string;
+  pages: ExtractPage[];
+  pageCount: number;
+  warnings: string[];
+  ocrUsed: boolean;
+}> {
   const pdfjs = await import("pdfjs-dist");
   const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
@@ -44,7 +66,6 @@ async function readPdf(file: File): Promise<{ text: string; pages: ExtractPage[]
     warnings.push(`PDF 共 ${doc.numPages} 页，超过 50 页，仅解析前 50 页；后续页面可能未包含。`);
   }
   const pages: ExtractPage[] = [];
-  const parts: string[] = [];
   const limit = Math.min(doc.numPages, 50);
   for (let index = 1; index <= limit; index += 1) {
     const page = await doc.getPage(index);
@@ -54,21 +75,48 @@ async function readPdf(file: File): Promise<{ text: string; pages: ExtractPage[]
       .join(" ")
       .replace(/[ \t]+/g, " ")
       .trim();
-    if (text) parts.push(text);
     pages.push({ page: index, text, method: "text" });
   }
-  const joined = parts.join("\n\n");
+
+  // 线上部署没有 OCR：无文本层的页渲染成图片，交给多模态模型逐页转写。
+  const scanned = pages.filter((page) => !page.text.trim());
+  if (scanned.length > 0) {
+    warnings.push(
+      `检测到 ${scanned.length} 页无文本层，正在用多模态模型逐页转写；请核对错字、漏字与数字。`,
+    );
+  }
+  let ocrUsed = false;
+  for (const pageInfo of scanned) {
+    const pdfPage = await doc.getPage(pageInfo.page);
+    const imageFile = await renderPageToJpeg(pdfPage, file.name, pageInfo.page);
+    try {
+      const parsed = (await api.transcribeImage(imageFile)).data;
+      pageInfo.text = parsed.text.trim();
+      pageInfo.method = "ocr";
+      ocrUsed = true;
+      warnings.push(...parsed.warnings.map((warning) => `第 ${pageInfo.page} 页：${warning}`));
+    } catch (err) {
+      const message = errorMessage(err);
+      if (message.includes("未识别到文本")) {
+        warnings.push(`第 ${pageInfo.page} 页未识别到文字，可能是空白页或图片过于模糊。`);
+        continue;
+      }
+      throw new Error(`第 ${pageInfo.page} 页多模态解析失败：${message}`);
+    }
+  }
+
+  const joined = pages.map((page) => page.text.trim()).filter(Boolean).join("\n\n");
   const emptyPages = pages.filter((page) => !page.text.trim()).map((page) => page.page);
   if (emptyPages.length > 0) {
     const list = emptyPages.slice(0, 10).join("、");
     warnings.push(
-      `第 ${list}${emptyPages.length > 10 ? " 等" : ""} 页未提取到文本，可能是扫描页或空白页；请在合同文本中核对补充。`,
+      `第 ${list}${emptyPages.length > 10 ? " 等" : ""} 页未提取到文本，可能是空白页或识别失败；请在合同文本中核对补充。`,
     );
   }
   if (!joined.trim()) {
-    warnings.push("这份 PDF 没有可复制的文字，可能是扫描件。请直接粘贴合同文本后再审查。");
+    warnings.push("这份 PDF 没有可解析的文字，可能是空白件或拍摄/扫描质量不足。请直接粘贴合同文本后再审查。");
   }
-  return { text: joined, pages, pageCount: doc.numPages, warnings };
+  return { text: joined, pages, pageCount: doc.numPages, warnings, ocrUsed };
 }
 
 async function readDocx(file: File): Promise<{ text: string; warnings: string[] }> {
@@ -96,7 +144,8 @@ export async function extractLocally(files: File[]): Promise<ExtractResult> {
       single.pages = parsed.pages;
       single.pageCount = parsed.pageCount;
       single.warnings = parsed.warnings;
-      pageOffset += Math.max(parsed.pageCount, parsed.pages.length);
+      single.ocrUsed = parsed.ocrUsed;
+      anyOcr = anyOcr || parsed.ocrUsed;
     } else if (ext === "docx") {
       const parsed = await readDocx(file);
       single.text = parsed.text;
@@ -118,6 +167,7 @@ export async function extractLocally(files: File[]): Promise<ExtractResult> {
     single.pages.forEach((page) =>
       pages.push({ ...page, page: pageOffset + page.page, sourceName: files.length > 1 ? file.name : undefined }),
     );
+    pageOffset += Math.max(single.pageCount ?? 0, single.pages.length);
   }
 
   const merged = chunks.join("\n\n");

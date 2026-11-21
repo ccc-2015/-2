@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CalendarClock,
+  Camera,
   Plus,
   Pencil,
   Trash2,
@@ -154,12 +155,27 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     stage: "signing",
     preset: null,
   });
+  const [pickedImages, setPickedImages] = useState<{ files: File[]; token: number } | null>(null);
+  const quickGalleryRef = useRef<HTMLInputElement>(null);
+  const quickCameraRef = useRef<HTMLInputElement>(null);
+  function openQuickPicker() {
+    // 手机优先直接调用相机；桌面等精细指针设备打开文件选择。
+    const coarse = window.matchMedia?.("(pointer: coarse)").matches;
+    (coarse ? quickCameraRef.current : quickGalleryRef.current)?.click();
+  }
   const [utilityForm, setUtilityForm] = useState<{ open: boolean; initial: UtilityAccount | null }>({
     open: false,
     initial: null,
   });
   const [flash, setFlash] = useState("");
+  const [focusRecordId, setFocusRecordId] = useState<string | null>(null);
   const [writeError, setWriteError] = useState("");
+  const [formKey, setFormKey] = useState(0);
+  const formDirtyRef = useRef(false);
+  const [pendingFormChange, setPendingFormChange] = useState<(() => void) | null>(null);
+  const onFormDirtyChange = useCallback((dirty: boolean) => {
+    formDirtyRef.current = dirty;
+  }, []);
 
   const stats = overviewStats(allRecords, allUtilities);
   const selectedSet = new Set(selectedIds);
@@ -181,36 +197,55 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         : `${formatCents(stats.balanceCents)}${stats.balanceIncomplete ? `（${stats.balanceIncomplete} 项未计入）` : ""}`;
 
   function closeForms() {
+    formDirtyRef.current = false;
+    setFormKey((key) => key + 1);
+    setWriteError("");
     setRecordForm((f) => ({ ...f, open: false, initial: null, preset: null }));
+    setPickedImages(null);
     setUtilityForm((f) => ({ ...f, open: false, initial: null }));
   }
+  function changeForm(action: () => void) {
+    if (formDirtyRef.current) setPendingFormChange(() => action);
+    else action();
+  }
   function openRecord(stage?: EvidenceStage) {
-    closeForms();
-    setRecordForm({
-      open: true,
-      initial: null,
-      stage: stage ?? (stageFilter === "all" ? lastStage() ?? "signing" : stageFilter),
-      preset: null,
+    changeForm(() => {
+      closeForms();
+      setRecordForm({
+        open: true,
+        initial: null,
+        stage: stage ?? (stageFilter === "all" ? lastStage() ?? "signing" : stageFilter),
+        preset: null,
+      });
     });
   }
   function openChecklistRecord(label: string, materialType: string, detail: string, stage: EvidenceStage = "move_in") {
-    closeForms();
-    setRecordForm({
-      open: true,
-      initial: null,
-      stage,
-      preset: { description: `${label}：${detail}`, materialType },
+    changeForm(() => {
+      closeForms();
+      setRecordForm({
+        open: true,
+        initial: null,
+        stage,
+        preset: { description: `${label}：${detail}`, materialType },
+      });
+      // 选图必须在点击事件的同一调用栈内触发，否则浏览器会拦截文件选择框。
+      openQuickPicker();
     });
   }
-  function editRecord(id: string) {
+  function editRecord(id: string, autoPick = false) {
     const record = allRecords.find((item) => item.id === id);
     if (!record) return;
-    closeForms();
-    setRecordForm({ open: true, initial: record, stage: record.stage, preset: null });
+    changeForm(() => {
+      closeForms();
+      setRecordForm({ open: true, initial: record, stage: record.stage, preset: null });
+      if (autoPick) openQuickPicker();
+    });
   }
   function openUtility() {
-    closeForms();
-    setUtilityForm({ open: true, initial: null });
+    changeForm(() => {
+      closeForms();
+      setUtilityForm({ open: true, initial: null });
+    });
   }
   function saveRecord(record: EvidenceRecord) {
     const ok = recordForm.initial ? records.update(record.id, record) : records.add(record);
@@ -220,9 +255,23 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
     }
     setWriteError("");
     rememberStage(record.stage);
+    const added = !recordForm.initial;
     closeForms();
-    setFlash(recordForm.initial ? "记录已更新" : "记录已保存到本机");
+    setFlash(added ? (record.attachments?.length ? "已保存并附上照片" : "已保存文字记录，可继续补照片") : "记录已更新");
+    setFocusRecordId(record.id);
   }
+  useEffect(() => {
+    if (!focusRecordId) return;
+    const timer = window.setTimeout(() => {
+      const node = document.querySelector<HTMLElement>(`[data-record-id="${focusRecordId}"]`);
+      node?.scrollIntoView({ block: "center", behavior: "auto" });
+    }, 120);
+    const clear = window.setTimeout(() => setFocusRecordId(null), 2600);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(clear);
+    };
+  }, [focusRecordId]);
   useEffect(() => {
     if (!flash) return;
     const timer = window.setTimeout(() => setFlash(""), 2400);
@@ -257,6 +306,30 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
 
   return (
     <div className="w-full pb-8">
+      <input
+        ref={quickGalleryRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          event.target.value = "";
+          if (files.length > 0) setPickedImages({ files, token: Date.now() });
+        }}
+      />
+      <input
+        ref={quickCameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          event.target.value = "";
+          if (files.length > 0) setPickedImages({ files, token: Date.now() });
+        }}
+      />
       <ModuleHeader
         icon={CalendarClock}
         purpose="记录证据：按时间整理材料，退租或争议时直接选用"
@@ -362,7 +435,7 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
 
       <RentalProfileCard />
 
-      <MoveInChecklist records={allRecords} onAdd={openChecklistRecord} onEdit={editRecord} />
+      <MoveInChecklist records={allRecords} onAdd={openChecklistRecord} onEdit={editRecord} onEditPhoto={(id) => editRecord(id, true)} />
 
       <MoveOutCompare
         records={allRecords}
@@ -396,17 +469,26 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
       {recordForm.open && (
         <div className="mt-3">
           <RecordForm
+            key={formKey}
             initial={recordForm.initial}
             initialStage={recordForm.stage}
             preset={recordForm.preset ?? null}
+            incoming={pickedImages}
+            onDirtyChange={onFormDirtyChange}
             onSave={saveRecord}
-            onCancel={closeForms}
+            onCancel={() => changeForm(closeForms)}
           />
         </div>
       )}
       {utilityForm.open && (
         <div className="mt-3">
-          <UtilityForm initial={utilityForm.initial} onSave={saveUtility} onCancel={closeForms} />
+          <UtilityForm
+            key={formKey}
+            initial={utilityForm.initial}
+            onDirtyChange={onFormDirtyChange}
+            onSave={saveUtility}
+            onCancel={() => changeForm(closeForms)}
+          />
         </div>
       )}
 
@@ -431,11 +513,9 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
                   record={r}
                   selected={selectedSet.has(r.id)}
                   bordered={i > 0}
+                  highlight={focusRecordId === r.id}
                   onToggle={() => selection.toggle(r.id)}
-                  onEdit={() => {
-                    closeForms();
-                    setRecordForm({ open: true, initial: r, stage: r.stage });
-                  }}
+                  onEdit={() => editRecord(r.id)}
                   onDelete={() => {
                     records.remove(r.id);
                     if (selectedSet.has(r.id)) selection.toggle(r.id);
@@ -505,10 +585,10 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
       <ExpenseSection
         list={allUtilities}
         onAdd={openUtility}
-        onEdit={(u) => {
+        onEdit={(u) => changeForm(() => {
           closeForms();
           setUtilityForm({ open: true, initial: u });
-        }}
+        })}
         onDelete={(u) => utilities.remove(u.id)}
       />
 
@@ -553,6 +633,22 @@ export function EvidenceCanvas({ onNavigate }: { onNavigate: (view: ViewId) => v
         )}
       </div>
 
+      <AlertDialog open={!!pendingFormChange} onOpenChange={(open) => { if (!open) setPendingFormChange(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>放弃当前未保存的修改？</AlertDialogTitle>
+            <AlertDialogDescription>当前填写的内容还未保存。继续会放弃这些修改，已保存的记录不会改变。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>继续编辑</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              pendingFormChange?.();
+              setPendingFormChange(null);
+            }}>放弃修改并继续</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {selectedCount > 0 && (
         <div className="step-appear fixed bottom-4 left-1/2 z-30 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border border-white/70 bg-white/85 px-4 py-2 shadow-[0_8px_30px_-10px_rgba(16,24,40,0.35)] backdrop-blur-xl md:left-[calc((100vw+248px)/2)]">
           <span className="text-[12px]">已选 {selectedCount} 条证据</span>
@@ -574,6 +670,7 @@ function RecordRow({
   record,
   selected,
   bordered,
+  highlight,
   onToggle,
   onEdit,
   onDelete,
@@ -582,6 +679,7 @@ function RecordRow({
   record: EvidenceRecord;
   selected: boolean;
   bordered: boolean;
+  highlight: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -599,10 +697,12 @@ function RecordRow({
 
   return (
     <details
+      data-record-id={record.id}
       className={cn(
         "group list-appear transition-[opacity,transform] duration-150",
         removing && "pointer-events-none -translate-x-1 opacity-0",
         bordered && "border-t border-black/[0.05]",
+        highlight && "bg-primary/[0.06] ring-2 ring-primary/30",
       )}
     >
       <summary className="flex cursor-pointer list-none items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-black/[0.02] [&::-webkit-details-marker]:hidden">
@@ -854,12 +954,16 @@ function RecordForm({
   initial,
   initialStage,
   preset,
+  incoming,
+  onDirtyChange,
   onSave,
   onCancel,
 }: {
   initial: EvidenceRecord | null;
   initialStage: EvidenceStage;
   preset?: { description: string; materialType: string } | null;
+  incoming?: { files: File[]; token: number } | null;
+  onDirtyChange: (dirty: boolean) => void;
   onSave: (record: EvidenceRecord) => void;
   onCancel: () => void;
 }) {
@@ -873,21 +977,43 @@ function RecordForm({
       materialName: preset.materialType,
     };
   });
+  const [initialDraft] = useState(draft);
   const [error, setError] = useState("");
   const [compressing, setCompressing] = useState(false);
+  useEffect(() => {
+    onDirtyChange(compressing || (Object.keys(draft) as (keyof RecordDraft)[]).some((key) => draft[key] !== initialDraft[key]));
+  }, [draft, initialDraft, compressing, onDirtyChange]);
   const [moreOpen, setMoreOpen] = useState(() => !!initial);
   const advancedFilled =
     !!draft.materialName || !!draft.materialType || !!draft.amountYuan || !!draft.reading || !!draft.contractClause;
-  const imageRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [photoNotice, setPhotoNotice] = useState("");
   const stageHint = STAGES.find((s) => s.id === draft.stage)?.hint ?? "";
+
+  useEffect(() => {
+    panelRef.current?.scrollIntoView({ block: "center", behavior: "auto" });
+  }, []);
+
+  useEffect(() => {
+    if (!incoming || incoming.files.length === 0) return;
+    void addImages(incoming.files);
+    // 只在新一批图片到达时处理。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming?.token]);
 
   function set<K extends keyof RecordDraft>(key: K, value: RecordDraft[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
+  function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
+    void addImages(files);
+  }
+
+  async function addImages(files: File[]) {
     if (files.length === 0) return;
     const room = MAX_ATTACHMENTS - draft.attachments.length;
     if (room <= 0) {
@@ -896,32 +1022,35 @@ function RecordForm({
     }
     setCompressing(true);
     setError("");
-    try {
-      const added: EvidenceAttachment[] = [];
-      for (const file of files.slice(0, room)) {
-        if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
-          setError("仅支持 PNG / JPG / WEBP 图片。");
-          continue;
-        }
-        if (file.size > 8 * 1024 * 1024) {
-          setError("单张图片超过 8MB，请压缩后再添加。");
-          continue;
-        }
+    setPhotoNotice("");
+    const added: EvidenceAttachment[] = [];
+    const failed: string[] = [];
+    for (const file of files.slice(0, room)) {
+      if (!file.type.startsWith("image/")) {
+        failed.push(`${file.name}（不是图片）`);
+        continue;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        failed.push(`${file.name}（超过 8MB）`);
+        continue;
+      }
+      try {
         added.push(await compressImage(file));
+      } catch {
+        failed.push(`${file.name}（无法读取，可能为 HEIC 等浏览器不支持的格式）`);
       }
-      if (added.length > 0) {
-        setDraft((prev) => ({
-          ...prev,
-          attachments: [...prev.attachments, ...added],
-          materialStatus: prev.materialStatus === "to_confirm" ? "present" : prev.materialStatus,
-          materialName: prev.materialName || added[0].name.replace(/\.[^.]+$/, ""),
-        }));
-      }
-    } catch {
-      setError("图片处理失败，请换一张或稍后重试。");
-    } finally {
-      setCompressing(false);
     }
+    if (added.length > 0) {
+      setDraft((prev) => ({
+        ...prev,
+        attachments: [...prev.attachments, ...added],
+        materialStatus: prev.materialStatus === "to_confirm" ? "present" : prev.materialStatus,
+        materialName: prev.materialName || added[0].name.replace(/\.[^.]+$/, ""),
+      }));
+      setPhotoNotice(`已选择 ${added.length} 张照片，保存后生效。`);
+    }
+    if (failed.length > 0) setError(`以下文件未添加：${failed.join("；")}`);
+    setCompressing(false);
   }
 
   function removeAttachment(id: string) {
@@ -961,14 +1090,13 @@ function RecordForm({
   }
 
   return (
-    <div className="panel p-4">
+    <div ref={panelRef} className="panel p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-[13px] font-semibold">{initial ? "编辑记录" : "快速记录"}</h3>
-        {!initial && <span className="text-[11px] text-muted-foreground">拍照 + 一句话即可保存</span>}
+        <h3 className="text-[14px] font-semibold">{initial ? "编辑记录" : "快速记录"}</h3>
+        {!initial && <span className="text-[12px] text-muted-foreground">拍照 + 一句话即可保存</span>}
       </div>
 
-      {!initial && (
-        <div className="mb-3 rounded-xl border border-dashed border-border/80 bg-secondary/20 p-3">
+      <div className="mb-3 rounded-xl border border-dashed border-border/80 bg-secondary/20 p-3">
           <div className="flex flex-wrap items-center gap-2">
             {draft.attachments.map((a) => (
               <div key={a.id} className="relative size-16 overflow-hidden rounded-lg border border-black/[0.06]">
@@ -984,25 +1112,57 @@ function RecordForm({
               </div>
             ))}
             {draft.attachments.length < MAX_ATTACHMENTS && (
-              <button
-                type="button"
-                onClick={() => imageRef.current?.click()}
-                disabled={compressing}
-                className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground disabled:opacity-60"
-              >
-                <ImagePlus className="size-4" />
-                <span className="text-[10px]">{compressing ? "处理中" : "拍照/选图"}</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => cameraRef.current?.click()}
+                  disabled={compressing}
+                  className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground disabled:opacity-60"
+                >
+                  <Camera className="size-4" />
+                  <span className="text-[11px]">{compressing ? "处理中" : "拍照"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => galleryRef.current?.click()}
+                  disabled={compressing}
+                  className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-background text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground disabled:opacity-60"
+                >
+                  <ImagePlus className="size-4" />
+                  <span className="text-[11px]">相册/文件</span>
+                </button>
+              </>
             )}
           </div>
-          <Input
-            value={draft.description}
-            onChange={(event) => set("description", event.target.value)}
-            className="mt-2"
-            placeholder="一句话说明：例如 入住时客厅墙面已有裂缝"
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={onPickImages}
           />
-        </div>
-      )}
+          <input
+            ref={galleryRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={onPickImages}
+          />
+          {photoNotice && <p className="mt-2 text-[12px] font-medium text-emerald-700">{photoNotice}</p>}
+          {!initial && (
+            <Input
+              value={draft.description}
+              onChange={(event) => set("description", event.target.value)}
+              className="mt-2"
+              placeholder="一句话说明：例如 入住时客厅墙面已有裂缝"
+            />
+          )}
+          <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
+            照片可选；只写文字会存为「已记录 · 缺照片」，入住必拍清单不会算作已拍。手机点「拍照」可直接调用相机。
+          </p>
+      </div>
 
       {!initial && <p className="mb-2 text-[11px] font-medium text-muted-foreground">时间与阶段（已自动带出，可改）</p>}
       <div className="grid gap-3 sm:grid-cols-2">
@@ -1089,43 +1249,10 @@ function RecordForm({
             </div>
           )}
         </div>
-        <div className={initial ? "space-y-1.5 sm:col-span-2" : "hidden"}>
-          <Label className="text-xs">图片材料（可选）</Label>
-          <div className="flex flex-wrap items-center gap-2">
-            {draft.attachments.map((a) => (
-              <div key={a.id} className="relative size-16 overflow-hidden rounded-lg border border-black/[0.06]">
-                <img src={a.dataUrl} alt={a.name} className="size-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(a.id)}
-                  aria-label={`移除 ${a.name}`}
-                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-            ))}
-            {draft.attachments.length < MAX_ATTACHMENTS && (
-              <button
-                type="button"
-                onClick={() => imageRef.current?.click()}
-                disabled={compressing}
-                className="flex size-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground disabled:opacity-60"
-              >
-                <ImagePlus className="size-4" />
-                <span className="text-[10px]">{compressing ? "处理中" : "添加"}</span>
-              </button>
-            )}
-          </div>
-          <input ref={imageRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onPickImages} />
-          <p className="text-[11px] leading-relaxed text-muted-foreground">
-            图片压缩后保存在本机浏览器（每条最多 {MAX_ATTACHMENTS} 张），清理浏览器数据会丢失。
-          </p>
         </div>
-      </div>
       {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
       <div className="mt-3 flex gap-2">
-        <Button size="sm" onClick={submit}>
+        <Button size="sm" onClick={submit} disabled={compressing}>
           <Check className="size-3.5" />
           {initial ? "保存修改" : "保存记录"}
         </Button>
@@ -1163,15 +1290,21 @@ function utilityDraftFrom(u: UtilityAccount | null): UtilityDraft {
 
 function UtilityForm({
   initial,
+  onDirtyChange,
   onSave,
   onCancel,
 }: {
   initial: UtilityAccount | null;
+  onDirtyChange: (dirty: boolean) => void;
   onSave: (u: UtilityAccount) => void;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<UtilityDraft>(() => utilityDraftFrom(initial));
+  const [initialDraft] = useState(draft);
   const [error, setError] = useState("");
+  useEffect(() => {
+    onDirtyChange((Object.keys(draft) as (keyof UtilityDraft)[]).some((key) => draft[key] !== initialDraft[key]));
+  }, [draft, initialDraft, onDirtyChange]);
 
   function set<K extends keyof UtilityDraft>(key: K, value: UtilityDraft[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }));

@@ -10,6 +10,8 @@ from ..schemas import SourceRef
 ReviewStatus = Literal["draft", "source_verified", "approved"]
 Scope = Literal["national", "province", "city"]
 Coverage = Literal["supported", "limited", "unsupported"]
+DocType = Literal["regulation", "policy", "guide"]
+AppliesTo = Literal["all", "enterprise", "intermediary", "lessor", "unknown"]
 
 
 class ChannelProfile(BaseModel):
@@ -34,6 +36,8 @@ class KnowledgeEntry(BaseModel):
     cityCode: str | None = None
     effectiveFrom: str | None = None
     effectiveTo: str | None = None
+    # 当前保存正文的最早可用日；与施行日分开，避免把修正后文本倒用于历史事件。
+    textAvailableFrom: str | None = None
     version: str
     checkedAt: str
     reviewStatus: ReviewStatus = "draft"
@@ -42,6 +46,8 @@ class KnowledgeEntry(BaseModel):
     text: str
     summary: str = ""
     limitations: str = ""
+    docType: DocType = "regulation"
+    appliesTo: AppliesTo = "all"
     channel: ChannelProfile | None = None
 
     def to_source_ref(self) -> SourceRef:
@@ -53,9 +59,12 @@ class KnowledgeEntry(BaseModel):
             cityCode=self.cityCode,
             effectiveFrom=self.effectiveFrom,
             effectiveTo=self.effectiveTo,
+            textAvailableFrom=self.textAvailableFrom,
             version=self.version,
             checkedAt=self.checkedAt,
             excerpt=self.text,
+            docType=self.docType,
+            appliesTo=self.appliesTo,
         )
 
 

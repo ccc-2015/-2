@@ -1,12 +1,20 @@
 """FastAPI 应用入口：清晰 REST 路由 + 统一 envelope + 异常处理。"""
 from __future__ import annotations
 
+import importlib.util
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .responses import register_exception_handlers, success
 from .routers import config, contract, dispute, extract, sources
+
+if importlib.util.find_spec("rapidocr_onnxruntime") is None:
+    logging.getLogger(__name__).warning(
+        "RapidOCR 未安装：扫描版 PDF/图片会返回 service_not_configured。请使用 backend/.venv 启动后端。"
+    )
 
 app = FastAPI(
     title="租住有据 API",

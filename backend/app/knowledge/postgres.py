@@ -5,8 +5,11 @@ JSON 资料包仍是审核/版本发布的权威源；本模块把资料同步�
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
-from datetime import date, datetime, timezone
+import math
+from datetime import datetime, timezone
 
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
@@ -16,15 +19,32 @@ from ..config import get_settings
 from .embeddings import embed_query, embed_texts
 from .rerank import rerank as rerank_api
 from .models import ChannelProfile, KnowledgeEntry, KnowledgePack
-from .store import SCENARIO_TOPICS, ensure_local_slot
+from .store import (
+    SCENARIO_TOPICS,
+    RetrievalResults,
+    context_compatible,
+    ensure_local_slot,
+    keyword_weight,
+    today_iso,
+)
 
 logger = logging.getLogger(__name__)
 
 _ENTRY_COLUMNS = """
 id, pack_city, title, publisher, url, scope, city_code,
-effective_from, effective_to, version, checked_at, review_status,
-topics, keywords, text, summary, limitations, channel
+effective_from, effective_to, text_available_from, version, checked_at, review_status,
+topics, keywords, text, summary, limitations, doc_type, applies_to, channel
 """
+
+
+# 按当前行重新计算 embedding 输入，不能仅比较两个可能一起陈旧的持久化字段。
+# PostgreSQL 内置 sha256(bytea)，无需安装 pgcrypto；与 _embed_text 的拼接一致。
+_INPUT_PARTS = ("title", "summary", "text", "array_to_string(keywords, ' ')", "array_to_string(topics, ' ')")
+_INPUT_SQL = "concat_ws(E'\\n', " + ", ".join(
+    f"CASE WHEN btrim({part}, E' \\t\\n\\r\\f\\013') <> '' THEN {part} END"
+    for part in _INPUT_PARTS
+) + ")"
+_INPUT_DIGEST_SQL = f"encode(sha256(convert_to({_INPUT_SQL}, 'UTF8')), 'hex')"
 
 
 class PostgresKnowledgeStore:
@@ -43,20 +63,6 @@ class PostgresKnowledgeStore:
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-                # 换了 embedding 模型后维度会变；已有列维度不一致时重建列和索引。
-                cur.execute(
-                    "SELECT format_type(atttypid, atttypmod) FROM pg_attribute "
-                    "WHERE attrelid = 'knowledge_entries'::regclass AND attname = 'embedding'"
-                )
-                row = cur.fetchone()
-                if row and row[0] != f"vector({dim})":
-                    logger.warning("embedding dim changed %s -> vector(%s); rebuilding column", row[0], dim)
-                    cur.execute("DROP INDEX IF EXISTS knowledge_entries_embedding_hnsw")
-                    cur.execute("ALTER TABLE knowledge_entries DROP COLUMN IF EXISTS embedding")
-                    cur.execute(f"ALTER TABLE knowledge_entries ADD COLUMN embedding vector({dim})")
-                    cur.execute(
-                        "UPDATE knowledge_entries SET embedding_model = NULL, embedding_updated_at = NULL"
-                    )
                 cur.execute(
                     """
                     CREATE TABLE IF NOT EXISTS knowledge_packs (
@@ -82,6 +88,7 @@ class PostgresKnowledgeStore:
                         city_code TEXT,
                         effective_from DATE,
                         effective_to DATE,
+                        text_available_from DATE,
                         version TEXT NOT NULL,
                         checked_at DATE NOT NULL,
                         review_status TEXT NOT NULL,
@@ -90,13 +97,36 @@ class PostgresKnowledgeStore:
                         text TEXT NOT NULL,
                         summary TEXT NOT NULL DEFAULT '',
                         limitations TEXT NOT NULL DEFAULT '',
+                        doc_type TEXT NOT NULL DEFAULT 'regulation',
+                        applies_to TEXT NOT NULL DEFAULT 'all',
                         channel JSONB,
                         embedding vector({dim}),
                         embedding_model TEXT,
+                        embedding_input_digest TEXT,
                         embedding_updated_at TIMESTAMPTZ,
                         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
                     )
                     """
+                )
+                cur.execute(
+                    "ALTER TABLE knowledge_entries ADD COLUMN IF NOT EXISTS embedding_input_digest TEXT"
+                )
+                cur.execute(
+                    "ALTER TABLE knowledge_entries ADD COLUMN IF NOT EXISTS text_available_from DATE"
+                )
+                # 不自动销毁旧模型向量。维度不匹配的查询由检索层安全回退。
+                cur.execute(
+                    "SELECT format_type(atttypid, atttypmod) FROM pg_attribute "
+                    "WHERE attrelid = to_regclass('knowledge_entries') AND attname = 'embedding'"
+                )
+                row = cur.fetchone()
+                if row and row[0] != f"vector({dim})":
+                    logger.warning("stored embedding dimension %s differs from vector(%s)", row[0], dim)
+                cur.execute(
+                    "ALTER TABLE knowledge_entries ADD COLUMN IF NOT EXISTS doc_type TEXT NOT NULL DEFAULT 'regulation'"
+                )
+                cur.execute(
+                    "ALTER TABLE knowledge_entries ADD COLUMN IF NOT EXISTS applies_to TEXT NOT NULL DEFAULT 'all'"
                 )
                 cur.execute(
                     "CREATE INDEX IF NOT EXISTS knowledge_entries_pack_review "
@@ -111,7 +141,7 @@ class PostgresKnowledgeStore:
                     "ON knowledge_entries USING GIN (keywords)"
                 )
                 # pgvector 的 HNSW/IVFFlat 都限制 2000 维；超高维模型只能精确顺序扫描。
-                if dim <= 2000:
+                if dim <= 2000 and (not row or row[0] == f"vector({dim})"):
                     cur.execute(
                         "CREATE INDEX IF NOT EXISTS knowledge_entries_embedding_hnsw "
                         "ON knowledge_entries USING hnsw (embedding vector_cosine_ops) "
@@ -166,6 +196,90 @@ class PostgresKnowledgeStore:
         pack = self.pack_for(city_code) or self._national_pack()
         return pack.version if pack else None
 
+    @property
+    def retrieval_mode(self) -> str:
+        # 兼容旧调用方；实际模式必须读取本次 RetrievalResults.mode。
+        return "keyword"
+
+    def snapshot_for(self, city_code: str | None) -> str | None:
+        # 从同一条 SQL 的一致性快照读取实际持久数据，而非 JSON 或 ingest 时的旧摘要。
+        rows = self._fetchall(
+            """
+            SELECT p.city_code, p.version,
+                   to_jsonb(p) - 'updated_at' AS pack_data,
+                   jsonb_agg(to_jsonb(e) - ARRAY[
+                       'embedding', 'embedding_model', 'embedding_input_digest',
+                       'embedding_updated_at', 'updated_at'
+                   ] ORDER BY e.id) AS entries
+            FROM knowledge_packs p JOIN knowledge_entries e ON e.pack_city = p.city_code
+            WHERE EXISTS (
+                SELECT 1 FROM knowledge_entries applicable
+                WHERE applicable.pack_city = p.city_code
+                  AND (applicable.scope = 'national' OR (
+                      applicable.scope IN ('city', 'province') AND applicable.city_code = %s
+                  ))
+            )
+            GROUP BY p.city_code ORDER BY p.city_code
+            """,
+            (city_code,),
+        )
+        parts = []
+        for row in rows:
+            content = {"pack": row["pack_data"], "entries": row["entries"]}
+            canonical = json.dumps(content, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            parts.append(f"{row['city_code']}:{row['version']} · {digest[:12]}")
+        return " | ".join(parts) or None
+
+    def retrieve_groups(
+        self,
+        city_code: str | None,
+        event_date: str | None,
+        queries: list[str],
+        top_k: int = 5,
+        scenario: str | None = None,
+        subject: str | None = None,
+    ) -> list[list[KnowledgeEntry]]:
+        """按议题分别召回：查询向量一次批量生成，候选合并后每议题取前几条。
+
+        多议题路径不在每组单独调用精排，避免按条款数量线性增加付费调用；
+        需要精排时仍走单查询 retrieve()。
+        """
+        if not queries or top_k <= 0:
+            return RetrievalResults([] for _ in queries)
+        rows = self._applicable_rows(city_code, event_date, scenario, subject)
+        if not rows:
+            return RetrievalResults([] for _ in queries)
+        settings = get_settings()
+        try:
+            query_vectors = embed_texts(queries) if settings.embedding_configured else []
+        except Exception as exc:  # 向量失败回退关键词，不阻断审查
+            logger.warning("grouped semantic retrieval fallback: %s", type(exc).__name__)
+            query_vectors = []
+        window = max(top_k, settings.rerank_candidates) if settings.rerank_configured else top_k
+        results = RetrievalResults()
+        for index, query in enumerate(queries):
+            vector = query_vectors[index] if index < len(query_vectors) else []
+            vector_pairs = []
+            try:
+                if vector:
+                    vector_pairs = self._vector_rows(city_code, event_date, scenario, vector, window, subject)
+            except Exception as exc:
+                logger.warning("grouped vector SQL fallback: %s", type(exc).__name__)
+            if vector_pairs:
+                results.mode = "hybrid"
+            candidates: dict[str, tuple[float, KnowledgeEntry]] = {}
+            for row, similarity in vector_pairs:
+                entry = self._entry_from_row(row)
+                candidates[entry.id] = (similarity, entry)
+            for _, entry in self._keyword_scored(rows, query)[:window]:
+                candidates.setdefault(entry.id, (0.0, entry))
+            fused = self._fuse_entries(list(candidates.values()), query)
+            entries = [entry for _, entry in fused[:top_k]]
+            pool = [entry for score, entry in fused if score > 0]
+            results.append(ensure_local_slot(entries, pool, top_k))
+        return results
+
     def coverage_for(self, city_code: str | None, scenario: str | None = None) -> str:
         entries = self.list_sources(city_code, scenario=scenario)
         if not entries:
@@ -175,8 +289,11 @@ class PostgresKnowledgeStore:
             return pack.topicCoverage.get(scenario or "", pack.coverage)
         return "limited"
 
-    def _filters(self, city_code: str | None, event_date: str | None, scenario: str | None) -> tuple[str, list]:
-        effective_on = event_date or date.today().isoformat()
+    def _filters(
+        self, city_code: str | None, event_date: str | None, scenario: str | None,
+        subject: str | None = None,
+    ) -> tuple[str, list]:
+        effective_on = event_date or today_iso()
         params: list = []
         region = "scope = 'national'"
         if city_code:
@@ -189,12 +306,15 @@ class PostgresKnowledgeStore:
             "review_status = 'approved'",
             "(effective_from IS NULL OR effective_from <= %s)",
             "(effective_to IS NULL OR effective_to >= %s)",
+            "(text_available_from IS NULL OR text_available_from <= %s)",
         ]
-        params += [effective_on, effective_on]
+        params += [effective_on, effective_on, effective_on]
         topics = SCENARIO_TOPICS.get(scenario or "")
         if topics:
             clauses.append("topics && %s::text[]")
             params.append(sorted(topics))
+        if subject == "private":
+            clauses.append("applies_to <> 'enterprise'")
         return " AND ".join(clauses), params
 
     def _entry_from_row(self, row: dict) -> KnowledgeEntry:
@@ -208,6 +328,7 @@ class PostgresKnowledgeStore:
             cityCode=row["city_code"],
             effectiveFrom=row["effective_from"].isoformat() if row["effective_from"] else None,
             effectiveTo=row["effective_to"].isoformat() if row["effective_to"] else None,
+            textAvailableFrom=row["text_available_from"].isoformat() if row["text_available_from"] else None,
             version=row["version"],
             checkedAt=row["checked_at"].isoformat(),
             reviewStatus=row["review_status"],
@@ -216,6 +337,8 @@ class PostgresKnowledgeStore:
             text=row["text"],
             summary=row["summary"] or "",
             limitations=row["limitations"] or "",
+            docType=row["doc_type"] or "regulation",
+            appliesTo=row["applies_to"] or "all",
             channel=ChannelProfile(**channel) if channel else None,
         )
 
@@ -225,8 +348,6 @@ class PostgresKnowledgeStore:
         event_date: str | None = None,
         scenario: str | None = None,
     ) -> list[KnowledgeEntry]:
-        if not city_code:
-            return []
         where, params = self._filters(city_code, event_date, scenario)
         rows = self._fetchall(
             f"SELECT {_ENTRY_COLUMNS} FROM knowledge_entries WHERE {where} ORDER BY id",
@@ -236,38 +357,51 @@ class PostgresKnowledgeStore:
 
     def _applicable_rows(
         self,
-        city_code: str,
+        city_code: str | None,
         event_date: str | None,
         scenario: str | None,
+        subject: str | None = None,
     ) -> list[dict]:
-        where, params = self._filters(city_code, event_date, scenario)
+        where, params = self._filters(city_code, event_date, scenario, subject)
         return self._fetchall(
             f"SELECT {_ENTRY_COLUMNS} FROM knowledge_entries WHERE {where} ORDER BY id",
             params,
         )
 
+    def _valid_vector(self, vector: list[float] | None) -> bool:
+        return (
+            isinstance(vector, list) and len(vector) == self.embedding_dim
+            and all(isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) for value in vector)
+            and any(value != 0 for value in vector)
+        )
+
     def _vector_rows(
         self,
-        city_code: str,
+        city_code: str | None,
         event_date: str | None,
         scenario: str | None,
         vector: list[float],
         top_k: int,
+        subject: str | None = None,
     ) -> list[tuple[dict, float]]:
-        where, params = self._filters(city_code, event_date, scenario)
+        if not self._valid_vector(vector) or not self.embedding_model or top_k <= 0:
+            return []
+        where, params = self._filters(city_code, event_date, scenario, subject)
         vector_literal = "[" + ",".join(f"{value:.8f}" for value in vector) + "]"
         sql = f"""
             SELECT {_ENTRY_COLUMNS}, 1 - (embedding <=> %s::vector) AS similarity
             FROM knowledge_entries
             WHERE {where}
               AND embedding IS NOT NULL
+              AND embedding_model = %s
+              AND embedding_input_digest = {_INPUT_DIGEST_SQL}
               AND 1 - (embedding <=> %s::vector) >= %s
             ORDER BY embedding <=> %s::vector
             LIMIT %s
         """
         rows = self._fetchall(
             sql,
-            [vector_literal, *params, vector_literal, self.embedding_min_score, vector_literal, top_k],
+            [vector_literal, *params, self.embedding_model, vector_literal, self.embedding_min_score, vector_literal, top_k],
         )
         return [(row, float(row.get("similarity") or 0.0)) for row in rows]
 
@@ -275,21 +409,33 @@ class PostgresKnowledgeStore:
         return [entry for _, entry in self._keyword_scored(rows, query)[:top_k]]
 
     @staticmethod
-    def _keyword_score(row: dict, q: str) -> int:
-        score = 0
+    def _keyword_score(row: dict, q: str, df: dict[str, int], total: int) -> float:
+        text = (row["text"] or "").lower()
+        title = (row["title"] or "").lower()
+        score = 0.0
         for keyword in row["keywords"] or []:
-            if keyword and keyword.lower() in q:
-                score += max(2, len(keyword))
+            key = (keyword or "").lower()
+            if key and key in q:
+                score += keyword_weight(keyword, df.get(key, 1), total, key in text or key in title)
         for topic in row["topics"] or []:
             if topic.lower() in q:
                 score += 1
         return score
 
-    def _keyword_scored(self, rows: list[dict], query: str) -> list[tuple[int, KnowledgeEntry]]:
-        q = (query or "").lower()
-        scored: list[tuple[int, str, KnowledgeEntry]] = []
+    @staticmethod
+    def _keyword_df(rows: list[dict]) -> tuple[dict[str, int], int]:
+        df: dict[str, int] = {}
         for row in rows:
-            score = self._keyword_score(row, q)
+            for keyword in {item.lower() for item in (row["keywords"] or []) if item}:
+                df[keyword] = df.get(keyword, 0) + 1
+        return df, max(1, len(rows))
+
+    def _keyword_scored(self, rows: list[dict], query: str) -> list[tuple[float, KnowledgeEntry]]:
+        q = (query or "").lower()
+        df, total = self._keyword_df(rows)
+        scored: list[tuple[float, str, KnowledgeEntry]] = []
+        for row in rows:
+            score = self._keyword_score(row, q, df, total)
             if score > 0:
                 scored.append((score, row["id"], self._entry_from_row(row)))
         scored.sort(key=lambda item: (-item[0], item[1]))
@@ -302,26 +448,32 @@ class PostgresKnowledgeStore:
         query: str,
         top_k: int = 4,
         scenario: str | None = None,
+        subject: str | None = None,
     ) -> list[KnowledgeEntry]:
-        if not city_code:
-            return []
-        candidates, _ = self._rank_candidates(city_code, event_date, query, scenario, top_k)
+        if top_k <= 0:
+            return RetrievalResults()
+        candidates, used_vector = self._rank_candidates(city_code, event_date, query, scenario, top_k, subject)
         if not candidates:
-            return []
-        ranked = self._rerank(query, candidates, top_k)
+            return RetrievalResults()
+        try:
+            ranked = self._rerank(query, candidates, top_k)
+        except Exception as exc:
+            logger.warning("rerank fallback: %s", type(exc).__name__)
+            ranked = None
         if ranked is None:
             ranked = candidates[:top_k]
         ordered = [entry for _, entry in ranked]
         pool = [entry for score, entry in candidates if score > 0]
-        return ensure_local_slot(ordered, pool, top_k)
+        return RetrievalResults(ensure_local_slot(ordered, pool, top_k), mode="hybrid" if used_vector else "keyword")
 
     def _rank_candidates(
         self,
-        city_code: str,
+        city_code: str | None,
         event_date: str | None,
         query: str,
         scenario: str | None,
         top_k: int,
+        subject: str | None = None,
     ) -> tuple[list[tuple[float, KnowledgeEntry]], bool]:
         """粗排：向量候选 ∪ 关键词候选，再按融合分排序。
 
@@ -335,18 +487,19 @@ class PostgresKnowledgeStore:
             try:
                 vector = embed_query(query)
                 if vector:
-                    vector_pairs = self._vector_rows(city_code, event_date, scenario, vector, window)
+                    vector_pairs = self._vector_rows(city_code, event_date, scenario, vector, window, subject)
             except Exception as exc:  # 语义检索失败不应阻断关键词回退
                 logger.warning("semantic retrieval fallback: %s", type(exc).__name__)
 
         candidates: dict[str, tuple[float, KnowledgeEntry]] = {}
         for row, similarity in vector_pairs:
             entry = self._entry_from_row(row)
-            candidates[entry.id] = (similarity, entry)
+            if context_compatible(entry, query, scenario):
+                candidates[entry.id] = (similarity, entry)
 
-        rows = self._applicable_rows(city_code, event_date, scenario)
+        rows = self._applicable_rows(city_code, event_date, scenario, subject)
         for _, entry in self._keyword_scored(rows, query)[:window]:
-            if entry.id not in candidates:
+            if entry.id not in candidates and context_compatible(entry, query, scenario):
                 candidates[entry.id] = (0.0, entry)
 
         if not candidates:
@@ -359,20 +512,30 @@ class PostgresKnowledgeStore:
         query: str,
     ) -> list[tuple[float, KnowledgeEntry]]:
         q = (query or "").lower()
+        df: dict[str, int] = {}
+        for _, entry in candidates:
+            for keyword in {item.lower() for item in entry.keywords if item}:
+                df[keyword] = df.get(keyword, 0) + 1
+        total_entries = max(1, len(candidates))
         scored: list[tuple[float, str, KnowledgeEntry]] = []
         for similarity, entry in candidates:
-            keyword = self._entry_keyword_score(entry, q)
-            total = similarity * 0.5 + (min(keyword, 24) / 24) * 0.5
+            keyword = self._entry_keyword_score(entry, q, df, total_entries)
+            total = similarity * 0.5 + (min(keyword, 80) / 80) * 0.5
             scored.append((total, entry.id, entry))
         scored.sort(key=lambda item: (-item[0], item[1]))
         return [(total, entry) for total, _, entry in scored]
 
     @staticmethod
-    def _entry_keyword_score(entry: KnowledgeEntry, q: str) -> int:
-        score = 0
+    def _entry_keyword_score(
+        entry: KnowledgeEntry, q: str, df: dict[str, int], total: int,
+    ) -> float:
+        text = entry.text.lower()
+        title = entry.title.lower()
+        score = 0.0
         for keyword in entry.keywords:
-            if keyword and keyword.lower() in q:
-                score += max(2, len(keyword))
+            key = (keyword or "").lower()
+            if key and key in q:
+                score += keyword_weight(keyword, df.get(key, 1), total, key in text or key in title)
         for topic in entry.topics:
             if topic.lower() in q:
                 score += 1
@@ -430,24 +593,47 @@ class PostgresKnowledgeStore:
                 " ".join(entry.keywords),
                 " ".join(entry.topics),
             )
-            if part
+            if part and part.strip(" \t\n\r\f\v")
         )
+
+    @classmethod
+    def _input_digest(cls, entry: KnowledgeEntry) -> str:
+        return hashlib.sha256(cls._embed_text(entry).encode("utf-8")).hexdigest()
 
     def ingest_packs(self, packs: list[KnowledgePack], embed: bool = True) -> int:
         settings = get_settings()
         entries = [entry for pack in packs for entry in pack.entries]
         vectors: list[list[float] | None] = [None] * len(entries)
         if embed and settings.embedding_configured and entries:
-            vectors = embed_texts([self._embed_text(entry) for entry in entries])
+            # 相同输入/模型的向量无需再次生成，metadata-only ingest 不增加付费调用。
+            existing = self._fetchall(
+                f"SELECT id, embedding_input_digest FROM knowledge_entries "
+                f"WHERE id = ANY(%s) AND embedding IS NOT NULL AND embedding_model = %s "
+                f"AND embedding_input_digest = {_INPUT_DIGEST_SQL}",
+                ([entry.id for entry in entries], self.embedding_model),
+            )
+            valid = {row["id"]: row["embedding_input_digest"] for row in existing}
+            pending = [i for i, entry in enumerate(entries) if valid.get(entry.id) != self._input_digest(entry)]
+            if pending:
+                generated = embed_texts([self._embed_text(entries[i]) for i in pending])
+                if len(generated) != len(pending) or any(not self._valid_vector(vector) for vector in generated):
+                    raise ValueError("embedding result count, dimension or values invalid")
+                for i, vector in zip(pending, generated):
+                    vectors[i] = vector
+        # Upsert 而非 delete/insert：只有相同输入指纹才保留旧向量及其模型/时间。
+        metadata_updates = ", ".join(
+            f"{column.strip()} = EXCLUDED.{column.strip()}"
+            for column in _ENTRY_COLUMNS.strip().split(",") if column.strip() != "id"
+        )
+        vector_updates = ", ".join(
+            f"{column} = CASE WHEN EXCLUDED.embedding IS NOT NULL THEN EXCLUDED.{column} "
+            f"WHEN knowledge_entries.embedding_input_digest = EXCLUDED.embedding_input_digest "
+            f"THEN knowledge_entries.{column} ELSE NULL END"
+            for column in ("embedding", "embedding_model", "embedding_input_digest", "embedding_updated_at")
+        )
         index = 0
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
-                # 全国条目可能从城市包迁到 cn 包（或反向），按 id 先清掉旧归属，避免主键冲突。
-                if entries:
-                    cur.execute(
-                        "DELETE FROM knowledge_entries WHERE id = ANY(%s)",
-                        ([entry.id for entry in entries],),
-                    )
                 for pack in packs:
                     cur.execute(
                         """
@@ -471,22 +657,23 @@ class PostgresKnowledgeStore:
                             pack.checkedAt,
                         ),
                     )
-                    cur.execute("DELETE FROM knowledge_entries WHERE pack_city = %s", (pack.cityCode,))
                     for entry in pack.entries:
                         vector = vectors[index] if index < len(vectors) else None
                         index += 1
                         vector_literal = "[" + ",".join(f"{value:.8f}" for value in vector) + "]" if vector else None
                         channel = Jsonb(entry.channel.model_dump()) if entry.channel else None
                         cur.execute(
-                            """
+                            f"""
                             INSERT INTO knowledge_entries
                                 (id, pack_city, title, publisher, url, scope, city_code,
-                                 effective_from, effective_to, version, checked_at, review_status,
-                                 topics, keywords, text, summary, limitations, channel,
-                                 embedding, embedding_model, embedding_updated_at, updated_at)
+                                 effective_from, effective_to, text_available_from, version, checked_at, review_status,
+                                 topics, keywords, text, summary, limitations, doc_type, applies_to, channel,
+                                 embedding, embedding_model, embedding_input_digest, embedding_updated_at, updated_at)
                             VALUES
-                                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                                 %s, %s, %s, %s, %s, %s, %s::vector, %s, %s, now())
+                                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                                 %s, %s, %s, %s, %s, %s, %s, %s, %s::vector, %s, %s, %s, now())
+                            ON CONFLICT (id) DO UPDATE SET
+                                {metadata_updates}, {vector_updates}, updated_at = now()
                             """,
                             (
                                 entry.id,
@@ -498,6 +685,7 @@ class PostgresKnowledgeStore:
                                 entry.cityCode,
                                 entry.effectiveFrom,
                                 entry.effectiveTo,
+                                entry.textAvailableFrom,
                                 entry.version,
                                 entry.checkedAt,
                                 entry.reviewStatus,
@@ -506,11 +694,20 @@ class PostgresKnowledgeStore:
                                 entry.text,
                                 entry.summary,
                                 entry.limitations,
+                                entry.docType,
+                                entry.appliesTo,
                                 channel,
                                 vector_literal,
-                                settings.embedding_configured_name or None,
+                                self.embedding_model if vector else None,
+                                self._input_digest(entry),
                                 datetime.now(timezone.utc) if vector else None,
                             ),
                         )
+                # 所有归属更新完毕后再删已移除条目，迁包时不会删除待复用向量。
+                for pack in packs:
+                    cur.execute(
+                        "DELETE FROM knowledge_entries WHERE pack_city = %s AND NOT (id = ANY(%s))",
+                        (pack.cityCode, [entry.id for entry in pack.entries]),
+                    )
             conn.commit()
         return len(entries)

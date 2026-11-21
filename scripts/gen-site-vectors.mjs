@@ -1,4 +1,5 @@
 import './check-node.mjs';
+import { createHash } from 'node:crypto';
 import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,11 +43,12 @@ if (!baseUrl || !apiKey || !model || !dim) {
 }
 const endpoint = baseUrl.endsWith('/embeddings') ? baseUrl : `${baseUrl}/embeddings`;
 
-const packFiles = (await readdir(dataDir)).filter((name) => name.endsWith('.json'));
+const packFiles = (await readdir(dataDir)).filter((name) => name.endsWith('.json')).sort();
 const packs = [];
 for (const name of packFiles) {
   packs.push(JSON.parse(await readFile(join(dataDir, name), 'utf8')));
 }
+packs.sort((a, b) => String(a.cityCode).localeCompare(String(b.cityCode)));
 const entries = packs.flatMap((pack) => pack.entries ?? []);
 const versions = Object.fromEntries(packs.map((pack) => [pack.cityCode, pack.version]));
 
@@ -55,6 +57,22 @@ function embedText(entry) {
   return [entry.title, entry.summary, entry.text, (entry.keywords || []).join(' '), (entry.topics || []).join(' ')]
     .filter((part) => part && String(part).trim())
     .join('\n');
+}
+
+function stable(value) {
+  if (value === undefined) return 'null';
+  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stable(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function digest(value) {
+  return createHash('sha256').update(stable(value)).digest('hex');
 }
 
 async function embedBatch(texts) {
@@ -85,15 +103,28 @@ for (let start = 0; start < entries.length; start += batch) {
   const result = await embedBatch(slice.map(embedText));
   slice.forEach((entry, i) => {
     const vector = result[i];
-    if (!Array.isArray(vector) || vector.length !== dim) {
-      throw new Error(`维度不匹配：${entry.id} 返回 ${vector?.length}，配置 ${dim}`);
+    if (!Array.isArray(vector) || vector.length !== dim
+      || !vector.every((value) => typeof value === 'number' && Number.isFinite(value))
+      || !vector.some((value) => value !== 0)) {
+      throw new Error(`向量维度或数值无效：${entry.id} 返回 ${vector?.length}，配置 ${dim}`);
     }
     vectors[entry.id] = vector.map((v) => Number(v.toFixed(8)));
   });
   console.log(`  已生成 ${Math.min(start + batch, entries.length)}/${entries.length}`);
 }
 
-const output = { model, dim, generatedAt: new Date().toISOString(), versions, vectors };
+const output = {
+  model,
+  dim,
+  generatedAt: new Date().toISOString(),
+  versions,
+  inputDigest: digest(
+    [...entries]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((entry) => ({ id: entry.id, input: embedText(entry) })),
+  ),
+  vectors,
+};
 await writeFile(outUrl, JSON.stringify(output), 'utf8');
 const bytes = (await readFile(outUrl)).length;
 console.log(`完成：site/functions/knowledge/vectors.json（${(bytes / 1024).toFixed(0)} KB，${Object.keys(vectors).length} 条向量）`);

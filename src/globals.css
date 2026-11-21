@@ -42,7 +42,7 @@
   --site-accent: #0071e3;
   --site-on-accent: #ffffff;
   --site-surface: #f5f5f7;
-  --site-muted: #6e6e73;
+  --site-muted: #5f5f66;
   --site-border: #e8e8ed;
   --site-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
     "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB",
@@ -327,4 +327,17 @@ body {
   100% {
     transform: translateX(310%);
   }
+}
+
+/* 可读性：辅助说明统一抬到 11–13px，避免 10px 文字长时间阅读吃力。 */
+.text-\[10px\] {
+  font-size: 11px;
+}
+
+.text-\[11px\] {
+  font-size: 12px;
+}
+
+.text-\[12px\] {
+  font-size: 13px;
 }

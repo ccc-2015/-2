@@ -51,15 +51,16 @@ export function EvidenceOverview({
     return null;
   })();
 
+  const checked = records.length > 0;
   const cards = [
     { label: "签约日期", value: signDate || "未记录", icon: FileSignature, tone: "text-stage-signing" },
     { label: "已居住", value: lived == null ? "—" : `${lived} 天`, icon: CalendarDays, tone: "text-stage-living" },
-    { label: "证据已有", value: `${present} 项`, icon: CheckCircle2, tone: "text-status-present" },
+    { label: "证据已有", value: checked ? `${present} 项` : "尚未开始", icon: CheckCircle2, tone: "text-status-present" },
     {
       label: "材料待补",
-      value: missing + toConfirm > 0 ? `${missing + toConfirm} 项` : "无",
+      value: !checked ? "尚未检查" : missing + toConfirm > 0 ? `${missing + toConfirm} 项` : "无",
       icon: TriangleAlert,
-      tone: missing > 0 ? "text-status-missing" : "text-status-to-confirm",
+      tone: !checked ? "text-muted-foreground" : missing > 0 ? "text-status-missing" : "text-status-to-confirm",
     },
   ];
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,7 @@ class Settings(BaseSettings):
     model_name: str = ""
     model_api_base_url: str = "https://api.openai.com/v1"
     model_timeout_ms: int = 60000
+    model_context_tokens: int = Field(default=32768, gt=0)
     # 推理强度：minimal 关闭冗余推理、显著提速（实测 63s→16s）；留空则不发送该参数。
     model_reasoning_effort: str = "minimal"
 

@@ -64,15 +64,30 @@ def _decode_text(data: bytes) -> str:
 @lru_cache
 def _ocr_engine():
     # 延迟加载：模型随包本机运行，启动服务不依赖 OCR 就绪。
-    from rapidocr_onnxruntime import RapidOCR
-
-    return RapidOCR()
+    try:
+        from rapidocr_onnxruntime import RapidOCR
+    except Exception as exc:
+        raise ApiError(
+            "service_not_configured",
+            "本机 OCR 组件未安装，无法识别扫描版 PDF 或图片。请改用文本版文件，或直接粘贴合同文本。",
+            "file",
+        ) from exc
+    try:
+        return RapidOCR()
+    except Exception as exc:
+        raise ApiError(
+            "service_not_configured",
+            "本机 OCR 初始化失败，无法识别扫描版 PDF 或图片。请改用文本版文件，或直接粘贴合同文本。",
+            "file",
+        ) from exc
 
 
 def _ocr_image(img) -> tuple[str, float | None]:
     """对 PIL 图像做本地 OCR，返回识别文本与平均置信度（无可识别内容时为空）。"""
-    import numpy as np
-
+    try:
+        import numpy as np
+    except Exception as exc:
+        raise ApiError("service_not_configured", "本机 OCR 依赖缺失（numpy），无法识别扫描页。", "file") from exc
     engine = _ocr_engine()
     arr = np.ascontiguousarray(np.array(img.convert("RGB"))[:, :, ::-1])
     try:
@@ -151,7 +166,10 @@ def _extract_pdf(data: bytes) -> ExtractResult:
             else:
                 pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))
                 img = Image.open(io.BytesIO(pix.tobytes("png")))
-                page_text, score = _ocr_image(img)
+                try:
+                    page_text, score = _ocr_image(img)
+                except ApiError as exc:
+                    raise ApiError(exc.code, f"第 {i + 1} 页：{exc.message}", exc.field) from exc
                 page_text = page_text.strip()
                 method = "ocr"
                 ocr_pages += 1
@@ -227,7 +245,7 @@ def extract_bytes(filename: str, content_type: str | None, data: bytes) -> Extra
     if not result.text.strip():
         raise ApiError("unsupported_file", "未提取到文本（文件可能为空白），请直接粘贴合同文本。", "file")
     if utf16_length(result.text) > LIMITS["maxTextLength"]:
-        raise ApiError("payload_too_large", f"提取文本超过 {LIMITS['maxTextLength']} 字符限制，请缩小材料或选择片段，不会被截断。", "file")
+        raise ApiError("payload_too_large", f"提取文本约 {utf16_length(result.text)} 字符，超过 {LIMITS['maxTextLength']} 字符限制，请缩小材料或选择片段，不会被截断。", "file")
 
     result.sourceName = os.path.basename(filename or "导入文件")
     result.needsReview = True

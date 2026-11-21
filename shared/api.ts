@@ -12,6 +12,8 @@ export interface ResponseMeta {
   processingMode: ProcessingMode;
   coverage: Coverage;
   knowledgeVersion: string | null;
+  /** 运行时实际加载的资料版本与内容摘要；旧响应可能没有。 */
+  knowledgeSnapshot?: string | null;
   warnings: string[];
 }
 
@@ -88,6 +90,9 @@ export interface ExtractResult {
 // ---- contract ----
 export type ContractIntent = "ask" | "review" | "suggest_revision" | "draft_revision";
 export type FindingPriority = "confirm_first" | "needs_attention" | "insufficient_info";
+export type FindingEvidenceStatus = "cited" | "conditional" | "insufficient";
+export type DocType = "regulation" | "policy" | "guide";
+export type AppliesTo = "all" | "enterprise" | "intermediary" | "lessor" | "unknown";
 
 export interface Excerpt {
   text: string;
@@ -121,6 +126,11 @@ export interface AnalyzeContractInput {
   targetExcerpt?: Excerpt | null;
 }
 
+export interface EvidenceSnippet {
+  sourceId: string;
+  text: string;
+}
+
 export interface Finding {
   priority: FindingPriority;
   issue: string;
@@ -129,6 +139,11 @@ export interface Finding {
   suggestedQuestion: string;
   uncertainties: string[];
   sourceRefs: string[];
+  /** 对应检索议题，不是法律分类认证。 */
+  topicId?: string | null;
+  topicLabel?: string | null;
+  evidenceStatus?: FindingEvidenceStatus;
+  evidenceSnippets?: EvidenceSnippet[];
 }
 
 export interface Revision {
@@ -153,14 +168,19 @@ export interface SourceRef {
   cityCode: string | null;
   effectiveFrom: string | null;
   effectiveTo: string | null;
+  textAvailableFrom?: string | null;
   version: string;
   checkedAt: string;
   excerpt: string;
+  docType?: DocType | null;
+  appliesTo?: AppliesTo | null;
 }
 
 export interface ContractResult {
   answer: string;
   coverage: Coverage;
+  /** 预置示例结果：未调用模型，界面需明确标注。 */
+  preset?: boolean;
   findings: Finding[];
   revision: Revision | null;
   /** 完整修订清单；旧数据可能只有 revision，前端需回退兼容。 */
@@ -244,6 +264,26 @@ export const PRIORITY_LABELS: Record<FindingPriority, string> = {
   confirm_first: "建议优先确认",
   needs_attention: "需要关注",
   insufficient_info: "信息不足",
+};
+
+export const FINDING_EVIDENCE_LABELS: Record<FindingEvidenceStatus, string> = {
+  cited: "有相关资料",
+  conditional: "需确认适用条件",
+  insufficient: "依据不足",
+};
+
+export const DOC_TYPE_LABELS: Record<DocType, string> = {
+  regulation: "法规",
+  policy: "政策",
+  guide: "办事资料",
+};
+
+export const APPLIES_TO_LABELS: Record<AppliesTo, string> = {
+  all: "一般适用",
+  enterprise: "住房租赁企业",
+  intermediary: "中介机构",
+  lessor: "出租人",
+  unknown: "适用主体待确认",
 };
 
 export const EVIDENCE_STATUS_LABELS: Record<EvidenceStatus, string> = {

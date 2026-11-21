@@ -14,9 +14,11 @@ from ..schemas import AnalyzeContractInput
 from ..services.contract import (
     DATA_MARKER,
     analyze_contract,
+    build_retrieval_context,
     materialize,
+    max_tokens_for,
     model_messages,
-    prepare_sources,
+    validate_model_output,
 )
 from ..validation import validate_analyze_limits
 
@@ -42,6 +44,7 @@ async def analyze(inp: AnalyzeContractInput):
         warnings=analysis.warnings,
         processing_mode=analysis.processing_mode,
         knowledge_version=analysis.knowledge_version,
+        knowledge_snapshot=analysis.knowledge_snapshot,
     )
 
 
@@ -58,12 +61,14 @@ async def analyze_stream(inp: AnalyzeContractInput):
         yield _event({"type": "stage", "stage": "reading", "requestId": request_id})
         try:
             # 检索是同步调用，放到线程里避免阻塞事件循环。
-            sources = await asyncio.to_thread(prepare_sources, inp)
+            context = await asyncio.to_thread(build_retrieval_context, inp)
             yield _event(
                 {
                     "type": "stage",
                     "stage": "retrieving",
-                    "sources": len(sources),
+                    "sources": len(context.sources),
+                    "issues": len(context.groups),
+                    "retrievalMode": context.retrieval_mode,
                     "knowledgeVersion": None,
                 }
             )
@@ -73,9 +78,9 @@ async def analyze_stream(inp: AnalyzeContractInput):
             seen_marker = False
             data_text = ""
             async for delta in chat_stream(
-                model_messages(inp, sources),
+                model_messages(inp, context.sources, context),
                 temperature=0.2,
-                max_tokens=2400,
+                max_tokens=max_tokens_for(inp.intent),
             ):
                 buffer += delta
                 if not seen_marker:
@@ -97,21 +102,24 @@ async def analyze_stream(inp: AnalyzeContractInput):
                 else:
                     data_text += delta
 
-            if not data_text.strip() and not "".join(answer_parts).strip():
-                raise ApiError("upstream_invalid", "模型服务未返回有效结果，请稍后手动重试。")
+            if not seen_marker and buffer:
+                answer_parts.append(buffer)
+                yield _event({"type": "delta", "text": buffer})
+                buffer = ""
+            if not seen_marker:
+                raise ApiError("upstream_invalid", "正文已生成，但结构化结果未完成，请手动重试。")
             streamed = "".join(answer_parts).strip()
-            raw = parse_json(data_text) if data_text.strip() else {
-                "findings": [],
-                "revision": None,
-                "followUpQuestions": [],
-            }
+            if not data_text.strip():
+                raise ApiError("upstream_invalid", "结构化结果为空，本次分析未完成，请手动重试。")
+            raw = parse_json(data_text)
+            validate_model_output(raw)
             # 正文以流式内容为准；模型若仍把正文写进 answer，则保留更完整的那一份。
             model_answer = raw.get("answer") if isinstance(raw.get("answer"), str) else ""
             if streamed and len(streamed) >= len(model_answer.strip()):
                 raw["answer"] = streamed
             elif streamed and not model_answer.strip():
                 raw["answer"] = streamed
-            analysis = materialize(inp, sources, raw)
+            analysis = materialize(inp, context.sources, raw, context)
             # 风险卡逐条推送，避免最后一次性全部出现。
             for finding in analysis.result.findings:
                 yield _event({"type": "finding", "finding": finding.model_dump()})
@@ -126,6 +134,7 @@ async def analyze_stream(inp: AnalyzeContractInput):
                     "processingMode": analysis.processing_mode,
                     "coverage": analysis.result.coverage,
                     "knowledgeVersion": analysis.knowledge_version,
+                    "knowledgeSnapshot": analysis.knowledge_snapshot,
                     "warnings": analysis.warnings,
                 },
             }

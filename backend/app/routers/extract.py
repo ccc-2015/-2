@@ -33,7 +33,7 @@ def _merge(results: list[tuple[str, ExtractResult]]) -> ExtractResult:
     if utf16_length(merged) > LIMITS["maxTextLength"]:
         raise ApiError(
             "payload_too_large",
-            f"合并后的合同超过 {LIMITS['maxTextLength']} 字符限制，请分次审查或精简材料。",
+            f"合并后的合同约 {utf16_length(merged)} 字符，超过 {LIMITS['maxTextLength']} 字符限制，请分次审查或精简材料。",
             "files",
         )
     return ExtractResult(
@@ -56,7 +56,10 @@ async def extract(file: UploadFile = File(...)):
     if len(data) > LIMITS["maxFileBytes"]:
         mb = LIMITS["maxFileBytes"] // (1024 * 1024)
         raise ApiError("payload_too_large", f"文件超过 {mb}MB 大小限制，请缩小材料或选择片段，不会被截断。", "file")
-    result = await run_in_threadpool(extract_bytes, file.filename or "", file.content_type, data)
+    try:
+        result = await run_in_threadpool(extract_bytes, file.filename or "", file.content_type, data)
+    except ApiError as exc:
+        raise ApiError(exc.code, f"{file.filename or '文件'}：{exc.message}", exc.field) from exc
     return success(result, coverage="limited", warnings=result.warnings)
 
 
@@ -74,7 +77,10 @@ async def extract_multi(files: list[UploadFile] = File(...)):
         if len(data) > LIMITS["maxFileBytes"]:
             mb = LIMITS["maxFileBytes"] // (1024 * 1024)
             raise ApiError("payload_too_large", f"文件超过 {mb}MB 大小限制，请缩小后再上传。", "files")
-        result = await run_in_threadpool(extract_bytes, upload.filename or "", upload.content_type, data)
+        try:
+            result = await run_in_threadpool(extract_bytes, upload.filename or "", upload.content_type, data)
+        except ApiError as exc:
+            raise ApiError(exc.code, f"{upload.filename or '文件'}：{exc.message}", exc.field) from exc
         results.append((result.sourceName, result))
 
     merged = _merge(results)

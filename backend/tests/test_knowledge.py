@@ -15,7 +15,7 @@ import json
 
 from app.knowledge import knowledge_store
 from app.knowledge.citations import collect_cited_ids
-from app.knowledge.store import DATA_DIR
+from app.knowledge.store import DATA_DIR, context_compatible
 from app.knowledge.validate import validate_pack
 from app.main import app
 from app.schemas import AnalyzeContractInput
@@ -61,6 +61,22 @@ class KnowledgeStoreTests(unittest.TestCase):
             [entry.id for entry in retrieved if entry.effectiveFrom and entry.effectiveFrom > "2000-01-01"],
             [entry.id for entry in retrieved],
         )
+
+    def test_context_filter_rejects_other_actor_provisions(self):
+        by_id = {entry.id: entry for entry in knowledge_store.entries}
+        query = "押金 扣减押金 无正当理由"
+        self.assertFalse(context_compatible(by_id["cn-housing-lease-reg-36"], query, "contract_review"))
+        self.assertTrue(context_compatible(by_id["cn-housing-lease-reg-10"], query, "contract_review"))
+        dispute = "押金 返还 纠纷 协商"
+        self.assertTrue(context_compatible(by_id["cn-housing-lease-reg-35"], dispute, "contract_review"))
+        self.assertFalse(context_compatible(by_id["cn-housing-lease-reg-35"], query, "contract_review"))
+        self.assertTrue(context_compatible(by_id["cn-housing-lease-reg-35"], query, "dispute"))
+
+    def test_history_before_saved_revision_excludes_current_text(self):
+        ids = {entry.id for entry in knowledge_store.list_sources("ZZ", "2025-02-01", "contract_review")}
+        self.assertNotIn("zz-rent-reg-12", ids)
+        ids = {entry.id for entry in knowledge_store.list_sources("ZZ", "2026-11-08", "contract_review")}
+        self.assertIn("zz-rent-reg-12", ids)
 
     def test_other_city_uses_national_sources_only(self):
         entries = knowledge_store.list_sources("SH", "2026-11-08", "contract_review")
@@ -126,7 +142,8 @@ class KnowledgeStoreTests(unittest.TestCase):
     def test_contract_retrieve_keeps_one_local_source(self):
         text = (
             "房屋租赁合同 押金 4000 元 月租金 2600 元 逾期滞纳金 "
-            "提前退租押金不退 甲方可单方调整租金 保洁费和家电折旧费从押金中扣除"
+            "提前退租押金不退 甲方可单方调整租金 保洁费和家电折旧费从押金中扣除 "
+            "房屋结构 装修 拆改"
         )
         for city in ("ZZ", "WH", "HZ"):
             with self.subTest(city=city):
@@ -193,6 +210,13 @@ class KnowledgeStoreTests(unittest.TestCase):
             ids,
         )
 
+    def test_entries_have_doc_type_and_applies_to(self):
+        for entry in knowledge_store.entries:
+            self.assertIn(entry.docType, ("regulation", "policy", "guide"), entry.id)
+            self.assertIn(entry.appliesTo, ("all", "enterprise", "intermediary", "lessor", "unknown"), entry.id)
+        scoped = [entry.id for entry in knowledge_store.entries if entry.appliesTo != "all"]
+        self.assertTrue(scoped, "至少应有明确限定主体的条目")
+
     def test_pack_has_zhengzhou_sources(self):
         city_entries = [entry for entry in PACK["entries"] if entry["cityCode"] == "ZZ"]
         self.assertGreaterEqual(len(city_entries), 20)
@@ -230,7 +254,7 @@ class ContractKnowledgeTests(unittest.TestCase):
                     "sourceRefs": ["S1"],
                 }
             ],
-            "revision": None,
+            "revisions": [],
             "followUpQuestions": [],
         }
         inp = AnalyzeContractInput(text="房屋维修由谁负责？", intent="review", cityCode="ZZ", eventDate="2026-11-08")
@@ -250,7 +274,7 @@ class ContractKnowledgeTests(unittest.TestCase):
             "answer": "一般建议。",
             "sourceRefs": ["S1"],
             "findings": [],
-            "revision": None,
+            "revisions": [],
             "followUpQuestions": [],
         }
         inp = AnalyzeContractInput(text="维修责任", intent="review", cityCode="BJ", eventDate="2026-11-08")
@@ -266,7 +290,7 @@ class ContractKnowledgeTests(unittest.TestCase):
             "answer": "一般建议。",
             "sourceRefs": ["S1"],
             "findings": [],
-            "revision": None,
+            "revisions": [],
             "followUpQuestions": [],
         }
         inp = AnalyzeContractInput(text="维修责任", intent="review", cityCode="ZZ", eventDate="2000-01-01")
@@ -281,10 +305,15 @@ class ContractKnowledgeTests(unittest.TestCase):
             "answer": "修订建议如下。",
             "sourceRefs": [],
             "findings": [],
-            "revision": {
+            "revisions": [{
+                "kind": "modify",
+                "clauseLabel": "第八条",
+                "title": "租金稳定",
                 "text": "协商草稿（请自行核对后使用）：第八条 租赁期内租金保持不变。",
                 "targetExcerpt": {"text": "第八条 甲方可单方调整租金。", "start": 0, "end": 13},
-            },
+                "reason": "明确租金",
+                "uncertainties": [],
+            }],
             "followUpQuestions": [],
         }
         text = "第八条 甲方可单方调整租金。"

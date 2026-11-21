@@ -15,7 +15,11 @@
     "build:site": "tsc --noEmit && node scripts/build-site.mjs",
     "dev:site": "node scripts/dev-site.mjs",
     "knowledge:sync": "node scripts/sync-site-knowledge.mjs",
-    "knowledge:vectors": "node scripts/gen-site-vectors.mjs"
+    "knowledge:vectors": "node scripts/gen-site-vectors.mjs",
+    "knowledge:check": "node scripts/check-knowledge-artifacts.mjs",
+    "eval:contract": "python scripts/eval_contract_retrieval.py",
+    "eval:contract:real": "python scripts/real_model_eval_30.py",
+    "review:citations": "python scripts/build_citation_review_sheet.py"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -10,8 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { ViewId } from "./AppShell";
-
-const SEEN_KEY = "zzyj.onboarding.seen.v1";
+import { LOCAL_SITE } from "../lib/extractLocal";
 
 const STEPS: { view: ViewId; title: string; detail: string; icon: typeof FileSearch; tone: string }[] = [
   {
@@ -41,11 +40,7 @@ export function Onboarding({ onNavigate }: { onNavigate: (view: ViewId) => void 
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      if (window.localStorage.getItem(SEEN_KEY) !== "1") setOpen(true);
-    } catch {
-      // 存储不可用时默认不打扰。
-    }
+    // 首次进入改为页内简短引导，不再自动弹窗；说明仍可从「更多操作」打开。
     const reopen = () => setOpen(true);
     window.addEventListener("zzyj:onboarding", reopen);
     return () => window.removeEventListener("zzyj:onboarding", reopen);
@@ -53,11 +48,6 @@ export function Onboarding({ onNavigate }: { onNavigate: (view: ViewId) => void 
 
   function close() {
     setOpen(false);
-    try {
-      window.localStorage.setItem(SEEN_KEY, "1");
-    } catch {
-      // 忽略。
-    }
   }
 
   function go(view: ViewId) {
@@ -88,8 +78,8 @@ export function Onboarding({ onNavigate }: { onNavigate: (view: ViewId) => void 
             </span>
             租住有据怎么用
           </DialogTitle>
-          <DialogDescription className="text-[12px] leading-relaxed">
-            三个模块围绕同一份租住材料：先看合同，再攒证据，有争议时直接生成话术。全部在本机处理，不上传合同与对话。
+          <DialogDescription className="text-[13px] leading-relaxed">
+            三个模块围绕同一份租住材料：先看合同，再攒证据，有争议时生成话术。本机保存与 AI 分析分开进行，使用 AI 功能需要发送相关材料。
           </DialogDescription>
         </DialogHeader>
 
@@ -107,11 +97,11 @@ export function Onboarding({ onNavigate }: { onNavigate: (view: ViewId) => void 
                   <Icon className={`size-3.5 ${step.tone}`} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 text-[13px] font-medium">
-                    <span className="text-[11px] text-muted-foreground">{index + 1}</span>
+                  <span className="flex items-center gap-1.5 text-[14px] font-medium">
+                    <span className="text-[12px] text-muted-foreground">{index + 1}</span>
                     {step.title}
                   </span>
-                  <span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">{step.detail}</span>
+                  <span className="mt-0.5 block text-[12px] leading-relaxed text-muted-foreground">{step.detail}</span>
                 </span>
               </button>
             );
@@ -119,17 +109,20 @@ export function Onboarding({ onNavigate }: { onNavigate: (view: ViewId) => void 
         </div>
 
         <div className="rounded-xl border border-dashed border-foreground/15 bg-secondary/40 px-3 py-2.5">
-          <p className="text-[11px] font-medium">第一次来？不用准备材料</p>
-          <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-            不用准备材料，点一下就能看到审查结果与争议方向；证据页的「入住必拍清单」建议入住当天就拍。
+          <p className="text-[13px] font-medium">隐私：保存与发送是分开的</p>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
+            {LOCAL_SITE
+              ? "含文字的 PDF、Word（DOCX）与文本文件在浏览器解析；图片会上传至服务端与模型服务识别。"
+              : "上传的文件会发送至服务端提取文字。"}
+            审查合同、整理争议或生成话术时，相关文本与所选材料会发送至服务端与模型服务。本机保存不代表处理过程不上传。
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Button size="sm" className="h-7 px-2 text-[11px]" onClick={() => trial("contract")}>
-              <FileSearch className="size-3" />
+            <Button size="sm" className="h-8 px-2.5 text-[12px]" onClick={() => trial("contract")}>
+              <FileSearch className="size-3.5" />
               试用示例合同
             </Button>
-            <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => trial("dispute")}>
-              <Scale className="size-3" />
+            <Button size="sm" variant="outline" className="h-8 px-2.5 text-[12px]" onClick={() => trial("dispute")}>
+              <Scale className="size-3.5" />
               试用示例争议
             </Button>
           </div>
@@ -146,10 +139,5 @@ export function Onboarding({ onNavigate }: { onNavigate: (view: ViewId) => void 
 }
 
 export function openOnboarding() {
-  try {
-    window.localStorage.removeItem(SEEN_KEY);
-  } catch {
-    // 忽略。
-  }
   window.dispatchEvent(new Event("zzyj:onboarding"));
 }

@@ -49,8 +49,14 @@ def validate_pack(path: Path) -> tuple[KnowledgePack | None, list[str]]:
 
     seen: set[str] = set()
     channel_ids: set[str] = set()
+    raw_entries = raw.get("entries") if isinstance(raw.get("entries"), list) else []
     for index, entry in enumerate(pack.entries):
         prefix = f"entries[{index}]"
+        raw_entry = raw_entries[index] if index < len(raw_entries) and isinstance(raw_entries[index], dict) else {}
+        if "docType" not in raw_entry:
+            errors.append(f"{prefix} 必须显式标注 docType（regulation/policy/guide）")
+        if "appliesTo" not in raw_entry:
+            errors.append(f"{prefix} 必须显式标注 appliesTo（all/enterprise/intermediary/lessor/unknown）")
         if entry.id in seen:
             errors.append(f"{prefix} id 重复：{entry.id}")
         seen.add(entry.id)
