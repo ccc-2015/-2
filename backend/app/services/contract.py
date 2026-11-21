@@ -39,7 +39,7 @@ from ..validation import close_excerpt
 
 _PRIORITIES = ("confirm_first", "needs_attention", "insufficient_info")
 _PRIORITY_ORDER = {"confirm_first": 0, "needs_attention": 1, "insufficient_info": 2}
-_MAX_TOKENS = {"ask": 1600, "review": 7000, "suggest_revision": 4000, "draft_revision": 2400}
+_MAX_TOKENS = {"ask": 1600, "review": 5000, "suggest_revision": 4000, "draft_revision": 2400}
 _MODE_LABELS = {"keyword": "关键词", "hybrid": "关键词＋向量混合"}
 _DOC_TYPE_LABELS = {"regulation": "法规", "policy": "政策", "guide": "办事资料"}
 _EVALUATIVE_REMEDY_TERMS = ("过高", "过低", "调减", "减免", "显失公平")
@@ -370,7 +370,7 @@ def _normalize_findings(
         return []
     entries_by_id = {entry.id: entry for entry in source_map.values()}
     findings: list[Finding] = []
-    for item in raw[:18]:
+    for item in raw[:15]:
         if not isinstance(item, dict):
             continue
         issue = _str(item.get("issue")).strip()
